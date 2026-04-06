@@ -2,6 +2,8 @@
 
 This document summarizes key project-structure and architecture choices in `/Users/morgan/Workspace/bus_finder` and extracts reusable patterns for a similar app in this repository.
 
+**Woleh note:** The reference app models **passenger** vs **driver** explicitly (folders, routes, subscription plan types). **Woleh intentionally does not**—see [ARCHITECTURE.md](./ARCHITECTURE.md): a single user model, **subscription plans that grant permission strings**, server enforcement, and mobile UI driven by that permission list. bus_finder also persists **Route** / **RouteStop** style data with coordinates; **Woleh uses only lists of place names** (no lat/long on names, no route geometry)—string matching only.
+
 ## Repo shape (high level)
 
 `bus_finder` is a mono-repo with two primary applications:
