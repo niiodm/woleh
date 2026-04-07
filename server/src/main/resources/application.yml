@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: woleh
+
+  # `spring-boot-docker-compose` (developmentOnly): if Docker is available, runs `docker compose up`.
+  # Compose file: `server/docker-compose.yml` (relative to cwd, usually `server/`).
+  # Override: `DOCKER_COMPOSE_FILE` or `SPRING_DOCKER_COMPOSE_ENABLED=false`.
+  docker:
+    compose:
+      enabled: true
+      file: ${DOCKER_COMPOSE_FILE:docker-compose.yml}
+      # Leave Postgres running when the JVM exits; `docker compose down` when you want to stop DB.
+      lifecycle-management: start-only
+
+# Default: expect PostgreSQL (local Docker or managed instance). Override via env or profile.
+# Quick local API without Postgres: run with --spring.profiles.active=dev (uses in-memory H2; see application-dev.yml).
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/woleh}
+    username: ${DATABASE_USER:woleh}
+    password: ${DATABASE_PASSWORD:woleh}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+
+server:
+  servlet:
+    context-path: /
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

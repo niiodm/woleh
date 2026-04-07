@@ -1,0 +1,17 @@
+### Phase 0 — manual checks (REST Client / IntelliJ HTTP)
+# Environment: select `dev` in http-client.env.json; start server with Postgres or `--spring.profiles.active=dev`.
+
+@baseUrl = http://localhost:8080
+@phone = +233241234567
+
+### Health (no auth)
+GET {{baseUrl}}/actuator/health
+Accept: application/json
+
+### Send OTP (stub until implemented)
+# POST {{baseUrl}}/api/v1/auth/send-otp
+# Content-Type: application/json
+#
+# {
+#   "phoneE164": "{{phone}}"
+# }
