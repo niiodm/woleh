@@ -41,7 +41,7 @@ Optional follow-ups belong in a new version section or ADR when introduced.
 
 - **Name equality:** Two place names **match** if and only if  
   `normalizePlaceName(a) == normalizePlaceName(b)` (character-by-character equality after normalization).
-- **List overlap:** When computing whether a broadcast path and a watch list overlap, compare **normalized** forms (e.g. intersection of normalized sets, or pairwise equality per product rule for ordered vs unordered lists—see PRD open questions).
+- **List overlap:** When computing whether a broadcast path and a watch list overlap, compare **normalized** forms (intersection of normalized sets; ordered broadcast vs unordered watch—see [PRD.md](./PRD.md) §13.2).
 - **Deduplication:** Within a single list, treat duplicates using normalized equality if product requires unique display names.
 
 ---

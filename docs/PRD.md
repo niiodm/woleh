@@ -5,8 +5,8 @@
 | **Product** | Woleh |
 | **Document type** | PRD (living document) |
 | **Status** | Draft — requirements evolve with discovery |
-| **Last updated** | 2026-04-06 (v0.5 transit product; reusable backend) |
-| **Related** | [Architecture](./ARCHITECTURE.md), [bus_finder learnings](./bus_finder-architecture-learnings.md) |
+| **Last updated** | 2026-04-06 (v0.9 Ghana, WebView payment, ADRs) |
+| **Related** | [Architecture](./ARCHITECTURE.md), [API contract](./API_CONTRACT.md), [ADRs](./adr/README.md), [bus_finder learnings](./bus_finder-architecture-learnings.md) |
 
 ---
 
@@ -18,7 +18,7 @@
 
 Woleh **does not** split users into fixed product roles such as “passenger” vs “driver” in the codebase or account model. The same user account can hold any combination of capabilities over time; **what they may do** is determined only by **subscription-backed permissions** (enforced on the server; reflected in the mobile UI for visibility).
 
-The **technical direction** is fixed in [ARCHITECTURE.md](./ARCHITECTURE.md): Flutter client, Spring Boot API, PostgreSQL, WebSocket-based realtime where needed, JWT authentication, and **permission-based access control** derived from the active subscription.
+The **technical direction** is fixed in [ARCHITECTURE.md](./ARCHITECTURE.md): Flutter client, Spring Boot API, PostgreSQL, WebSocket-based realtime where needed, JWT authentication, and **permission-based access control** derived from the active subscription. The **v1 API and permission matrix** are specified in [API_CONTRACT.md](./API_CONTRACT.md).
 
 This PRD states **what** we build and **why**; architecture states **how** we implement it.
 
@@ -85,8 +85,8 @@ These **scenarios** describe **transit** jobs-to-be-done and inform UX copy and 
 ### 6.1 Authentication
 
 1. User opens Woleh.
-2. User enters phone number; receives OTP; verifies.
-3. New users complete minimal signup (e.g. name); returning users land in the main experience.
+2. User enters phone number; receives OTP; verifies. The client does **not** choose “signup” vs “login”; the **backend** decides whether the number is already registered and returns **`flow`** (`login` or `signup`) on OTP verification per [API_CONTRACT.md](./API_CONTRACT.md) §6.2.
+3. **`signup`:** user completes minimal onboarding (e.g. name). **`login`:** user lands in the main experience (or profile completion if product requires).
 4. Session persists securely; logout clears client-held tokens.
 
 ### 6.2 Subscription, plans, and permissions
@@ -238,15 +238,62 @@ Phases are adjustable; **G1–G3** should not slip far past Phase 0–1.
 
 ---
 
-## 13. Open questions
+## 13. Resolved defaults (v1)
 
-1. **Permission catalog**: Canonical list of permission strings (including broadcast vs watch), naming convention, and how plans map to them.
-2. **Place-name rules**: Ordered vs unordered drive-through list; matching rule (overlap vs subset); max list length and validation. (**Normalization** is specified in [PLACE_NAMES.md](./PLACE_NAMES.md).)
-3. **Backend reuse**: If a second non-Woleh app shares this API—deployment, branding, and tenant model (single multi-tenant vs fork)—document in ADR when relevant.
-4. **Markets**: Countries, languages, and regulatory constraints (payments, telecom, data residency).
-5. **Free tier**: Which permissions (if any) are granted without a paid plan?
-6. **Grace period** after subscription lapse: duration and behavior (do permissions downgrade immediately or after grace?).
-7. **Offline**: Read-only cache vs. hard requirement for offline-first.
+These replace the former open questions. Revisit when launching or when product research contradicts them.
+
+### 13.1 Permission catalog (v1)
+
+- **Naming:** Dot-separated, `woleh.` prefix for Woleh-scoped permissions (leaves room for other products on a shared API later).
+
+| Permission | Meaning |
+|------------|--------|
+| `woleh.account.profile` | Sign in, read/update own profile |
+| `woleh.plans.read` | View subscription plans (pricing UI) |
+| `woleh.place.watch` | Set and manage **watch** place-name list |
+| `woleh.place.broadcast` | Set and manage **broadcast** (drive-through) place-name list |
+
+- **Plans map to permissions** in data: each plan record includes the **list of permission strings** it grants. Example **v1** product split (adjustable):
+  - **Free (no paid subscription):** `woleh.account.profile`, `woleh.plans.read`, `woleh.place.watch` — **watch list capped at 5** place names (server-enforced); **no** `woleh.place.broadcast`.
+  - **Paid:** adds `woleh.place.broadcast`; raises watch list limit to **50**; broadcast list limit **50**.
+
+Exact pricing and plan names are product/marketing; **limits** are the defaults above.
+
+### 13.2 Place-name rules (v1)
+
+- **Broadcast (drive-through) list:** **Ordered** — order is meaningful (sequence along the intended path).
+- **Watch list:** **Unordered** — treated as a **set** for matching (order ignored).
+- **Matching rule:** After [PLACE_NAMES.md](./PLACE_NAMES.md) normalization, a **match** exists if the **intersection** of the watch set and the broadcast list (as sets of normalized strings) is **non-empty**.
+- **Limits:** Max **50** entries per list (broadcast or watch); max **200** Unicode scalar values per place name; reject empty strings after trim; duplicates **allowed** in input but **dedupe** by normalized equality when matching/storing (product choice: **dedupe on save** recommended).
+
+### 13.3 Backend reuse (v1)
+
+- **Single deployment, single tenant** for Woleh. A second app or multi-tenant separation requires an **ADR** before implementation; not assumed for MVP.
+
+### 13.4 Markets and jurisdiction (v1)
+
+- **Launch jurisdiction:** **Ghana** only for v1 ([ADR 0004](./adr/0004-jurisdiction-ghana.md)). Expansion requires PRD + ADR updates.
+- **App UI:** **English** first.
+- **Phone auth:** **E.164**; **+233** expected for primary users.
+- **Currency:** **GHS** for pricing and checkout.
+- **Payments:** Local provider; checkout completed in a **secure WebView** loading the provider’s hosted UI ([ADR 0005](./adr/0005-payment-checkout-webview.md)). Card/bank details are not collected by Woleh.
+- **Legal entity and data residency:** Fix before production launch and record in deployment runbooks; hosting should align with Ghana-facing service ([ADR 0004](./adr/0004-jurisdiction-ghana.md)).
+
+### 13.5 Free tier (v1)
+
+- As in §13.1: free users get **watch-only** (up to **5** names), **no** broadcast. **Paid** unlocks broadcast and higher caps.
+
+### 13.6 Grace period (v1)
+
+- **7 calendar days** after subscription end (or recorded end datetime). During grace, **keep the same permissions** as immediately before lapse. **After** grace ends, enforce **free-tier** permissions (§13.1). No partial refunds specified in this doc.
+
+### 13.7 Offline (v1)
+
+- **Online-first.** The client may **cache** last-known profile and place lists for **read-only display** when offline; **no** requirement for offline-first or offline mutations for MVP.
+
+### 13.8 Future review
+
+- Alias lists for place names, fuzzy matching, multi-language UI, and multi-tenant API remain **out of scope** until explicitly prioritized.
 
 ---
 
@@ -259,5 +306,9 @@ Phases are adjustable; **G1–G3** should not slip far past Phase 0–1.
 | 0.3 | 2026-04-06 | Place-name lists only (no route objects); no coordinates on names; string matching (FR-P1–FR-P4); location FRs deferred to optional |
 | 0.4 | 2026-04-06 | Documented normalization pipeline in [PLACE_NAMES.md](./PLACE_NAMES.md); FR-P3 points to spec |
 | 0.5 | 2026-04-06 | **Transit** product positioning and copy; backend as reusable platform ([ARCHITECTURE.md](./ARCHITECTURE.md) §1.1); G8; open questions updated |
+| 0.6 | 2026-04-06 | Former §13 open questions resolved with **v1 defaults** (permissions, place rules, reuse, markets, free tier, grace, offline) |
+| 0.7 | 2026-04-06 | Linked [API_CONTRACT.md](./API_CONTRACT.md) (REST v1, permission matrix, WebSockets) |
+| 0.8 | 2026-04-06 | Auth: server-driven login vs signup (`flow` on verify-otp); PRD §6.1 aligned |
+| 0.9 | 2026-04-06 | Ghana jurisdiction; WebView + local provider payments; linked [adr](./adr/README.md) |
 
 When requirements change materially, bump version and summarize in this table.

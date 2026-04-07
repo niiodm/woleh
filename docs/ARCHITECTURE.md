@@ -131,7 +131,7 @@ Keep **design notes and phase logs** in `docs/` when they help onboarding; cross
 - **JWT** for API and WebSocket handshake (`/ws/**` authenticated).
 - **Stateless** sessions (`SessionCreationPolicy.STATELESS`).
 - **Permission-based authorization** (not passenger/driver types, not coarse roles only):
-  - Each **subscription plan** defines a set of **permission strings** (e.g. `perm.view_map`, `perm.publish_location`, `perm.receive_matches` — exact catalog is product-defined and versioned).
+  - Each **subscription plan** defines a set of **permission strings**. The **v1 catalog** for Woleh is in [PRD.md](./PRD.md) §13.1 (e.g. `woleh.place.watch`, `woleh.place.broadcast`).
   - The user’s **active subscription** yields an **effective permission set** (union of plan permissions, minus revocations if any).
   - After JWT validation, a filter or method-level checks assert the required permission(s) for the route or operation. WebSocket paths and message handlers enforce the same permissions as the REST surface for equivalent capabilities.
   - **Server is authoritative**: the client uses permissions only for UX; never rely on UI hiding alone for security.
@@ -157,7 +157,7 @@ Keep **design notes and phase logs** in `docs/` when they help onboarding; cross
 - **No route aggregate**: Do not model bus_finder-style **Route** / **RouteStop** entities with coordinates. Persist only what is needed for two concepts (exact API names TBD):
   - **Broadcast path** — ordered or unordered **list of place name strings** for “places I will drive through” (permission-gated).
   - **Watch list** — **list of place name strings** for “places I want to see buses for” (permission-gated).
-- **Matching**: Determine relevance by **comparing place names as strings** (e.g. non-empty intersection after normalization). **Do not** attach lat/long to place names in storage for this purpose.
+- **Matching**: Determine relevance by **comparing place names as strings** after normalization ([PLACE_NAMES.md](./PLACE_NAMES.md)). **v1 rule** (ordered broadcast vs unordered watch, intersection): [PRD.md](./PRD.md) §13.2. **Do not** attach lat/long to place names in storage for this purpose.
 - **Normalization**: Implement `normalizePlaceName` per [PLACE_NAMES.md](./PLACE_NAMES.md). Server and mobile must share the same algorithm and test vectors; optional alias/fuzzy rules require a doc version bump.
 - **Debouncing** for high-frequency notifications still applies where users receive live updates; use in-memory maps for single node, **Redis** for clusters if scaled horizontally.
 - **Caching**: Prefer caching **DTOs** (e.g. resolved permission sets, denormalized watch lists for read paths) — avoid `@Cacheable` on raw JPA entities if Redis serialization can break types.
@@ -170,12 +170,14 @@ Keep **design notes and phase logs** in `docs/` when they help onboarding; cross
 
 ## 6. API and realtime contracts
 
+The **v1 contract** (paths, envelopes, permission matrix, WebSocket outline) lives in [API_CONTRACT.md](./API_CONTRACT.md). Summaries below stay aligned with that file.
+
 ### 6.1 REST
 
-- Prefix: `/api/...` (version in path later if needed, e.g. `/api/v1/...`).
-- Success envelope (example): `{ "result": "SUCCESS", "message": "...", "data": ... }` — keep consistent with mobile parsers.
+- Prefix: **`/api/v1`** for v1 (see [API_CONTRACT.md](./API_CONTRACT.md)).
+- Success envelope: `{ "result": "SUCCESS", "message": "...", "data": ... }` — keep consistent with mobile parsers.
 - Errors: `{ "result": "ERROR", "message": "..." }` plus appropriate HTTP status.
-- **Place lists**: Endpoints that accept drive-through or watch intent should use **arrays of place name strings** in JSON—no coordinate fields on those names for the core model (see §5.6).
+- **Place lists**: JSON arrays of place name strings—no coordinate fields on those names for the core model (see §5.6).
 
 ### 6.2 WebSocket envelope
 
@@ -186,7 +188,7 @@ Standardize on:
 { "type": "<domain_event>", "data": { } }
 ```
 
-Document each `type` and its `data` schema in `docs/` or OpenAPI companion notes.
+Event types and handshake auth: [API_CONTRACT.md](./API_CONTRACT.md) §8.
 
 ## 7. Testing strategy
 
@@ -204,15 +206,17 @@ Document each `type` and its `data` schema in `docs/` or OpenAPI companion notes
 
 ## 9. Evolution and ADRs
 
-When a decision is non-obvious or costly to reverse (e.g. broker vs in-process streams, payment provider), add a short **Architecture Decision Record** under `docs/adr/` with context, decision, and consequences.
+Recorded decisions live under [docs/adr/README.md](./adr/README.md) (WebSocket auth, OTP policy, Ghana jurisdiction, WebView payment, scaling, tenancy). Add a new ADR when a choice is non-obvious or costly to reverse (e.g. second product on the same API).
 
 ## 10. Related documents
 
 - [Product Requirements (PRD)](./PRD.md) — what Woleh builds and why.
+- [API & permission contract](./API_CONTRACT.md) — REST v1, permission matrix, WebSockets.
+- [Architecture Decision Records (ADRs)](./adr/README.md) — recorded choices (e.g. payment WebView, Ghana, OTP).
 - [Place name normalization](./PLACE_NAMES.md) — canonical matching rules for place strings.
 - [bus_finder architecture learnings](./bus_finder-architecture-learnings.md) — rationale and anti-patterns from the reference project.
 
 ---
 
 **Document owner**: maintainers of the Woleh repo.  
-**Last updated**: 2026-04-06 (transit product vs reusable backend; PLACE_NAMES v1)
+**Last updated**: 2026-04-06 ([ADRs](./adr/README.md); [API_CONTRACT.md](./API_CONTRACT.md) v1.2)
