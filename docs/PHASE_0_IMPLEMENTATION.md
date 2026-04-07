@@ -65,6 +65,8 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 - **`application.yml`**: datasource (PostgreSQL), JWT signing secret/issuer/TTL via env vars, profile for `dev` (e.g. log SQL).
 - **Flyway** (or Liquibase) under `server/src/main/resources/db/migration`.
 
+**Implementation:** `woleh.jwt.*` (`WolehJwtProperties`), JJWT on the classpath, `spring-boot-configuration-processor`, baseline `db/migration/V1__baseline.sql`, **`dev`** profile SQL logging (`application-dev.yml`). Env: `JWT_SECRET`, `JWT_ISSUER`, `JWT_ACCESS_TOKEN_TTL`.
+
 **Done when:** app starts against a local Postgres; migrations apply cleanly.
 
 ### Step 3.2 — Database schema (minimal)

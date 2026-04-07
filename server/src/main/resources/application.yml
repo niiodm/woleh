@@ -34,3 +34,10 @@ management:
     web:
       exposure:
         include: health,info
+
+# JWT access tokens (HS256). Override JWT_SECRET in every non-local environment.
+woleh:
+  jwt:
+    issuer: ${JWT_ISSUER:woleh}
+    access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:PT24H}
+    secret: ${JWT_SECRET:dev-only-do-not-use-in-production-0123456789abcdef0123456789abcdef}

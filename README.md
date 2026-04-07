@@ -11,6 +11,16 @@ Mono-repo for the **Woleh** transit app: Flutter client and Spring Boot API.
 | [`server/api-tests/`](server/api-tests/) | `.http` collections for manual API checks |
 | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | CI (Gradle + Flutter) on push/PR to `main` |
 
+## Configuration (API)
+
+| Env | Purpose |
+|-----|---------|
+| `JWT_SECRET` | **Required in production** — HS256 signing key (use a long random value). |
+| `JWT_ISSUER` | Optional (default `woleh`). |
+| `JWT_ACCESS_TOKEN_TTL` | Optional ISO-8601 duration (default `PT24H`). |
+
+See `server/src/main/resources/application.yml` (`woleh.jwt.*`).
+
 ## Continuous integration
 
 On **push** and **pull request** to **`main`**, [GitHub Actions](.github/workflows/ci.yml) runs **`./gradlew build`** in `server/` and **`dart run build_runner build`**, **`flutter analyze`**, and **`flutter test`** in `mobile/`.
