@@ -179,13 +179,15 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 
 **Done when:** end-to-end against dev server completes login and signup paths. ✅
 
-### Step 4.3 — Session and protected UI
+### Step 4.3 — Session and protected UI ✅
 
 - On app start: if token present, **validate** with **`GET /me`** (or treat 401 as logout).
 - **Home (or “signed in”) screen**: display at least **`displayName`**, **phone**, and a short **permissions** summary from `data` (proves protected fetch).
 - **Logout:** delete token; clear in-memory state; navigate to auth.
 
-**Done when:** this matches the Phase 0 **exit criterion** (sign in + see protected content).
+**Implementation:** [`me_dto.dart`](../mobile/lib/features/me/data/me_dto.dart) (`MeResponse`, `MeProfile`, `MeLimits`, `MeSubscription`; `displayNameOrPhone` helper); [`me_repository.dart`](../mobile/lib/features/me/data/me_repository.dart) (added `getMe()`); [`me_notifier.dart`](../mobile/lib/features/me/presentation/me_notifier.dart) (`MeNotifier` — watches `authStateProvider.future` so it auto-fires on token load/change, handles 401 → `signOut()`, exposes `refresh()`); [`home_screen.dart`](../mobile/lib/features/home/presentation/home_screen.dart) (avatar with initials, `displayName`/phone, tier chip, permissions chips, limits rows, pull-to-refresh, error+retry); widget tests updated with `_StubMeNotifier` override verifying name, phone, and permission chips.
+
+**Done when:** this matches the Phase 0 **exit criterion** (sign in + see protected content). ✅
 
 ### Step 4.4 — Profile edit (minimal)
 
@@ -226,5 +228,6 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 | 0.9 | 2026-04-07 | Step 3.9 implemented: OtpServiceTest unit tests, phase0.http reorganised, http-client.env.json |
 | 1.0 | 2026-04-07 | Step 4.1 implemented: core wiring — ApiClient, AuthTokenStorage, AuthState, GoRouter with auth redirect, stub screens, widget tests |
 | 1.1 | 2026-04-07 | Step 4.2 implemented: auth screens — PhoneScreen, OtpScreen (countdown + resend), SetupNameScreen (signup branch), AuthRepository, MeRepository.patchDisplayName |
+| 1.2 | 2026-04-07 | Step 4.3 implemented: MeNotifier (auto-fetch on token load, 401→signOut), MeResponse DTOs, HomeScreen with profile/permissions/limits, pull-to-refresh, widget tests |
 
 When Phase 0 is complete, update [PRD.md](./PRD.md) or a project README with “Phase 0 complete” and any deviations (e.g. refresh-token policy).

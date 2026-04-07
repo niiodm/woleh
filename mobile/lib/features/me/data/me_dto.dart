@@ -1,0 +1,82 @@
+// DTOs for GET /api/v1/me (see API_CONTRACT.md §6.3 and §4).
+
+class MeProfile {
+  const MeProfile({
+    required this.userId,
+    required this.phoneE164,
+    this.displayName,
+  });
+
+  final String userId;
+  final String phoneE164;
+  final String? displayName;
+
+  /// Returns [displayName] when set, otherwise falls back to [phoneE164].
+  String get displayNameOrPhone => displayName?.isNotEmpty == true ? displayName! : phoneE164;
+
+  factory MeProfile.fromJson(Map<String, dynamic> json) => MeProfile(
+        userId: json['userId'].toString(),
+        phoneE164: json['phoneE164'] as String,
+        displayName: json['displayName'] as String?,
+      );
+}
+
+class MeLimits {
+  const MeLimits({
+    required this.placeWatchMax,
+    required this.placeBroadcastMax,
+  });
+
+  final int placeWatchMax;
+  final int placeBroadcastMax;
+
+  factory MeLimits.fromJson(Map<String, dynamic> json) => MeLimits(
+        placeWatchMax: json['placeWatchMax'] as int,
+        placeBroadcastMax: json['placeBroadcastMax'] as int,
+      );
+}
+
+class MeSubscription {
+  const MeSubscription({
+    required this.status,
+    this.currentPeriodEnd,
+    required this.inGracePeriod,
+  });
+
+  final String status;
+  final String? currentPeriodEnd;
+  final bool inGracePeriod;
+
+  factory MeSubscription.fromJson(Map<String, dynamic> json) => MeSubscription(
+        status: json['status'] as String,
+        currentPeriodEnd: json['currentPeriodEnd'] as String?,
+        inGracePeriod: json['inGracePeriod'] as bool,
+      );
+}
+
+class MeResponse {
+  const MeResponse({
+    required this.profile,
+    required this.permissions,
+    required this.tier,
+    required this.limits,
+    required this.subscription,
+  });
+
+  final MeProfile profile;
+  final List<String> permissions;
+  final String tier;
+  final MeLimits limits;
+  final MeSubscription subscription;
+
+  bool hasPermission(String permission) => permissions.contains(permission);
+
+  factory MeResponse.fromJson(Map<String, dynamic> json) => MeResponse(
+        profile: MeProfile.fromJson(json['profile'] as Map<String, dynamic>),
+        permissions: List<String>.from(json['permissions'] as List),
+        tier: json['tier'] as String,
+        limits: MeLimits.fromJson(json['limits'] as Map<String, dynamic>),
+        subscription:
+            MeSubscription.fromJson(json['subscription'] as Map<String, dynamic>),
+      );
+}
