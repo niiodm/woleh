@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/auth_state.dart';
 import '../../me/data/me_dto.dart';
@@ -16,6 +17,11 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Woleh'),
         actions: [
+          IconButton(
+            tooltip: 'Edit profile',
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () => context.push('/me/edit'),
+          ),
           IconButton(
             tooltip: 'Sign out',
             icon: const Icon(Icons.logout),

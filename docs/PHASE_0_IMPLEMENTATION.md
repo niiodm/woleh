@@ -189,11 +189,13 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 
 **Done when:** this matches the Phase 0 **exit criterion** (sign in + see protected content). ✅
 
-### Step 4.4 — Profile edit (minimal)
+### Step 4.4 — Profile edit (minimal) ✅
 
 - Form bound to **`PATCH /me/profile`**; on success refresh **`GET /me`** or update local state.
 
-**Done when:** name changes persist across restart (via re-fetch).
+**Implementation:** [`profile_edit_screen.dart`](../mobile/lib/features/me/presentation/profile_edit_screen.dart) (`ProfileEditNotifier` — calls `patchDisplayName` then `meNotifier.refresh()`; pre-fills field from live `meNotifierProvider`; pops on success); edit icon added to `HomeScreen` AppBar (`context.push('/me/edit')`); `/me/edit` route added to router.
+
+**Done when:** name changes persist across restart (via re-fetch). ✅
 
 ### Step 4.5 — Tests
 
@@ -229,5 +231,6 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 | 1.0 | 2026-04-07 | Step 4.1 implemented: core wiring — ApiClient, AuthTokenStorage, AuthState, GoRouter with auth redirect, stub screens, widget tests |
 | 1.1 | 2026-04-07 | Step 4.2 implemented: auth screens — PhoneScreen, OtpScreen (countdown + resend), SetupNameScreen (signup branch), AuthRepository, MeRepository.patchDisplayName |
 | 1.2 | 2026-04-07 | Step 4.3 implemented: MeNotifier (auto-fetch on token load, 401→signOut), MeResponse DTOs, HomeScreen with profile/permissions/limits, pull-to-refresh, widget tests |
+| 1.3 | 2026-04-07 | Step 4.4 implemented: ProfileEditScreen + ProfileEditNotifier, edit icon on HomeScreen AppBar, /me/edit route |
 
 When Phase 0 is complete, update [PRD.md](./PRD.md) or a project README with “Phase 0 complete” and any deviations (e.g. refresh-token policy).

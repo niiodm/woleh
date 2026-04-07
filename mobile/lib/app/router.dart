@@ -8,6 +8,7 @@ import '../features/auth/presentation/otp_screen.dart';
 import '../features/auth/presentation/phone_screen.dart';
 import '../features/auth/presentation/setup_name_screen.dart';
 import '../features/home/presentation/home_screen.dart';
+import '../features/me/presentation/profile_edit_screen.dart';
 
 part 'router.g.dart';
 
@@ -40,6 +41,10 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: '/home',
         builder: (_, __) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/me/edit',
+        builder: (_, __) => const ProfileEditScreen(),
       ),
     ],
   );
