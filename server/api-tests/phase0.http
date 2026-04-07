@@ -31,3 +31,31 @@ Content-Type: application/json
 {
   "phoneE164": "{{phone}}"
 }
+
+### Verify OTP — happy path (use OTP from dev console log)
+# Replace 123456 with the OTP printed by [DEV] log when dev-log-otp=true
+POST {{baseUrl}}/api/v1/auth/verify-otp
+Content-Type: application/json
+
+{
+  "phoneE164": "{{phone}}",
+  "otp": "123456"
+}
+
+### Verify OTP — wrong code (expects 400 INVALID_OTP)
+POST {{baseUrl}}/api/v1/auth/verify-otp
+Content-Type: application/json
+
+{
+  "phoneE164": "{{phone}}",
+  "otp": "000000"
+}
+
+### Verify OTP — invalid format (expects 400 VALIDATION_ERROR)
+POST {{baseUrl}}/api/v1/auth/verify-otp
+Content-Type: application/json
+
+{
+  "phoneE164": "{{phone}}",
+  "otp": "abc"
+}

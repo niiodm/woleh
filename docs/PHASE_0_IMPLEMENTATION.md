@@ -103,7 +103,7 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 
 **Done when:** contract response includes `expiresInSeconds: 300` ([API_CONTRACT.md](./API_CONTRACT.md) §6.1). ✅
 
-### Step 3.5 — OTP: `POST /api/v1/auth/verify-otp`
+### Step 3.5 — OTP: `POST /api/v1/auth/verify-otp` ✅
 
 - Validate body; load pending OTP by phone; check expiry and **≤ 5** failed attempts ([ADR 0002](./adr/0002-otp-policy.md)).
 - On success:
@@ -112,7 +112,9 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 - Issue **JWT** (`sub` = user id, standard claims, expiry aligned with `expiresInSeconds` in response).
 - Mark OTP consumed; **repeat verify** on consumed OTP → **400**, no double user creation ([ADR 0003](./adr/0003-account-creation-and-auth-flow.md)).
 
-**Done when:** response matches [API_CONTRACT.md](./API_CONTRACT.md) §6.2 (`accessToken`, `tokenType`, `expiresInSeconds`, `userId`, `flow`).
+**Implementation:** [`VerifyOtpRequest`](../server/src/main/java/odm/clarity/woleh/auth/dto/VerifyOtpRequest.java) / [`VerifyOtpResponse`](../server/src/main/java/odm/clarity/woleh/auth/dto/VerifyOtpResponse.java); [`VerifyOtpResult`](../server/src/main/java/odm/clarity/woleh/auth/service/VerifyOtpResult.java); [`OtpService.verifyOtp`](../server/src/main/java/odm/clarity/woleh/auth/service/OtpService.java) (attempt tracking, user create/lookup, consumed guard); [`InvalidOtpException`](../server/src/main/java/odm/clarity/woleh/common/error/InvalidOtpException.java) → 400 in `GlobalExceptionHandler`; [`AuthController.verifyOtp`](../server/src/main/java/odm/clarity/woleh/auth/AuthController.java); tests [`VerifyOtpIntegrationTest`](../server/src/test/java/odm/clarity/woleh/auth/VerifyOtpIntegrationTest.java).
+
+**Done when:** response matches [API_CONTRACT.md](./API_CONTRACT.md) §6.2 (`accessToken`, `tokenType`, `expiresInSeconds`, `userId`, `flow`). ✅
 
 ### Step 3.6 — Profile and session: `GET /api/v1/me`
 
@@ -205,5 +207,6 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 | 0.2 | 2026-04-07 | Locked Gradle package `odm.clarity.woleh`, Flutter `odm.clarity.woleh_mobile`, Riverpod codegen |
 | 0.3 | 2026-04-07 | Restored file (was missing from tree); content unchanged from v0.2 |
 | 0.4 | 2026-04-07 | Step 3.4 implemented: send-otp endpoint, OtpService, SmsAdapter, OtpProperties, RateLimitedException |
+| 0.5 | 2026-04-07 | Step 3.5 implemented: verify-otp endpoint, VerifyOtpResult, InvalidOtpException, user create/lookup |
 
 When Phase 0 is complete, update [PRD.md](./PRD.md) or a project README with “Phase 0 complete” and any deviations (e.g. refresh-token policy).

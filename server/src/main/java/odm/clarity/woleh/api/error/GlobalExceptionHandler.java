@@ -1,6 +1,7 @@
 package odm.clarity.woleh.api.error;
 
 import odm.clarity.woleh.api.dto.ApiEnvelope;
+import odm.clarity.woleh.common.error.InvalidOtpException;
 import odm.clarity.woleh.common.error.RateLimitedException;
 
 import org.springframework.http.HttpHeaders;
@@ -51,6 +52,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 			@NonNull WebRequest request) {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(ApiEnvelope.error("Not found", "NOT_FOUND"));
+	}
+
+	@ExceptionHandler(InvalidOtpException.class)
+	ResponseEntity<ApiEnvelope<Void>> handleInvalidOtp(InvalidOtpException ex) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(ApiEnvelope.error(ex.getMessage(), "INVALID_OTP"));
 	}
 
 	@ExceptionHandler(RateLimitedException.class)
