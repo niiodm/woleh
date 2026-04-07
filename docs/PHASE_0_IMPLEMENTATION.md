@@ -9,7 +9,7 @@ This document turns [PRD.md](./PRD.md) §10 **Phase 0 — Foundation** into orde
 | Artifact | Value |
 |----------|--------|
 | **Server (Gradle / JVM)** | Base package **`odm.clarity.woleh`** — Spring Boot main class, Java/Kotlin sources, and tests live under this namespace (e.g. `odm.clarity.woleh.WolehApplication`). |
-| **Flutter (Dart package)** | **`odm.clarity.woleh_mobile`** — `name:` in `pubspec.yaml`; Android `applicationId` / iOS bundle id should align with product conventions (often the same string or `odm.clarity.woleh_mobile` with platform suffixes as required by stores). |
+| **Flutter (Dart package)** | **`odm_clarity_woleh_mobile`** — `name:` in `pubspec.yaml` (Dart allows only `a-z0-9_`). Android **`applicationId`** / iOS bundle id: **`odm.clarity.woleh_mobile`**. |
 | **Riverpod** | **Codegen on** — use `riverpod_annotation` + `riverpod_generator` + `build_runner`; define providers with `@riverpod` / `@Riverpod` and generated `*.g.dart` files. |
 
 ---
