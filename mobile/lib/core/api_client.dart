@@ -7,8 +7,14 @@ import 'auth_state.dart';
 
 part 'api_client.g.dart';
 
-/// Base URL injected at build time via `--dart-define=API_BASE_URL=...`.
-/// Falls back to the Android emulator loopback when not specified.
+// Base URL injected at build time via --dart-define=API_BASE_URL=...
+//
+// Defaults to the Android emulator's loopback alias for the host machine.
+// Physical devices on the same Wi-Fi network need the host's actual LAN IP:
+//
+//   flutter run --dart-define=API_BASE_URL=http://<your-lan-ip>:8080
+//
+// Find your LAN IP on macOS:  ipconfig getifaddr en0
 const _kApiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
   defaultValue: 'http://10.0.2.2:8080',

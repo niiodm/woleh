@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../core/auth_state.dart';
+import '../features/auth/presentation/otp_screen.dart';
 import '../features/auth/presentation/phone_screen.dart';
+import '../features/auth/presentation/setup_name_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 
 part 'router.g.dart';
@@ -20,6 +22,20 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: '/auth/phone',
         builder: (_, __) => const PhoneScreen(),
+      ),
+      GoRoute(
+        path: '/auth/otp',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return OtpScreen(
+            phone: extra['phone'] as String,
+            expiresInSeconds: extra['expiresInSeconds'] as int,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/auth/setup-name',
+        builder: (_, __) => const SetupNameScreen(),
       ),
       GoRoute(
         path: '/home',
@@ -47,10 +63,18 @@ class _RouterNotifier extends ChangeNotifier {
     if (authAsync.isLoading) return null;
 
     final isAuthenticated = authAsync.valueOrNull != null;
-    final onAuthRoute = state.matchedLocation.startsWith('/auth');
+    final location = state.matchedLocation;
 
-    if (!isAuthenticated && !onAuthRoute) return '/auth/phone';
-    if (isAuthenticated && onAuthRoute) return '/home';
+    // Unauthenticated users must stay on auth routes.
+    if (!isAuthenticated && !location.startsWith('/auth')) return '/auth/phone';
+
+    // Authenticated users skip phone/otp entry — but are allowed on
+    // /auth/setup-name (signup name-entry step after first token issuance).
+    if (isAuthenticated &&
+        (location == '/auth/phone' || location == '/auth/otp')) {
+      return '/home';
+    }
+
     return null;
   }
 }

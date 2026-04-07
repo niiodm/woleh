@@ -168,14 +168,16 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 
 **Implementation:** [`app_error.dart`](../mobile/lib/core/app_error.dart) (sealed failure hierarchy: `UnauthorizedError`, `ForbiddenError`, `RateLimitedError`, `ServerError`, `NetworkError`, `UnknownError`); [`auth_token_storage.dart`](../mobile/lib/core/auth_token_storage.dart) (`AuthTokenStorage` + `keepAlive` providers); [`auth_state.dart`](../mobile/lib/core/auth_state.dart) (`AuthState` async notifier — `setToken`/`signOut`); [`api_client.dart`](../mobile/lib/core/api_client.dart) (`ApiClient` wrapping Dio with `_AuthInterceptor` and `_ErrorInterceptor`, `API_BASE_URL` via `--dart-define`); [`router.dart`](../mobile/lib/app/router.dart) (`GoRouter` keepAlive provider + `_RouterNotifier` bridging `authStateProvider` changes to `refreshListenable`; `/auth/phone` → `PhoneScreen`, `/home` → `HomeScreen`); stub screens with fake-token toggle and sign-out; `main.dart` updated to `MaterialApp.router`; widget tests verify both redirect paths.
 
-### Step 4.2 — Auth screens
+### Step 4.2 — Auth screens ✅
 
 - Screen A: enter **phone** (validate E.164 UX for Ghana).
 - Call **`POST .../auth/send-otp`**; show countdown / resend respecting rate limits (surface **429**).
 - Screen B: enter **OTP**; call **`POST .../auth/verify-otp`**; persist **`accessToken`** in secure storage.
 - Branch on **`flow`**: `signup` → optional profile completion (or inline name field); `login` → home.
 
-**Done when:** end-to-end against dev server completes login and signup paths.
+**Implementation:** [`auth_dto.dart`](../mobile/lib/features/auth/data/auth_dto.dart) (`SendOtpResponse`, `VerifyOtpResponse`); [`auth_repository.dart`](../mobile/lib/features/auth/data/auth_repository.dart) (`sendOtp`, `verifyOtp`, keepAlive provider); [`phone_utils.dart`](../mobile/lib/core/phone_utils.dart) (`normalizePhone`, `isValidE164`, Ghana `+233` default); [`phone_notifier.dart`](../mobile/lib/features/auth/presentation/phone_notifier.dart) + [`phone_screen.dart`](../mobile/lib/features/auth/presentation/phone_screen.dart) (E.164 text field, loading/error/429 states, normalizes `0XXXXXXXXX` → `+233...`); [`otp_notifier.dart`](../mobile/lib/features/auth/presentation/otp_notifier.dart) (family by `phoneE164`, countdown `Timer`, resend, verify); [`otp_screen.dart`](../mobile/lib/features/auth/presentation/otp_screen.dart) (6-digit field, live countdown, resend button); [`me_repository.dart`](../mobile/lib/features/me/data/me_repository.dart) (`patchDisplayName`); [`setup_name_screen.dart`](../mobile/lib/features/auth/presentation/setup_name_screen.dart) (`SetupNameNotifier`, save/skip → `/home`); router updated: `/auth/otp` (phone+expiresInSeconds via `extra`), `/auth/setup-name` (allowed when authenticated); redirect allows setup-name for authenticated users.
+
+**Done when:** end-to-end against dev server completes login and signup paths. ✅
 
 ### Step 4.3 — Session and protected UI
 
@@ -223,5 +225,6 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 | 0.8 | 2026-04-07 | Step 3.8 implemented: health details, liveness/readiness probes, HealthIntegrationTest |
 | 0.9 | 2026-04-07 | Step 3.9 implemented: OtpServiceTest unit tests, phase0.http reorganised, http-client.env.json |
 | 1.0 | 2026-04-07 | Step 4.1 implemented: core wiring — ApiClient, AuthTokenStorage, AuthState, GoRouter with auth redirect, stub screens, widget tests |
+| 1.1 | 2026-04-07 | Step 4.2 implemented: auth screens — PhoneScreen, OtpScreen (countdown + resend), SetupNameScreen (signup branch), AuthRepository, MeRepository.patchDisplayName |
 
 When Phase 0 is complete, update [PRD.md](./PRD.md) or a project README with “Phase 0 complete” and any deviations (e.g. refresh-token policy).
