@@ -67,3 +67,23 @@ Authorization: Bearer <token>
 
 ### GET /me — no token (expects 401)
 GET {{baseUrl}}/api/v1/me
+
+### PATCH /me/profile — set display name
+# Replace <token> with the accessToken from verify-otp response
+PATCH {{baseUrl}}/api/v1/me/profile
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "displayName": "Ama Owusu"
+}
+
+### PATCH /me/profile — reject immutable field (expects 400 VALIDATION_ERROR)
+PATCH {{baseUrl}}/api/v1/me/profile
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "displayName": "Ama",
+  "phoneE164": "+233241234567"
+}

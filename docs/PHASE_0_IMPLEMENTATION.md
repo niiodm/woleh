@@ -126,18 +126,22 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 
 **Done when:** mobile can render name + permission list from one call. ✅
 
-### Step 3.7 — `PATCH /api/v1/me/profile`
+### Step 3.7 — `PATCH /api/v1/me/profile` ✅
 
 - Require JWT + permission check for **`woleh.account.profile`** (method security or explicit check).
 - Partial update **`displayName`** (and any other allowed fields); reject immutable fields (e.g. phone) with **400** if sent.
 
-**Done when:** after signup, client can set name and see it on next `GET /me`.
+**Implementation:** [`PatchProfileRequest`](../server/src/main/java/odm/clarity/woleh/api/dto/PatchProfileRequest.java) (`displayName` with size validation; `phoneE164` annotated `@AssertNull` → 400 if supplied); [`MeController.patchProfile`](../server/src/main/java/odm/clarity/woleh/api/MeController.java) (partial update — only writes fields that are non-null in the request; returns full `MeResponse`); tests [`PatchProfileIntegrationTest`](../server/src/test/java/odm/clarity/woleh/api/PatchProfileIntegrationTest.java).
 
-### Step 3.8 — Health
+**Done when:** after signup, client can set name and see it on next `GET /me`. ✅
+
+### Step 3.8 — Health ✅
 
 - Expose **`/actuator/health`** (or documented path) **without** JWT; include DB check if trivial (optional for Phase 0).
 
-**Done when:** orchestrator or `curl` can verify liveness/readiness.
+**Implementation:** `management.endpoint.health.show-details/show-components: always` (override via `HEALTH_SHOW_DETAILS`); liveness/readiness probes enabled at `/actuator/health/liveness` and `/actuator/health/readiness` (`HEALTH_PROBES_ENABLED`); DB component auto-included by Spring Boot Actuator; tests [`HealthIntegrationTest`](../server/src/test/java/odm/clarity/woleh/api/HealthIntegrationTest.java).
+
+**Done when:** orchestrator or `curl` can verify liveness/readiness. ✅
 
 ### Step 3.9 — Tests and API artifacts
 
@@ -211,5 +215,7 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 | 0.4 | 2026-04-07 | Step 3.4 implemented: send-otp endpoint, OtpService, SmsAdapter, OtpProperties, RateLimitedException |
 | 0.5 | 2026-04-07 | Step 3.5 implemented: verify-otp endpoint, VerifyOtpResult, InvalidOtpException, user create/lookup |
 | 0.6 | 2026-04-07 | Step 3.6 implemented: GET /me with full profile + free-tier entitlements, MeResponse, UserNotFoundException |
+| 0.7 | 2026-04-07 | Step 3.7 implemented: PATCH /me/profile with displayName update and immutable-field guard |
+| 0.8 | 2026-04-07 | Step 3.8 implemented: health details, liveness/readiness probes, HealthIntegrationTest |
 
 When Phase 0 is complete, update [PRD.md](./PRD.md) or a project README with “Phase 0 complete” and any deviations (e.g. refresh-token policy).

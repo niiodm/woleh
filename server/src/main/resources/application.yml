@@ -44,6 +44,15 @@ management:
     web:
       exposure:
         include: health,info
+  endpoint:
+    health:
+      # Always show component details (db, diskSpace, etc.) so orchestrators and curl can confirm DB liveness.
+      # Override with HEALTH_SHOW_DETAILS=when-authorized before exposing to the public internet.
+      show-details: ${HEALTH_SHOW_DETAILS:always}
+      show-components: ${HEALTH_SHOW_COMPONENTS:always}
+      probes:
+        # /actuator/health/liveness and /actuator/health/readiness — useful for Kubernetes / Docker health-checks.
+        enabled: ${HEALTH_PROBES_ENABLED:true}
 
 # JWT access tokens (HS256). Override JWT_SECRET in every non-local environment.
 woleh:
