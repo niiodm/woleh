@@ -59,3 +59,11 @@ Content-Type: application/json
   "phoneE164": "{{phone}}",
   "otp": "abc"
 }
+
+### GET /me — authenticated profile + entitlements
+# Replace <token> with the accessToken from verify-otp response
+GET {{baseUrl}}/api/v1/me
+Authorization: Bearer <token>
+
+### GET /me — no token (expects 401)
+GET {{baseUrl}}/api/v1/me

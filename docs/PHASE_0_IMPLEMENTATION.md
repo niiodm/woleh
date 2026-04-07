@@ -116,13 +116,15 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 
 **Done when:** response matches [API_CONTRACT.md](./API_CONTRACT.md) §6.2 (`accessToken`, `tokenType`, `expiresInSeconds`, `userId`, `flow`). ✅
 
-### Step 3.6 — Profile and session: `GET /api/v1/me`
+### Step 3.6 — Profile and session: `GET /api/v1/me` ✅
 
 - Require valid JWT; load user by id from principal.
 - Return **`profile`** (e.g. `userId`, `phoneE164`, `displayName`) plus **entitlements**: `permissions`, `tier`, `limits`, `subscription` stub ([API_CONTRACT.md](./API_CONTRACT.md) §4, §6.3).
 - For Phase 0, **free tier** defaults from [PRD.md](./PRD.md) §13.1 (e.g. `woleh.account.profile`, `woleh.plans.read`, `woleh.place.watch`; watch cap 5; no broadcast permission).
 
-**Done when:** mobile can render name + permission list from one call.
+**Implementation:** [`MeResponse`](../server/src/main/java/odm/clarity/woleh/api/dto/MeResponse.java) (profile, limits, subscription nested records); [`MeController`](../server/src/main/java/odm/clarity/woleh/api/MeController.java) (loads `User` by JWT principal, returns free-tier entitlements); [`UserNotFoundException`](../server/src/main/java/odm/clarity/woleh/common/error/UserNotFoundException.java) → 404 in `GlobalExceptionHandler`; tests [`MeIntegrationTest`](../server/src/test/java/odm/clarity/woleh/api/MeIntegrationTest.java).
+
+**Done when:** mobile can render name + permission list from one call. ✅
 
 ### Step 3.7 — `PATCH /api/v1/me/profile`
 
@@ -208,5 +210,6 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 | 0.3 | 2026-04-07 | Restored file (was missing from tree); content unchanged from v0.2 |
 | 0.4 | 2026-04-07 | Step 3.4 implemented: send-otp endpoint, OtpService, SmsAdapter, OtpProperties, RateLimitedException |
 | 0.5 | 2026-04-07 | Step 3.5 implemented: verify-otp endpoint, VerifyOtpResult, InvalidOtpException, user create/lookup |
+| 0.6 | 2026-04-07 | Step 3.6 implemented: GET /me with full profile + free-tier entitlements, MeResponse, UserNotFoundException |
 
 When Phase 0 is complete, update [PRD.md](./PRD.md) or a project README with “Phase 0 complete” and any deviations (e.g. refresh-token policy).

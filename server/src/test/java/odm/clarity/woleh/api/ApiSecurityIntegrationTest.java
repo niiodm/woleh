@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.Instant;
 
+import odm.clarity.woleh.model.User;
+import odm.clarity.woleh.repository.UserRepository;
 import odm.clarity.woleh.security.JwtService;
 
 import org.junit.jupiter.api.Test;
@@ -14,16 +16,16 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class ApiSecurityIntegrationTest {
 
-	@Autowired
-	private MockMvc mockMvc;
-
-	@Autowired
-	private JwtService jwtService;
+	@Autowired private MockMvc mockMvc;
+	@Autowired private JwtService jwtService;
+	@Autowired private UserRepository userRepository;
 
 	@Test
 	void me_withoutBearer_returns401Json() throws Exception {
@@ -35,11 +37,13 @@ class ApiSecurityIntegrationTest {
 
 	@Test
 	void me_withValidToken_returns200Envelope() throws Exception {
-		String token = jwtService.createAccessToken(42L, Instant.now());
+		User user = userRepository.save(new User("+233241000001"));
+		String token = jwtService.createAccessToken(user.getId(), Instant.now());
+
 		mockMvc.perform(get("/api/v1/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.result").value("SUCCESS"))
-				.andExpect(jsonPath("$.data.userId").value("42"));
+				.andExpect(jsonPath("$.data.profile.userId").value(String.valueOf(user.getId())));
 	}
 
 	@Test
