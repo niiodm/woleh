@@ -42,8 +42,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   }
 
   String? _validateOtp(String? value) {
-    if (value == null || value.trim().isEmpty) return 'Enter the 6-digit code';
-    if (value.trim().length != 6) return 'Code must be 6 digits';
+    if (value == null || value.trim().isEmpty) return 'Verification code is required';
+    if (value.trim().length != 6) return 'Verification code must be 6 digits';
     return null;
   }
 

@@ -197,10 +197,24 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 
 **Done when:** name changes persist across restart (via re-fetch). ✅
 
-### Step 4.5 — Tests
+### Step 4.5 — Tests ✅
 
 - Widget or golden tests for auth screens (mock repository).
 - Unit tests for phone validation and redirect logic.
+
+#### Implementation
+
+**Files created:**
+- `test/core/phone_utils_test.dart` — 21 unit tests for `normalizePhone` (local, E.164, spaces/dashes) and `isValidE164` (valid/invalid/round-trip).
+- `test/features/auth/phone_screen_test.dart` — widget tests for `PhoneScreen`: idle layout, loading indicator + disabled button, error banner (429/server error), form validation (empty + invalid).
+- `test/features/auth/otp_screen_test.dart` — widget tests for `OtpScreen`: layout, countdown active, countdown expired (Resend button), verifying/resending/error states, form validation.
+- `test/app/router_redirect_test.dart` — redirect integration tests via `WolehApp`: unauthenticated → phone screen, authenticated → home, `/auth/setup-name` accessible when authenticated, auth-loading smoke test.
+
+**Key decisions:**
+- All stub notifiers override `startCountdown` as a no-op to prevent the `Timer.periodic` from escaping into the test harness.
+- Loading-state tests use `tester.pump()` instead of `tester.pumpAndSettle()` because `CircularProgressIndicator` animates indefinitely.
+- `_AuthLoading` stub uses an uncompleted `Completer` (not `Future.delayed`) to avoid leaving a pending `Timer`.
+- OTP form validation messages changed to `'Verification code is required'` / `'Verification code must be 6 digits'` to avoid collision with the screen heading "Enter the 6-digit code".
 
 ---
 
@@ -232,5 +246,6 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 | 1.1 | 2026-04-07 | Step 4.2 implemented: auth screens — PhoneScreen, OtpScreen (countdown + resend), SetupNameScreen (signup branch), AuthRepository, MeRepository.patchDisplayName |
 | 1.2 | 2026-04-07 | Step 4.3 implemented: MeNotifier (auto-fetch on token load, 401→signOut), MeResponse DTOs, HomeScreen with profile/permissions/limits, pull-to-refresh, widget tests |
 | 1.3 | 2026-04-07 | Step 4.4 implemented: ProfileEditScreen + ProfileEditNotifier, edit icon on HomeScreen AppBar, /me/edit route |
+| 1.4 | 2026-04-07 | Step 4.5 implemented: 51 tests across phone_utils, PhoneScreen, OtpScreen, router redirect; no-op startCountdown stubs, Completer-based auth-loading stub |
 
 When Phase 0 is complete, update [PRD.md](./PRD.md) or a project README with “Phase 0 complete” and any deviations (e.g. refresh-token policy).
