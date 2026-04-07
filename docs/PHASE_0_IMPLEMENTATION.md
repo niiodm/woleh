@@ -87,6 +87,8 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
   - **Permit without auth:** `POST /api/v1/auth/send-otp`, `POST /api/v1/auth/verify-otp`, `GET /api/v1/subscription/plans` (if implemented), **`/actuator/health`** (or `/health` if proxied).
   - **JWT** on `/api/v1/me/**` and other protected routes.
 
+**Implementation:** [`ApiEnvelope`](../server/src/main/java/odm/clarity/woleh/api/dto/ApiEnvelope.java); [`GlobalExceptionHandler`](../server/src/main/java/odm/clarity/woleh/api/error/GlobalExceptionHandler.java); [`JwtService`](../server/src/main/java/odm/clarity/woleh/security/JwtService.java) + [`JwtAuthenticationFilter`](../server/src/main/java/odm/clarity/woleh/security/JwtAuthenticationFilter.java); [`SecurityConfig`](../server/src/main/java/odm/clarity/woleh/config/SecurityConfig.java) (stateless JWT, JSON 401/403, CORS via `woleh.cors.allowed-origin-patterns` / `CORS_ALLOWED_ORIGIN_PATTERNS`); `spring.mvc.throw-exception-if-no-handler-found` + minimal placeholder [`MeController`](../server/src/main/java/odm/clarity/woleh/api/MeController.java); tests [`ApiSecurityIntegrationTest`](../server/src/test/java/odm/clarity/woleh/api/ApiSecurityIntegrationTest.java).
+
 **Done when:** 401 for missing/invalid JWT on protected routes; 404 routes return consistent JSON errors.
 
 ### Step 3.4 — OTP: `POST /api/v1/auth/send-otp`

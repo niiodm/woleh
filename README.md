@@ -18,8 +18,9 @@ Mono-repo for the **Woleh** transit app: Flutter client and Spring Boot API.
 | `JWT_SECRET` | **Required in production** — HS256 signing key (use a long random value). |
 | `JWT_ISSUER` | Optional (default `woleh`). |
 | `JWT_ACCESS_TOKEN_TTL` | Optional ISO-8601 duration (default `PT24H`). |
+| `CORS_ALLOWED_ORIGIN_PATTERNS` | Comma-separated patterns for browser clients (default local `http://localhost:*`, `http://127.0.0.1:*`). |
 
-See `server/src/main/resources/application.yml` (`woleh.jwt.*`).
+See `server/src/main/resources/application.yml` (`woleh.jwt.*`, `woleh.cors.*`).
 
 ## Continuous integration
 
