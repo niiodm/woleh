@@ -18,6 +18,11 @@ spring:
   flyway:
     enabled: false
 
+woleh:
+  otp:
+    # Log plaintext OTP to the console in dev — NEVER enable in production.
+    dev-log-otp: true
+
 logging:
   level:
     org.hibernate.SQL: DEBUG

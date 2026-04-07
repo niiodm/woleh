@@ -1,6 +1,7 @@
 package odm.clarity.woleh.api.error;
 
 import odm.clarity.woleh.api.dto.ApiEnvelope;
+import odm.clarity.woleh.common.error.RateLimitedException;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -50,6 +51,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 			@NonNull WebRequest request) {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(ApiEnvelope.error("Not found", "NOT_FOUND"));
+	}
+
+	@ExceptionHandler(RateLimitedException.class)
+	ResponseEntity<ApiEnvelope<Void>> handleRateLimited(RateLimitedException ex) {
+		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+				.body(ApiEnvelope.error(ex.getMessage(), "RATE_LIMITED"));
 	}
 
 	@ExceptionHandler(Exception.class)

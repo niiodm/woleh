@@ -8,10 +8,26 @@
 GET {{baseUrl}}/actuator/health
 Accept: application/json
 
-### Send OTP (stub until implemented)
-# POST {{baseUrl}}/api/v1/auth/send-otp
-# Content-Type: application/json
-#
-# {
-#   "phoneE164": "{{phone}}"
-# }
+### Send OTP — happy path
+POST {{baseUrl}}/api/v1/auth/send-otp
+Content-Type: application/json
+
+{
+  "phoneE164": "{{phone}}"
+}
+
+### Send OTP — invalid number (expects 400)
+POST {{baseUrl}}/api/v1/auth/send-otp
+Content-Type: application/json
+
+{
+  "phoneE164": "07911123456"
+}
+
+### Send OTP — rate limit smoke (run 4× same number, 4th expects 429)
+POST {{baseUrl}}/api/v1/auth/send-otp
+Content-Type: application/json
+
+{
+  "phoneE164": "{{phone}}"
+}

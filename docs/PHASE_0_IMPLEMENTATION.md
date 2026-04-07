@@ -91,7 +91,7 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 
 **Done when:** 401 for missing/invalid JWT on protected routes; 404 routes return consistent JSON errors.
 
-### Step 3.4 — OTP: `POST /api/v1/auth/send-otp`
+### Step 3.4 — OTP: `POST /api/v1/auth/send-otp` ✅
 
 - Validate **`phoneE164`** (E.164; Ghana-focused `+233` in product copy, but accept valid E.164).
 - Generate 6-digit OTP; hash and store with TTL **5 minutes** ([ADR 0002](./adr/0002-otp-policy.md)).
@@ -99,7 +99,9 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 - **Dev:** log OTP to console or return in a dev-only header **only** behind a flag (never in production).
 - **Prod:** integrate SMS adapter behind an interface (stub implementation acceptable for Phase 0 if you only run in dev).
 
-**Done when:** contract response includes `expiresInSeconds: 300` ([API_CONTRACT.md](./API_CONTRACT.md) §6.1).
+**Implementation:** [`SendOtpRequest`](../server/src/main/java/odm/clarity/woleh/auth/dto/SendOtpRequest.java) / [`SendOtpResponse`](../server/src/main/java/odm/clarity/woleh/auth/dto/SendOtpResponse.java); [`OtpService`](../server/src/main/java/odm/clarity/woleh/auth/service/OtpService.java) (generate, BCrypt-hash, persist, `woleh.otp.dev-log-otp` flag); [`AuthController`](../server/src/main/java/odm/clarity/woleh/auth/AuthController.java); [`SmsAdapter`](../server/src/main/java/odm/clarity/woleh/sms/SmsAdapter.java) + [`StubSmsAdapter`](../server/src/main/java/odm/clarity/woleh/sms/StubSmsAdapter.java); [`OtpProperties`](../server/src/main/java/odm/clarity/woleh/config/OtpProperties.java) (`woleh.otp.*`); [`RateLimitedException`](../server/src/main/java/odm/clarity/woleh/common/error/RateLimitedException.java) → 429 in `GlobalExceptionHandler`; tests [`SendOtpIntegrationTest`](../server/src/test/java/odm/clarity/woleh/auth/SendOtpIntegrationTest.java).
+
+**Done when:** contract response includes `expiresInSeconds: 300` ([API_CONTRACT.md](./API_CONTRACT.md) §6.1). ✅
 
 ### Step 3.5 — OTP: `POST /api/v1/auth/verify-otp`
 
@@ -202,5 +204,6 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 | 0.1 | 2026-04-07 | Initial Phase 0 codable breakdown |
 | 0.2 | 2026-04-07 | Locked Gradle package `odm.clarity.woleh`, Flutter `odm.clarity.woleh_mobile`, Riverpod codegen |
 | 0.3 | 2026-04-07 | Restored file (was missing from tree); content unchanged from v0.2 |
+| 0.4 | 2026-04-07 | Step 3.4 implemented: send-otp endpoint, OtpService, SmsAdapter, OtpProperties, RateLimitedException |
 
 When Phase 0 is complete, update [PRD.md](./PRD.md) or a project README with “Phase 0 complete” and any deviations (e.g. refresh-token policy).

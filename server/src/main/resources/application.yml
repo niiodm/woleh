@@ -53,3 +53,9 @@ woleh:
     secret: ${JWT_SECRET:dev-only-do-not-use-in-production-0123456789abcdef0123456789abcdef}
   cors:
     allowed-origin-patterns: ${CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*}
+  # OTP policy (ADR 0002). dev-log-otp must stay false in production.
+  otp:
+    ttl: ${OTP_TTL:PT5M}
+    rate-limit-window: ${OTP_RATE_LIMIT_WINDOW:PT1H}
+    rate-limit-max-sends: ${OTP_RATE_LIMIT_MAX_SENDS:3}
+    dev-log-otp: false
