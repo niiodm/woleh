@@ -75,6 +75,8 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 - **OTP storage** (table or dedicated store): link to pending verification by `phone_e164`, **hashed** OTP ([ADR 0002](./adr/0002-otp-policy.md)), `expires_at`, `attempt_count`, consumed flag.
 - No subscription/billing tables required for Phase 0 if **`GET /me`** computes **free-tier** entitlements in code (permissions + limits per [API_CONTRACT.md](./API_CONTRACT.md) §4).
 
+**Implementation:** Flyway **`V2__users_and_otp_challenges.sql`** (`users`, `otp_challenges`); JPA entities [`User`](../server/src/main/java/odm/clarity/woleh/model/User.java), [`OtpChallenge`](../server/src/main/java/odm/clarity/woleh/model/OtpChallenge.java); [`UserRepository`](../server/src/main/java/odm/clarity/woleh/repository/UserRepository.java), [`OtpChallengeRepository`](../server/src/main/java/odm/clarity/woleh/repository/OtpChallengeRepository.java). User rows are created only in verify-otp success path (step 3.5).
+
 **Done when:** entities map to tables; user created **only after successful OTP verify** ([ADR 0003](./adr/0003-account-creation-and-auth-flow.md)).
 
 ### Step 3.3 — Global API behavior
