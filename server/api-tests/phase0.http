@@ -1,12 +1,37 @@
-### Phase 0 — manual checks (REST Client / IntelliJ HTTP)
-# Environment: select `dev` in http-client.env.json; start server with Postgres or `--spring.profiles.active=dev`.
+### Phase 0 — manual QA collection
+# Covers the full happy-path flow: health → send-otp → verify-otp → GET /me → PATCH profile.
+#
+# IntelliJ HTTP Client: select the "dev" environment from http-client.env.json.
+# VS Code REST Client: set @baseUrl and @phone manually below.
+#
+# How to run the happy path end-to-end:
+#   1. Start server: cd server && ./gradlew bootRun  (or --spring.profiles.active=dev for H2)
+#   2. Run "Health" — expect UP.
+#   3. Run "Send OTP".  Copy the OTP from the console [DEV] log (woleh.otp.dev-log-otp=true in dev profile).
+#   4. Run "Verify OTP" with the copied OTP.  Copy accessToken from the response.
+#   5. Paste the token into @token below, then run "GET /me" and "PATCH /me/profile".
 
-@baseUrl = http://localhost:8080
-@phone = +233241234567
+@baseUrl = {{baseUrl}}
+@phone   = {{phone}}
+@token   = PASTE_ACCESS_TOKEN_HERE
 
-### Health (no auth)
+###############################################################################
+# 0. Health
+###############################################################################
+
+### Health — liveness (no auth required)
 GET {{baseUrl}}/actuator/health
 Accept: application/json
+
+### Health — liveness probe
+GET {{baseUrl}}/actuator/health/liveness
+
+### Health — readiness probe
+GET {{baseUrl}}/actuator/health/readiness
+
+###############################################################################
+# 1. Authentication — send OTP
+###############################################################################
 
 ### Send OTP — happy path
 POST {{baseUrl}}/api/v1/auth/send-otp
@@ -16,7 +41,7 @@ Content-Type: application/json
   "phoneE164": "{{phone}}"
 }
 
-### Send OTP — invalid number (expects 400)
+### Send OTP — invalid number (expects 400 VALIDATION_ERROR)
 POST {{baseUrl}}/api/v1/auth/send-otp
 Content-Type: application/json
 
@@ -24,7 +49,7 @@ Content-Type: application/json
   "phoneE164": "07911123456"
 }
 
-### Send OTP — rate limit smoke (run 4× same number, 4th expects 429)
+### Send OTP — rate limit smoke (run this request 4× for the same number; 4th should return 429 RATE_LIMITED)
 POST {{baseUrl}}/api/v1/auth/send-otp
 Content-Type: application/json
 
@@ -32,8 +57,11 @@ Content-Type: application/json
   "phoneE164": "{{phone}}"
 }
 
-### Verify OTP — happy path (use OTP from dev console log)
-# Replace 123456 with the OTP printed by [DEV] log when dev-log-otp=true
+###############################################################################
+# 2. Authentication — verify OTP  (replace 123456 with OTP from [DEV] console log)
+###############################################################################
+
+### Verify OTP — happy path → copy accessToken from response into @token above
 POST {{baseUrl}}/api/v1/auth/verify-otp
 Content-Type: application/json
 
@@ -60,27 +88,37 @@ Content-Type: application/json
   "otp": "abc"
 }
 
-### GET /me — authenticated profile + entitlements
-# Replace <token> with the accessToken from verify-otp response
-GET {{baseUrl}}/api/v1/me
-Authorization: Bearer <token>
+###############################################################################
+# 3. Profile — GET /me
+###############################################################################
 
-### GET /me — no token (expects 401)
+### GET /me — authenticated (expects profile + free-tier entitlements)
 GET {{baseUrl}}/api/v1/me
+Authorization: Bearer {{token}}
+
+### GET /me — no token (expects 401 UNAUTHORIZED)
+GET {{baseUrl}}/api/v1/me
+
+###############################################################################
+# 4. Profile — PATCH /me/profile
+###############################################################################
 
 ### PATCH /me/profile — set display name
-# Replace <token> with the accessToken from verify-otp response
 PATCH {{baseUrl}}/api/v1/me/profile
-Authorization: Bearer <token>
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
   "displayName": "Ama Owusu"
 }
 
+### PATCH /me/profile — confirm name persisted (re-run GET /me)
+GET {{baseUrl}}/api/v1/me
+Authorization: Bearer {{token}}
+
 ### PATCH /me/profile — reject immutable field (expects 400 VALIDATION_ERROR)
 PATCH {{baseUrl}}/api/v1/me/profile
-Authorization: Bearer <token>
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {

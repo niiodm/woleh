@@ -143,13 +143,15 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 
 **Done when:** orchestrator or `curl` can verify liveness/readiness. ✅
 
-### Step 3.9 — Tests and API artifacts
+### Step 3.9 — Tests and API artifacts ✅
 
 - Unit tests: OTP hashing, verify attempt limits, `flow` branching.
 - Integration tests: `@WebMvcTest` or `@SpringBootTest` with test DB for auth + `/me` (minimal).
 - **`server/api-tests/*.http`**: send-otp → verify-otp → GET me → PATCH profile.
 
-**Done when:** CI runs these tests successfully.
+**Implementation:** [`OtpServiceTest`](../server/src/test/java/odm/clarity/woleh/auth/service/OtpServiceTest.java) — 15 Mockito unit tests covering OTP format (6 digits), BCrypt hash storage, TTL, SMS dispatch, rate-limit guard, expiry/exhaustion/wrong-OTP/consumed paths, signup vs login flow branching, user creation idempotency; [`phase0.http`](../server/api-tests/phase0.http) reorganised into four numbered sections (health → send-otp → verify-otp → GET /me → PATCH profile) with `@token` variable; [`http-client.env.json`](../server/api-tests/http-client.env.json) added for IntelliJ HTTP Client `dev`/`staging` environments.
+
+**Done when:** CI runs these tests successfully. ✅
 
 ---
 
@@ -217,5 +219,6 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 | 0.6 | 2026-04-07 | Step 3.6 implemented: GET /me with full profile + free-tier entitlements, MeResponse, UserNotFoundException |
 | 0.7 | 2026-04-07 | Step 3.7 implemented: PATCH /me/profile with displayName update and immutable-field guard |
 | 0.8 | 2026-04-07 | Step 3.8 implemented: health details, liveness/readiness probes, HealthIntegrationTest |
+| 0.9 | 2026-04-07 | Step 3.9 implemented: OtpServiceTest unit tests, phase0.http reorganised, http-client.env.json |
 
 When Phase 0 is complete, update [PRD.md](./PRD.md) or a project README with “Phase 0 complete” and any deviations (e.g. refresh-token policy).
