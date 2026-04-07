@@ -5,8 +5,8 @@
 | **Product** | Woleh |
 | **Document type** | PRD (living document) |
 | **Status** | Draft — requirements evolve with discovery |
-| **Last updated** | 2026-04-06 (v0.9 Ghana, WebView payment, ADRs) |
-| **Related** | [Architecture](./ARCHITECTURE.md), [API contract](./API_CONTRACT.md), [ADRs](./adr/README.md), [bus_finder learnings](./bus_finder-architecture-learnings.md) |
+| **Last updated** | 2026-04-07 (v0.10 Phase 0 implementation doc) |
+| **Related** | [Architecture](./ARCHITECTURE.md), [API contract](./API_CONTRACT.md), [Phase 0 implementation](./PHASE_0_IMPLEMENTATION.md), [ADRs](./adr/README.md), [bus_finder learnings](./bus_finder-architecture-learnings.md) |
 
 ---
 
@@ -206,7 +206,7 @@ Metrics should be **instrumented** after baseline; initial candidates:
 
 | Phase | Focus | Exit criteria |
 |-------|--------|----------------|
-| **0 — Foundation** | Repo layout, CI, auth, profile, health | User can sign in and see protected content |
+| **0 — Foundation** | Repo layout, CI, auth, profile, health | User can sign in and see protected content ([codable steps](./PHASE_0_IMPLEMENTATION.md)) |
 | **1 — Plans** | Plans API, gating, payment integration | Paid plan unlocks gated features end-to-end |
 | **2 — Core transit journey** | Domain models, REST + WS streams, **transit** mobile UX | Rider/operator place-name flow works in staging |
 | **3 — Hardening** | Rate limits, observability, push (if needed) | SLOs met; runbooks for incidents |
@@ -310,5 +310,6 @@ Exact pricing and plan names are product/marketing; **limits** are the defaults 
 | 0.7 | 2026-04-06 | Linked [API_CONTRACT.md](./API_CONTRACT.md) (REST v1, permission matrix, WebSockets) |
 | 0.8 | 2026-04-06 | Auth: server-driven login vs signup (`flow` on verify-otp); PRD §6.1 aligned |
 | 0.9 | 2026-04-06 | Ghana jurisdiction; WebView + local provider payments; linked [adr](./adr/README.md) |
+| 0.10 | 2026-04-07 | Linked [Phase 0 implementation](./PHASE_0_IMPLEMENTATION.md) codable breakdown |
 
 When requirements change materially, bump version and summarize in this table.
