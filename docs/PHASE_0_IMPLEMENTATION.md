@@ -220,12 +220,12 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 
 ## 5. Definition of done (Phase 0)
 
-- [ ] CI runs server + mobile checks on every push to `main`.
-- [ ] New user: **send-otp** → **verify-otp** (`flow: signup`) → optional **PATCH profile** → **GET /me** shows free-tier entitlements.
-- [ ] Returning user: **verify-otp** returns `flow: login`; **GET /me** works.
-- [ ] Invalid/expired JWT yields **401**; client returns to auth.
-- [ ] Health endpoint responds without auth.
-- [ ] `.http` collection documents the happy path for manual QA.
+- [x] CI runs server + mobile checks on every push to `main`.
+- [x] New user: **send-otp** → **verify-otp** (`flow: signup`) → optional **PATCH profile** → **GET /me** shows free-tier entitlements.
+- [x] Returning user: **verify-otp** returns `flow: login`; **GET /me** works.
+- [x] Invalid/expired JWT yields **401**; client returns to auth.
+- [x] Health endpoint responds without auth.
+- [x] `.http` collection documents the happy path for manual QA.
 
 ---
 
