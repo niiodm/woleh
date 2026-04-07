@@ -157,14 +157,16 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 
 ## 4. Mobile (Flutter)
 
-### Step 4.1 — Core wiring
+### Step 4.1 — Core wiring ✅
 
 - Dependencies: **Riverpod with codegen** (`flutter_riverpod`, `riverpod_annotation`, `riverpod_generator`, `build_runner`), **Dio**, **flutter_secure_storage**, **go_router** ([ARCHITECTURE.md](./ARCHITECTURE.md) §4.1).
 - Prefer **`@riverpod`** / **`@Riverpod`** providers (notifier + async providers as needed); run **`dart run build_runner watch`** during development.
 - **`lib/core/`**: `ApiClient` (base URL from `--dart-define`), interceptor attaching `Authorization: Bearer`, error mapping to typed failures (401/403/429/5xx).
 - **`lib/app/`**: router with **auth redirect**: unauthenticated users only on `/auth/*`; authenticated users skip auth routes.
 
-**Done when:** toggling a “fake token” proves redirects work (before real API).
+**Done when:** toggling a “fake token” proves redirects work (before real API). ✅
+
+**Implementation:** [`app_error.dart`](../mobile/lib/core/app_error.dart) (sealed failure hierarchy: `UnauthorizedError`, `ForbiddenError`, `RateLimitedError`, `ServerError`, `NetworkError`, `UnknownError`); [`auth_token_storage.dart`](../mobile/lib/core/auth_token_storage.dart) (`AuthTokenStorage` + `keepAlive` providers); [`auth_state.dart`](../mobile/lib/core/auth_state.dart) (`AuthState` async notifier — `setToken`/`signOut`); [`api_client.dart`](../mobile/lib/core/api_client.dart) (`ApiClient` wrapping Dio with `_AuthInterceptor` and `_ErrorInterceptor`, `API_BASE_URL` via `--dart-define`); [`router.dart`](../mobile/lib/app/router.dart) (`GoRouter` keepAlive provider + `_RouterNotifier` bridging `authStateProvider` changes to `refreshListenable`; `/auth/phone` → `PhoneScreen`, `/home` → `HomeScreen`); stub screens with fake-token toggle and sign-out; `main.dart` updated to `MaterialApp.router`; widget tests verify both redirect paths.
 
 ### Step 4.2 — Auth screens
 
@@ -220,5 +222,6 @@ Implement behind prefix **`/api/v1`** with the **envelope** from [API_CONTRACT.m
 | 0.7 | 2026-04-07 | Step 3.7 implemented: PATCH /me/profile with displayName update and immutable-field guard |
 | 0.8 | 2026-04-07 | Step 3.8 implemented: health details, liveness/readiness probes, HealthIntegrationTest |
 | 0.9 | 2026-04-07 | Step 3.9 implemented: OtpServiceTest unit tests, phase0.http reorganised, http-client.env.json |
+| 1.0 | 2026-04-07 | Step 4.1 implemented: core wiring — ApiClient, AuthTokenStorage, AuthState, GoRouter with auth redirect, stub screens, widget tests |
 
 When Phase 0 is complete, update [PRD.md](./PRD.md) or a project README with “Phase 0 complete” and any deviations (e.g. refresh-token policy).
