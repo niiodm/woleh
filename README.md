@@ -9,6 +9,11 @@ Mono-repo for the **Woleh** transit app: Flutter client and Spring Boot API.
 | [`server/`](server/) | Spring Boot API — Java **`odm.clarity.woleh`** |
 | [`server/docker-compose.yml`](server/docker-compose.yml) | Local PostgreSQL for development |
 | [`server/api-tests/`](server/api-tests/) | `.http` collections for manual API checks |
+| [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | CI (Gradle + Flutter) on push/PR to `main` |
+
+## Continuous integration
+
+On **push** and **pull request** to **`main`**, [GitHub Actions](.github/workflows/ci.yml) runs **`./gradlew build`** in `server/` and **`dart run build_runner build`**, **`flutter analyze`**, and **`flutter test`** in `mobile/`.
 
 ## Prerequisites
 

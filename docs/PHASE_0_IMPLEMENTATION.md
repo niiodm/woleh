@@ -49,6 +49,8 @@ This document turns [PRD.md](./PRD.md) §10 **Phase 0 — Foundation** into orde
   - Runs **`flutter analyze`** and **`flutter test`** for **mobile**.
 - Cache dependencies (Gradle, Pub) to keep runs fast; run **`build_runner`** in CI when codegen is part of the mobile build (or commit `*.g.dart` per team policy).
 
+**Implementation:** [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) — jobs **Server (Gradle)** and **Mobile (Flutter)** on push/PR to `main`.
+
 **Done when:** CI is green on `main` for the above steps.
 
 ---
