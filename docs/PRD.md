@@ -5,8 +5,8 @@
 | **Product** | Woleh |
 | **Document type** | PRD (living document) |
 | **Status** | Active — Phase 0 complete; Phase 1 planning |
-| **Last updated** | 2026-04-07 (v0.11 Phase 0 complete) |
-| **Related** | [Architecture](./ARCHITECTURE.md), [API contract](./API_CONTRACT.md), [Phase 0 implementation](./PHASE_0_IMPLEMENTATION.md), [ADRs](./adr/README.md), [bus_finder learnings](./bus_finder-architecture-learnings.md) |
+| **Last updated** | 2026-04-07 (v0.12 Phase 1 planning) |
+| **Related** | [Architecture](./ARCHITECTURE.md), [API contract](./API_CONTRACT.md), [Phase 0 implementation](./PHASE_0_IMPLEMENTATION.md), [Phase 1 implementation](./PHASE_1_IMPLEMENTATION.md), [ADRs](./adr/README.md), [bus_finder learnings](./bus_finder-architecture-learnings.md) |
 
 ---
 
@@ -207,7 +207,7 @@ Metrics should be **instrumented** after baseline; initial candidates:
 | Phase | Focus | Exit criteria | Status |
 |-------|--------|----------------|--------|
 | **0 — Foundation** | Repo layout, CI, auth, profile, health | User can sign in and see protected content ([codable steps](./PHASE_0_IMPLEMENTATION.md)) | ✅ Complete (2026-04-07) |
-| **1 — Plans** | Plans API, gating, payment integration | Paid plan unlocks gated features end-to-end | Planned |
+| **1 — Plans** | Plans API, gating, payment integration | Paid plan unlocks gated features end-to-end ([codable steps](./PHASE_1_IMPLEMENTATION.md)) | Planned |
 | **2 — Core transit journey** | Domain models, REST + WS streams, **transit** mobile UX | Rider/operator place-name flow works in staging | Planned |
 | **3 — Hardening** | Rate limits, observability, push (if needed) | SLOs met; runbooks for incidents | Planned |
 
@@ -312,5 +312,6 @@ Exact pricing and plan names are product/marketing; **limits** are the defaults 
 | 0.9 | 2026-04-06 | Ghana jurisdiction; WebView + local provider payments; linked [adr](./adr/README.md) |
 | 0.10 | 2026-04-07 | Linked [Phase 0 implementation](./PHASE_0_IMPLEMENTATION.md) codable breakdown |
 | 0.11 | 2026-04-07 | Phase 0 complete — status updated; phased rollout table gains Status column |
+|| 0.12 | 2026-04-07 | Linked [Phase 1 implementation](./PHASE_1_IMPLEMENTATION.md) codable breakdown; Phase 1 row updated |
 
 When requirements change materially, bump version and summarize in this table.
