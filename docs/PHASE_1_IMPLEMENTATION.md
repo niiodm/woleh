@@ -59,7 +59,7 @@ Seed the v1 **plans** in a separate Flyway migration (data migration):
 
 ---
 
-### Step 2.2 — Permission service (real subscription-backed entitlements)
+### Step 2.2 — Permission service (real subscription-backed entitlements) ✅
 
 Replace the Phase 0 hard-coded free-tier block in `MeController` with a dedicated `EntitlementService`:
 
@@ -319,5 +319,6 @@ Make the broadcast permission gate visible in the app even before Phase 2 builds
 |---------|------|---------|
 | 0.1 | 2026-04-07 | Initial Phase 1 codable breakdown |
 | 0.2 | 2026-04-09 | Step 2.1 implemented: V3/V4 migrations, StringListConverter, SubscriptionStatus/PaymentSessionStatus enums, Plan/Subscription/PaymentSession entities, PlanRepository/SubscriptionRepository/PaymentSessionRepository, PlanRepositoryTest (5 tests) |
+| 0.3 | 2026-04-09 | Step 2.2 implemented: Entitlements record, EntitlementService (free tier / active / grace / expired logic), MeController updated, EntitlementServiceTest (4 unit tests), MeIntegrationTest extended (3 new paid/grace/expired cases) |
 
 When Phase 1 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. actual payment provider chosen, any limits adjusted).

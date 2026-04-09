@@ -5,8 +5,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 
+import odm.clarity.woleh.model.Plan;
+import odm.clarity.woleh.model.Subscription;
+import odm.clarity.woleh.model.SubscriptionStatus;
 import odm.clarity.woleh.model.User;
+import odm.clarity.woleh.repository.PlanRepository;
+import odm.clarity.woleh.repository.SubscriptionRepository;
 import odm.clarity.woleh.repository.UserRepository;
 import odm.clarity.woleh.security.JwtService;
 
@@ -29,6 +36,8 @@ class MeIntegrationTest {
 
 	@Autowired MockMvc mockMvc;
 	@Autowired UserRepository userRepository;
+	@Autowired PlanRepository planRepository;
+	@Autowired SubscriptionRepository subscriptionRepository;
 	@Autowired JwtService jwtService;
 
 	private User user;
@@ -36,6 +45,8 @@ class MeIntegrationTest {
 
 	@BeforeEach
 	void setup() {
+		subscriptionRepository.deleteAll();
+		planRepository.deleteAll();
 		userRepository.deleteAll();
 		user = userRepository.save(new User(PHONE));
 		bearerToken = "Bearer " + jwtService.createAccessToken(user.getId(), Instant.now());
@@ -95,6 +106,70 @@ class MeIntegrationTest {
 	void me_returnsNoSubscription() throws Exception {
 		mockMvc.perform(get(ME_URL).header(HttpHeaders.AUTHORIZATION, bearerToken))
 				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.subscription.status").value("none"))
+				.andExpect(jsonPath("$.data.subscription.inGracePeriod").value(false));
+	}
+
+	// ── paid subscription entitlements ───────────────────────────────────────
+
+	@Test
+	void me_userWithActiveSubscription_returnsPaidTier() throws Exception {
+		Plan plan = planRepository.save(new Plan(
+				"woleh_paid_monthly", "Woleh Pro",
+				List.of("woleh.account.profile", "woleh.plans.read",
+						"woleh.place.watch", "woleh.place.broadcast"),
+				100, "GHS", 999999999, 999999999, true));
+		Instant periodEnd = Instant.now().plus(30, ChronoUnit.DAYS);
+		subscriptionRepository.save(new Subscription(
+				user, plan, SubscriptionStatus.ACTIVE,
+				Instant.now(), periodEnd, periodEnd.plus(7, ChronoUnit.DAYS)));
+
+		mockMvc.perform(get(ME_URL).header(HttpHeaders.AUTHORIZATION, bearerToken))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.tier").value("paid"))
+				.andExpect(jsonPath("$.data.permissions[?(@ == 'woleh.place.broadcast')]").exists())
+				.andExpect(jsonPath("$.data.limits.placeWatchMax").value(999999999))
+				.andExpect(jsonPath("$.data.limits.placeBroadcastMax").value(999999999))
+				.andExpect(jsonPath("$.data.subscription.status").value("active"))
+				.andExpect(jsonPath("$.data.subscription.inGracePeriod").value(false));
+	}
+
+	@Test
+	void me_userInGracePeriod_returnsPaidTierWithGraceFlag() throws Exception {
+		Plan plan = planRepository.save(new Plan(
+				"woleh_paid_monthly", "Woleh Pro",
+				List.of("woleh.account.profile", "woleh.plans.read",
+						"woleh.place.watch", "woleh.place.broadcast"),
+				100, "GHS", 999999999, 999999999, true));
+		Instant periodEnd = Instant.now().minus(2, ChronoUnit.DAYS);
+		Instant graceEnd = Instant.now().plus(5, ChronoUnit.DAYS);
+		subscriptionRepository.save(new Subscription(
+				user, plan, SubscriptionStatus.ACTIVE,
+				periodEnd.minus(30, ChronoUnit.DAYS), periodEnd, graceEnd));
+
+		mockMvc.perform(get(ME_URL).header(HttpHeaders.AUTHORIZATION, bearerToken))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.tier").value("paid"))
+				.andExpect(jsonPath("$.data.subscription.status").value("active"))
+				.andExpect(jsonPath("$.data.subscription.inGracePeriod").value(true));
+	}
+
+	@Test
+	void me_userWithExpiredSubscriptionPastGrace_returnsFreeTier() throws Exception {
+		Plan plan = planRepository.save(new Plan(
+				"woleh_paid_monthly", "Woleh Pro",
+				List.of("woleh.account.profile", "woleh.plans.read",
+						"woleh.place.watch", "woleh.place.broadcast"),
+				100, "GHS", 999999999, 999999999, true));
+		Instant periodEnd = Instant.now().minus(10, ChronoUnit.DAYS);
+		Instant graceEnd = Instant.now().minus(3, ChronoUnit.DAYS);
+		subscriptionRepository.save(new Subscription(
+				user, plan, SubscriptionStatus.ACTIVE,
+				periodEnd.minus(30, ChronoUnit.DAYS), periodEnd, graceEnd));
+
+		mockMvc.perform(get(ME_URL).header(HttpHeaders.AUTHORIZATION, bearerToken))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.tier").value("free"))
 				.andExpect(jsonPath("$.data.subscription.status").value("none"))
 				.andExpect(jsonPath("$.data.subscription.inGracePeriod").value(false));
 	}
