@@ -22,6 +22,12 @@ woleh:
   otp:
     # Log plaintext OTP to the console in dev — NEVER enable in production.
     dev-log-otp: true
+  payment:
+    # Override base-url for dev so the stub checkout link works on physical devices.
+    # The default uses localhost (works for emulators).
+    # For a physical device on the same Wi-Fi, set DEV_HOST to your machine's LAN IP:
+    #   DEV_HOST=172.16.0.100  (then restart the server)
+    base-url: "http://${DEV_HOST:localhost}:8080"
 
 logging:
   level:

@@ -41,3 +41,14 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// Forward DEV_HOST to the Spring Boot process so the stub checkout URL
+// resolves on physical devices.  Two ways to supply the value (first wins):
+//   1. Gradle project property:  ./gradlew bootRun -PdevHost=172.16.0.100
+//   2. Environment variable:     DEV_HOST=172.16.0.100 ./gradlew bootRun
+// Project properties are passed per-build and bypass daemon env-var caching.
+tasks.named('bootRun') {
+	def host = (project.findProperty('devHost') as String)
+			?: (System.getenv('DEV_HOST') ?: 'localhost')
+	environment 'DEV_HOST', host
+}
