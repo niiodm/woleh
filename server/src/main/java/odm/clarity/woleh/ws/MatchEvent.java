@@ -1,10 +1,10 @@
-package odm.clarity.woleh.places;
+package odm.clarity.woleh.ws;
 
 import java.util.List;
 
 /**
  * Data payload for a {@code match} WebSocket event (API_CONTRACT.md §8.1).
- * Serialised as the {@code data} field inside a {@code WsEnvelope}.
+ * Serialised as the {@code data} field inside a {@link WsEnvelope}.
  *
  * <ul>
  *   <li>{@code matchedNames} — normalized place names found in the intersection.</li>

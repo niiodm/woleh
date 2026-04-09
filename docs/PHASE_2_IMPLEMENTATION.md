@@ -154,7 +154,7 @@ Implement the authenticated WebSocket channel per [API_CONTRACT.md](./API_CONTRA
 
 ---
 
-### Step 2.7 — Realtime match dispatch (connect matching to WebSocket)
+### Step 2.7 — Realtime match dispatch (connect matching to WebSocket) ✅
 
 Wire `MatchingService` → `WsSessionRegistry` so match events flow to connected clients:
 
@@ -162,9 +162,9 @@ Wire `MatchingService` → `WsSessionRegistry` so match events flow to connected
 - `MatchingService` (step 2.5) already calls `WsSessionRegistry.sendMatchEvent` — this step ensures the wire-up is live-tested end-to-end.
 - Add an integration test **`MatchDispatchIntegrationTest`**: spin up the server with `@SpringBootTest`; use a test WS client (e.g. `StandardWebSocketClient`) to connect as user A (watcher); have user B PUT a broadcast list that overlaps A's watch list; assert A's WS client receives a `match` message with the correct `matchedNames`.
 
-**Implementation:** `WsSessionRegistry.sendMatchEvent(...)` implementation; `MatchDispatchIntegrationTest` (end-to-end test via embedded server, two test users, two WS sessions, overlapping place lists).
+**Implementation:** [`WsSessionRegistry.sendMatchEvent`](../server/src/main/java/odm/clarity/woleh/ws/WsSessionRegistry.java) implemented (`ObjectMapper` injected; serialize `MatchEvent` into `WsEnvelope<MatchEvent>`; send to session if open; deregister on `IOException`; skip silently if no session); [`MatchEvent`](../server/src/main/java/odm/clarity/woleh/ws/MatchEvent.java) moved from `places/` to `ws/` to avoid circular package dependency; [`MatchDispatchIntegrationTest`](../server/src/test/java/odm/clarity/woleh/ws/MatchDispatchIntegrationTest.java) — 2 end-to-end tests (`RANDOM_PORT`, `TestRestTemplate`, Java 11 `HttpClient` WS API).
 
-**Done when:** end-to-end integration test passes: broadcast PUT → watcher receives WS `match` event.
+**Done when:** end-to-end integration test passes: broadcast PUT → watcher receives WS `match` event. ✅
 
 ---
 
@@ -337,5 +337,6 @@ Surface incoming `match` events to the user:
 | 0.5 | 2026-04-09 | Step 2.4 implemented: `getBroadcastList`/`putBroadcastList` added to `PlaceListService` (validate → reject duplicate normalized names with 400 → limit → upsert → dispatch stub); `GET`+`PUT /broadcast` added to `PlaceListController`; `BroadcastListIntegrationTest` (17 tests — auth, permission guard for free user, 3× duplicate 400, limit, order preserved, round-trip, clear) |
 | 0.6 | 2026-04-09 | Step 2.5 implemented: `MatchEvent` record, `WsSessionRegistry` stub in `ws/`, `userId` read-only FK on `UserPlaceList`, `MatchingService` real intersection logic (`@Transactional(readOnly=true)`, in-memory set intersection, notify both watcher and broadcaster), `MatchingServiceTest` (11 unit tests — empty list short-circuit, disjoint, single match, multiple names, two watchers partial overlap, symmetric watch dispatch) |
 | 0.7 | 2026-04-09 | Step 2.6 implemented: `WsEnvelope<T>` record, `JwtHandshakeInterceptor` (query-param JWT → `JwtService` → `EntitlementService` → 403 on reject), `TransitWebSocketHandler` (register/deregister sessions, ignore inbound), `WsSessionRegistry` updated (`ConcurrentHashMap`, `register`/`deregister`, `sendToAllOpen`), `WsHeartbeatScheduler` (`@Scheduled` 15 s), `WsConfig` (`@EnableWebSocket @EnableScheduling`), `SecurityConfig` updated with `/ws/**` permitAll, `WsAuthIntegrationTest` (5 tests — valid token, missing token, invalid token, expired token, no place permission; all 185 tests green) |
+| 0.8 | 2026-04-09 | Step 2.7 implemented: `MatchEvent` moved to `ws/` package, `WsSessionRegistry.sendMatchEvent` real implementation (`ObjectMapper`, `WsEnvelope<MatchEvent>`, skip-on-no-session, evict-on-IOException), `MatchDispatchIntegrationTest` (2 end-to-end tests — broadcast PUT → watcher notified, watch PUT → broadcaster notified; 187 tests total green) |
 
 When Phase 2 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. normalization library chosen for Dart NFC, in-memory vs DB intersection query, final `match` event field names).
