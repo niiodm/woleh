@@ -118,7 +118,7 @@ public interface PaymentProviderAdapter {
 
 ---
 
-### Step 2.5 — `POST /api/v1/subscription/checkout`
+### Step 2.5 — `POST /api/v1/subscription/checkout` ✅
 
 Implement per [API_CONTRACT.md](./API_CONTRACT.md) §6.6:
 
@@ -322,5 +322,6 @@ Make the broadcast permission gate visible in the app even before Phase 2 builds
 | 0.3 | 2026-04-09 | Step 2.2 implemented: Entitlements record, EntitlementService (free tier / active / grace / expired logic), MeController updated, EntitlementServiceTest (4 unit tests), MeIntegrationTest extended (3 new paid/grace/expired cases) |
 | 0.4 | 2026-04-09 | Step 2.3 implemented: PlanResponse DTO, PlanService, SubscriptionController (GET /plans), PlansIntegrationTest (6 tests — unauthenticated access, shape, ordering, inactive exclusion) |
 | 0.5 | 2026-04-09 | Step 2.4 implemented: PaymentProviderAdapter interface, CheckoutSession/WebhookEvent records, StubPaymentProviderAdapter (@Profile !prod), PaymentProviderProperties, PaymentException + GlobalExceptionHandler handler, StubPaymentProviderAdapterTest (8 unit tests) |
+| 0.6 | 2026-04-09 | Step 2.5 implemented: CheckoutRequest/CheckoutResponse DTOs, SubscriptionService (initiateCheckout with permission check, free-plan guard, idempotency), SubscriptionController updated, CheckoutIntegrationTest (6 tests — 401 no-auth, 400 missing/unknown/free plan, 200 happy path, idempotency) |
 
 When Phase 1 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. actual payment provider chosen, any limits adjusted).
