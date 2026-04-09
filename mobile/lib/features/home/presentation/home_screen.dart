@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth_state.dart';
+import '../../../shared/permission_gated_button.dart';
 import '../../me/data/me_dto.dart';
 import '../../me/presentation/me_notifier.dart';
+import '../../subscription/presentation/subscription_status_card.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -91,6 +93,8 @@ class _MeView extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 _TierChip(tier: me.tier),
+                const SizedBox(height: 8),
+                SubscriptionStatusCard(me: me),
               ],
             ),
           ),
@@ -127,6 +131,22 @@ class _MeView extends StatelessWidget {
             icon: Icons.radio_outlined,
             label: 'Broadcast places',
             value: me.limits.placeBroadcastMax,
+          ),
+
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+
+          // Actions
+          Text('Actions', style: textTheme.titleMedium),
+          const SizedBox(height: 12),
+          PermissionGatedButton(
+            icon: Icons.radio_outlined,
+            label: 'Broadcast your route',
+            hasPermission:
+                me.permissions.contains('woleh.place.broadcast'),
+            onTap: () => context.push('/broadcast'),
+            onLockedTap: () => context.push('/plans'),
           ),
         ],
       ),

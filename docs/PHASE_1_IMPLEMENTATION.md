@@ -198,7 +198,7 @@ Add a **`dev`-only** endpoint that simulates a payment-provider redirect, enabli
 
 ## 3. Mobile (Flutter)
 
-### Step 3.1 — Permission provider + router gates
+### Step 3.1 — Permission provider + router gates ✅
 
 Build the permission infrastructure that Phase 1 gating depends on:
 
@@ -213,7 +213,7 @@ Build the permission infrastructure that Phase 1 gating depends on:
 
 ---
 
-### Step 3.2 — Plans screen
+### Step 3.2 — Plans screen ✅
 
 Display the plan catalog fetched from `GET /api/v1/subscription/plans`:
 
@@ -231,7 +231,7 @@ Display the plan catalog fetched from `GET /api/v1/subscription/plans`:
 
 ---
 
-### Step 3.3 — Checkout WebView flow
+### Step 3.3 — Checkout WebView flow ✅
 
 Handle the full checkout lifecycle per [ADR 0005](./adr/0005-payment-checkout-webview.md):
 
@@ -252,7 +252,7 @@ Handle the full checkout lifecycle per [ADR 0005](./adr/0005-payment-checkout-we
 
 ---
 
-### Step 3.4 — Subscription status on home / profile
+### Step 3.4 — Subscription status on home / profile ✅
 
 Surface subscription state to the user after they return from checkout or on every app open:
 
@@ -267,7 +267,7 @@ Surface subscription state to the user after they return from checkout or on eve
 
 ---
 
-### Step 3.5 — Conditional UI for broadcast gate
+### Step 3.5 — Conditional UI for broadcast gate ✅
 
 Make the broadcast permission gate visible in the app even before Phase 2 builds the actual broadcast feature:
 
@@ -282,7 +282,7 @@ Make the broadcast permission gate visible in the app even before Phase 2 builds
 
 ---
 
-### Step 3.6 — Tests
+### Step 3.6 — Tests ✅
 
 - Widget tests for `PlansScreen`: stub notifier, verify card rendering, price formatting, current-plan highlight.
 - Widget tests for `CheckoutWebViewScreen`: loading state, error state, stub deep-link interception.
@@ -297,19 +297,19 @@ Make the broadcast permission gate visible in the app even before Phase 2 builds
 
 ## 4. Definition of done (Phase 1)
 
-- [ ] `GET /api/v1/subscription/plans` returns seeded free + paid plans; no auth required.
-- [ ] `GET /me` reflects real subscription state; free tier by default; paid tier after confirmed webhook.
-- [ ] Grace period: subscription past `currentPeriodEnd` but within 7 days keeps paid permissions; after 7 days reverts to free.
-- [ ] `POST /api/v1/subscription/checkout` returns a valid (stub) `checkoutUrl`; 403 without auth/permission.
-- [ ] Dev checkout stub simulates success/failure and activates/rejects the subscription.
-- [ ] Webhook confirms payment → subscription activated → next `GET /me` returns `tier: paid` + `woleh.place.broadcast`.
-- [ ] `GET /api/v1/subscription/status` returns subscription details for authenticated users.
-- [ ] Mobile Plans screen renders both plans; current plan is highlighted.
-- [ ] Tapping "Subscribe" opens the WebView; stub flow completes; home screen updates to paid tier without manual app restart.
-- [ ] Broadcast route is gated: free users are redirected to Plans; paid users are allowed through.
-- [ ] Grace-period banner is shown when `inGracePeriod: true`.
-- [ ] CI passes: server + mobile tests green.
-- [ ] `server/api-tests/phase1.http` documents the plans → checkout → activation flow.
+- [x] `GET /api/v1/subscription/plans` returns seeded free + paid plans; no auth required.
+- [x] `GET /me` reflects real subscription state; free tier by default; paid tier after confirmed webhook.
+- [x] Grace period: subscription past `currentPeriodEnd` but within 7 days keeps paid permissions; after 7 days reverts to free.
+- [x] `POST /api/v1/subscription/checkout` returns a valid (stub) `checkoutUrl`; 403 without auth/permission.
+- [x] Dev checkout stub simulates success/failure and activates/rejects the subscription.
+- [x] Webhook confirms payment → subscription activated → next `GET /me` returns `tier: paid` + `woleh.place.broadcast`.
+- [x] `GET /api/v1/subscription/status` returns subscription details for authenticated users.
+- [x] Mobile Plans screen renders both plans; current plan is highlighted.
+- [x] Tapping "Subscribe" opens the WebView; stub flow completes; home screen updates to paid tier without manual app restart.
+- [x] Broadcast route is gated: free users are redirected to Plans; paid users are allowed through.
+- [x] Grace-period banner is shown when `inGracePeriod: true`.
+- [x] CI passes: server + mobile tests green.
+- [x] `server/api-tests/phase1.http` documents the plans → checkout → activation flow.
 
 ---
 
@@ -327,8 +327,10 @@ Make the broadcast permission gate visible in the app even before Phase 2 builds
 | 0.8 | 2026-04-09 | Step 2.7 implemented: SubscriptionStatusResponse DTO, SubscriptionController GET /subscription/status, SubscriptionStatusIntegrationTest (4 tests — 401, free tier shape, paid tier shape, grace period flag) |
 | 0.9 | 2026-04-09 | Step 2.8 implemented: DevController (@Profile !prod) with GET /api/v1/dev/checkout-stub (HTML page + success/failure redirect to woleh:// deep link), SecurityConfig permits GET /api/v1/dev/**, DevCheckoutStubTest (7 tests — HTML page, success redirect, subscription activated, failure redirect, unknown session 400, invalid result 400, full loop end-to-end) |
 | 1.0 | 2026-04-09 | Step 2.9 implemented: server/api-tests/phase1.http (6 sections: plans, checkout with IntelliJ response-handler variable capture, dev stub, /me verification, /subscription/status, webhook), http-client.env.json updated with planId in dev + staging environments |
-| 1.3 | 2026-04-09 | Step 3.3 implemented: CheckoutResponse DTO (checkout_dto.dart), SubscriptionRepository.startCheckout() (subscription_repository.dart, keepAlive), CheckoutState sealed class (Idle/Loading/WebViewOpen/Polling/Success/Failed), CheckoutNotifier (state machine with startCheckout/onPaymentResult/onWebViewClosed/reset), CheckoutWebViewScreen (ConsumerStatefulWidget, lazy WebViewController, NavigationDelegate woleh:// interception, polling fallback on WebView close, SnackBar + /home on success, retry on failure), router /checkout/:planId, Android intent-filter + iOS CFBundleURLSchemes for woleh://, webview_flutter 4.13.1 dependency; checkout_notifier_test (10 unit tests) + checkout_webview_screen_test (7 widget tests — loading/error states, navigation) |
-| 1.2 | 2026-04-09 | Step 3.2 implemented: PlanPrice/PlanLimits/PlanDto DTOs (plans_dto.dart), PlansRepository (keepAlive, getPlans()), PlansNotifier (keepAlive AsyncNotifier), PlansScreen (full: plan cards with price formatting, permission labels, limits, current-plan highlight, Subscribe/Current plan CTA), Plans icon button added to HomeScreen AppBar, /checkout/:planId route stub in router, plans_screen_test.dart (9 widget tests: card layout, price formatting, current-plan highlight for free+paid user, Subscribe CTA enabled, error state with retry) |
 | 1.1 | 2026-04-09 | Step 3.1 implemented: permissionsProvider + hasPermissionProvider (lib/core/permission_provider.dart, keepAlive, derived from meNotifierProvider), PlansScreen placeholder, BroadcastPlaceholderScreen placeholder, router updated with /plans + /broadcast routes and _permissionGuards map, _RouterNotifier listens to meNotifierProvider for reactive permission refresh, router_redirect_test.dart extended with 3 new permission-gate tests (free user redirected from /broadcast to /plans, paid user allowed through, /plans accessible to all authenticated users) |
+| 1.2 | 2026-04-09 | Step 3.2 implemented: PlanPrice/PlanLimits/PlanDto DTOs (plans_dto.dart), PlansRepository (keepAlive, getPlans()), PlansNotifier (keepAlive AsyncNotifier), PlansScreen (full: plan cards with price formatting, permission labels, limits, current-plan highlight, Subscribe/Current plan CTA), Plans icon button added to HomeScreen AppBar, /checkout/:planId route stub in router, plans_screen_test.dart (9 widget tests: card layout, price formatting, current-plan highlight for free+paid user, Subscribe CTA enabled, error state with retry) |
+| 1.3 | 2026-04-09 | Step 3.3 implemented: CheckoutResponse DTO (checkout_dto.dart), SubscriptionRepository.startCheckout() (subscription_repository.dart, keepAlive), CheckoutState sealed class (Idle/Loading/WebViewOpen/Polling/Success/Failed), CheckoutNotifier (state machine with startCheckout/onPaymentResult/onWebViewClosed/reset), CheckoutWebViewScreen (ConsumerStatefulWidget, lazy WebViewController, NavigationDelegate woleh:// interception, polling fallback on WebView close, SnackBar + /home on success, retry on failure), router /checkout/:planId, Android intent-filter + iOS CFBundleURLSchemes for woleh://, webview_flutter 4.13.1 dependency; checkout_notifier_test (10 unit tests) + checkout_webview_screen_test (7 widget tests — loading/error states, navigation) |
+| 1.4 | 2026-04-09 | Step 3.4 implemented: SubscriptionStatusCard widget (subscription_status_card.dart) with three states — paid/active (“Renews D Mon YYYY” row), grace period (warning banner with days remaining + “View plans” CTA), free (“Free plan · Upgrade →” link); _formatDate helper (no intl dependency); _graceDaysRemaining from currentPeriodEnd + 7 days; inserted below tier chip in home_screen.dart; subscription_status_card_test.dart (8 widget tests: paid date format, free link text + navigation, grace heading + days message + navigation) |
+| 1.5 | 2026-04-09 | Step 3.5 implemented: PermissionGatedButton reusable widget (mobile/lib/shared/permission_gated_button.dart) — unlocked variant shows active card with primary-colour icon and forward arrow; locked variant shows greyed-out card with padlock badge overlay and configurable lockedMessage subtitle (default “Upgrade to unlock”); “Actions” section added to home_screen.dart with “Broadcast your route” entry driven by woleh.place.broadcast permission; permission_gated_button_test.dart (10 widget tests: locked/unlocked icon presence, callback routing, custom lockedMessage); all 98 mobile tests passing. Steps 3.1–3.6 and all Phase 1 mobile work complete. |
 
 When Phase 1 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. actual payment provider chosen, any limits adjusted).
