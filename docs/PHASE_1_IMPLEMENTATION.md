@@ -89,7 +89,7 @@ Implement the public plan catalog endpoint per [API_CONTRACT.md](./API_CONTRACT.
 
 ---
 
-### Step 2.4 — Payment provider adapter interface
+### Step 2.4 — Payment provider adapter interface ✅
 
 Define a provider-agnostic interface behind which any Ghana-local provider (Paystack, Hubtel, etc.) can be plugged:
 
@@ -321,5 +321,6 @@ Make the broadcast permission gate visible in the app even before Phase 2 builds
 | 0.2 | 2026-04-09 | Step 2.1 implemented: V3/V4 migrations, StringListConverter, SubscriptionStatus/PaymentSessionStatus enums, Plan/Subscription/PaymentSession entities, PlanRepository/SubscriptionRepository/PaymentSessionRepository, PlanRepositoryTest (5 tests) |
 | 0.3 | 2026-04-09 | Step 2.2 implemented: Entitlements record, EntitlementService (free tier / active / grace / expired logic), MeController updated, EntitlementServiceTest (4 unit tests), MeIntegrationTest extended (3 new paid/grace/expired cases) |
 | 0.4 | 2026-04-09 | Step 2.3 implemented: PlanResponse DTO, PlanService, SubscriptionController (GET /plans), PlansIntegrationTest (6 tests — unauthenticated access, shape, ordering, inactive exclusion) |
+| 0.5 | 2026-04-09 | Step 2.4 implemented: PaymentProviderAdapter interface, CheckoutSession/WebhookEvent records, StubPaymentProviderAdapter (@Profile !prod), PaymentProviderProperties, PaymentException + GlobalExceptionHandler handler, StubPaymentProviderAdapterTest (8 unit tests) |
 
 When Phase 1 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. actual payment provider chosen, any limits adjusted).

@@ -68,3 +68,6 @@ woleh:
     rate-limit-window: ${OTP_RATE_LIMIT_WINDOW:PT1H}
     rate-limit-max-sends: ${OTP_RATE_LIMIT_MAX_SENDS:3}
     dev-log-otp: false
+  # Payment provider (ADR 0005). Replace base-url and add provider credentials for prod.
+  payment:
+    base-url: ${PAYMENT_BASE_URL:http://localhost:8080}
