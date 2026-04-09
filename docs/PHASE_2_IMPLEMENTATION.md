@@ -74,7 +74,7 @@ Store both display and normalized forms: display form is returned to the client;
 
 ---
 
-### Step 2.3 — `GET` + `PUT /api/v1/me/places/watch`
+### Step 2.3 — `GET` + `PUT /api/v1/me/places/watch` ✅
 
 Implement per [API_CONTRACT.md](./API_CONTRACT.md) §6.7–§6.8:
 
@@ -87,9 +87,9 @@ Implement per [API_CONTRACT.md](./API_CONTRACT.md) §6.7–§6.8:
   - After a successful save, call `MatchingService.dispatchWatchMatches(userId, normalizedNames)` (step 2.5) to push real-time events.
   - Return the saved list: `{ "names": [...] }` (display form, deduped).
 
-**Implementation:** `PlaceListController` at `/api/v1/me/places`; `PlaceNamesRequest` / `PlaceNamesResponse` DTOs; `PlaceListService.getWatchList` / `putWatchList`; `PlaceLimitExceededException` → 403 in `GlobalExceptionHandler`; `WatchListIntegrationTest` (401, 403 missing permission, 400 empty name, 400 over-length, 403 over-limit, 200 save + retrieve, dedupe behavior).
+**Implementation:** [`PlaceListController`](../server/src/main/java/odm/clarity/woleh/places/PlaceListController.java) at `/api/v1/me/places`; [`PlaceNamesRequest`](../server/src/main/java/odm/clarity/woleh/places/dto/PlaceNamesRequest.java) / [`PlaceNamesResponse`](../server/src/main/java/odm/clarity/woleh/places/dto/PlaceNamesResponse.java) DTOs; [`PlaceListService`](../server/src/main/java/odm/clarity/woleh/places/PlaceListService.java) (`getWatchList` / `putWatchList`); [`PermissionDeniedException`](../server/src/main/java/odm/clarity/woleh/common/error/PermissionDeniedException.java) → 403 `PERMISSION_DENIED`; [`PlaceLimitExceededException`](../server/src/main/java/odm/clarity/woleh/common/error/PlaceLimitExceededException.java) → 403 `OVER_LIMIT`; [`MatchingService`](../server/src/main/java/odm/clarity/woleh/places/MatchingService.java) stub (no-op `dispatchWatchMatches` / `dispatchBroadcastMatches`); [`WatchListIntegrationTest`](../server/src/test/java/odm/clarity/woleh/places/WatchListIntegrationTest.java) — 16 tests.
 
-**Done when:** a paid user can PUT and GET a watch list; free user with capped list gets 403 on exceeding 5 names; empty list PUT clears it.
+**Done when:** a paid user can PUT and GET a watch list; free user with capped list gets 403 on exceeding 5 names; empty list PUT clears it. ✅
 
 ---
 
@@ -332,6 +332,7 @@ Surface incoming `match` events to the user:
 |---------|------|---------|
 | 0.1 | 2026-04-09 | Initial Phase 2 codable breakdown |
 | 0.2 | 2026-04-09 | Step 2.1 implemented: `PlaceNameNormalizer` (trim → NFC → case fold → collapse whitespace), `PlaceNameValidationException` → 400 in `GlobalExceptionHandler`, `PlaceNameNormalizerTest` (17 tests — 3 spec vectors + 14 edge cases) |
+| 0.4 | 2026-04-09 | Step 2.3 implemented: `PermissionDeniedException` → 403 `PERMISSION_DENIED`, `PlaceLimitExceededException` → 403 `OVER_LIMIT`, `PlaceNamesRequest`/`PlaceNamesResponse` DTOs, `MatchingService` no-op stub, `PlaceListService` (`getWatchList`/`putWatchList` — validate, dedupe, limit, upsert, dispatch stub), `PlaceListController` (`GET`+`PUT /watch`), `WatchListIntegrationTest` (16 tests — auth, permission guard via `@MockBean`, validation, limit, dedupe, round-trip, clear) |
 | 0.3 | 2026-04-09 | Step 2.2 implemented: `V5__user_place_lists.sql` (unique constraint on user+type, indexes on user_id and list_type), `PlaceListType` enum (`WATCH`/`BROADCAST`), `UserPlaceList` entity (display + normalized names via `StringListConverter`), `UserPlaceListRepository` (`findByUser_IdAndListType`, `findAllByListType`), `UserPlaceListRepositoryTest` (9 tests — round-trips, isolation, empty-list JSON) |
 
 When Phase 2 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. normalization library chosen for Dart NFC, in-memory vs DB intersection query, final `match` event field names).
