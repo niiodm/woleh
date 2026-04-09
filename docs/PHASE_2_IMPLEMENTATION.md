@@ -59,7 +59,7 @@ Implement `PlaceNameNormalizer` per [PLACE_NAMES.md](./PLACE_NAMES.md) §1:
 
 ---
 
-### Step 2.2 — Place-list DB schema
+### Step 2.2 — Place-list DB schema ✅
 
 Add one table via Flyway migration:
 
@@ -68,9 +68,9 @@ Add one table via Flyway migration:
 
 Store both display and normalized forms: display form is returned to the client; normalized form is used for matching queries without re-normalizing at read time. If the normalization algorithm changes, a migration must re-normalize stored values (document this risk in the migration comment).
 
-**Implementation:** Flyway **`V5__user_place_lists.sql`**; JPA entity `UserPlaceList`; Spring Data repository `UserPlaceListRepository` (with `findByUserIdAndListType`, `findAllByListType`); enum `PlaceListType` (`WATCH`, `BROADCAST`); `StringListConverter` (reuse or extend the one from Phase 1 for JSON ↔ `List<String>`).
+**Implementation:** Flyway [`V5__user_place_lists.sql`](../server/src/main/resources/db/migration/V5__user_place_lists.sql); JPA entity [`UserPlaceList`](../server/src/main/java/odm/clarity/woleh/model/UserPlaceList.java); Spring Data repository [`UserPlaceListRepository`](../server/src/main/java/odm/clarity/woleh/repository/UserPlaceListRepository.java) (`findByUser_IdAndListType`, `findAllByListType`); enum [`PlaceListType`](../server/src/main/java/odm/clarity/woleh/model/PlaceListType.java) (`WATCH`, `BROADCAST`); reuses existing `StringListConverter` for JSON ↔ `List<String>`; [`UserPlaceListRepositoryTest`](../server/src/test/java/odm/clarity/woleh/places/UserPlaceListRepositoryTest.java) — 9 tests.
 
-**Done when:** migrations apply cleanly; a `UserPlaceListRepository` round-trip test verifies both list types save and reload correctly.
+**Done when:** migrations apply cleanly; a `UserPlaceListRepository` round-trip test verifies both list types save and reload correctly. ✅
 
 ---
 
@@ -332,5 +332,6 @@ Surface incoming `match` events to the user:
 |---------|------|---------|
 | 0.1 | 2026-04-09 | Initial Phase 2 codable breakdown |
 | 0.2 | 2026-04-09 | Step 2.1 implemented: `PlaceNameNormalizer` (trim → NFC → case fold → collapse whitespace), `PlaceNameValidationException` → 400 in `GlobalExceptionHandler`, `PlaceNameNormalizerTest` (17 tests — 3 spec vectors + 14 edge cases) |
+| 0.3 | 2026-04-09 | Step 2.2 implemented: `V5__user_place_lists.sql` (unique constraint on user+type, indexes on user_id and list_type), `PlaceListType` enum (`WATCH`/`BROADCAST`), `UserPlaceList` entity (display + normalized names via `StringListConverter`), `UserPlaceListRepository` (`findByUser_IdAndListType`, `findAllByListType`), `UserPlaceListRepositoryTest` (9 tests — round-trips, isolation, empty-list JSON) |
 
 When Phase 2 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. normalization library chosen for Dart NFC, in-memory vs DB intersection query, final `match` event field names).
