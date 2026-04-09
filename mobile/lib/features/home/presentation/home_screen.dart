@@ -18,6 +18,11 @@ class HomeScreen extends ConsumerWidget {
         title: const Text('Woleh'),
         actions: [
           IconButton(
+            tooltip: 'Plans',
+            icon: const Icon(Icons.workspace_premium_outlined),
+            onPressed: () => context.push('/plans'),
+          ),
+          IconButton(
             tooltip: 'Edit profile',
             icon: const Icon(Icons.edit_outlined),
             onPressed: () => context.push('/me/edit'),
