@@ -48,6 +48,14 @@ public class UserPlaceList {
 	@JoinColumn(name = "user_id", nullable = false)
 	private User user;
 
+	/**
+	 * Read-only projection of the {@code user_id} FK column.
+	 * Allows code that only needs the owner's ID (e.g. {@code MatchingService}) to avoid
+	 * triggering the LAZY {@link User} association.
+	 */
+	@Column(name = "user_id", insertable = false, updatable = false)
+	private Long userId;
+
 	@Enumerated(EnumType.STRING)
 	@Column(name = "list_type", nullable = false, length = 10)
 	private PlaceListType listType;
@@ -88,6 +96,11 @@ public class UserPlaceList {
 
 	public User getUser() {
 		return user;
+	}
+
+	/** Returns the owner's user ID without triggering the LAZY {@link User} association. */
+	public Long getUserId() {
+		return userId;
 	}
 
 	public PlaceListType getListType() {

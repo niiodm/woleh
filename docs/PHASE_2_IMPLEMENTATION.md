@@ -112,7 +112,7 @@ Implement per [API_CONTRACT.md](./API_CONTRACT.md) §6.9–§6.10 — mirrors st
 
 ---
 
-### Step 2.5 — Matching service
+### Step 2.5 — Matching service ✅
 
 `MatchingService` computes name intersections and hands off to the WebSocket dispatch layer (step 2.6):
 
@@ -130,9 +130,9 @@ Implement per [API_CONTRACT.md](./API_CONTRACT.md) §6.9–§6.10 — mirrors st
 
 - Add `MatchingServiceTest` (unit): mock repository; verify correct counterparty lists are identified; verify empty broadcast → no events; verify disjoint lists → no events; verify intersection of two names → `matchedNames` correct.
 
-**Implementation:** `MatchingService` (`odm.clarity.woleh.places.service.MatchingService`); `MatchEvent` record (`matchedNames`, `counterpartyUserId`, `kind`); `MatchingServiceTest`.
+**Implementation:** [`MatchEvent`](../server/src/main/java/odm/clarity/woleh/places/MatchEvent.java) record; [`WsSessionRegistry`](../server/src/main/java/odm/clarity/woleh/ws/WsSessionRegistry.java) stub in `ws/` (no-op `sendMatchEvent`; completed in steps 2.6–2.7); `userId` read-only FK column added to [`UserPlaceList`](../server/src/main/java/odm/clarity/woleh/model/UserPlaceList.java) to avoid LAZY load in service; [`MatchingService`](../server/src/main/java/odm/clarity/woleh/places/MatchingService.java) (`@Transactional(readOnly=true)`, in-memory intersection, notifies both parties per match); [`MatchingServiceTest`](../server/src/test/java/odm/clarity/woleh/places/MatchingServiceTest.java) — 11 unit tests.
 
-**Done when:** unit tests pass; `MatchingService` is called from `PlaceListService` after every successful PUT.
+**Done when:** unit tests pass; `MatchingService` is called from `PlaceListService` after every successful PUT. ✅
 
 ---
 
@@ -335,5 +335,6 @@ Surface incoming `match` events to the user:
 | 0.3 | 2026-04-09 | Step 2.2 implemented: `V5__user_place_lists.sql` (unique constraint on user+type, indexes on user_id and list_type), `PlaceListType` enum (`WATCH`/`BROADCAST`), `UserPlaceList` entity (display + normalized names via `StringListConverter`), `UserPlaceListRepository` (`findByUser_IdAndListType`, `findAllByListType`), `UserPlaceListRepositoryTest` (9 tests — round-trips, isolation, empty-list JSON) |
 | 0.4 | 2026-04-09 | Step 2.3 implemented: `PermissionDeniedException` → 403 `PERMISSION_DENIED`, `PlaceLimitExceededException` → 403 `OVER_LIMIT`, `PlaceNamesRequest`/`PlaceNamesResponse` DTOs, `MatchingService` no-op stub, `PlaceListService` (`getWatchList`/`putWatchList` — validate, dedupe, limit, upsert, dispatch stub), `PlaceListController` (`GET`+`PUT /watch`), `WatchListIntegrationTest` (16 tests — auth, permission guard via `@MockBean`, validation, limit, dedupe, round-trip, clear) |
 | 0.5 | 2026-04-09 | Step 2.4 implemented: `getBroadcastList`/`putBroadcastList` added to `PlaceListService` (validate → reject duplicate normalized names with 400 → limit → upsert → dispatch stub); `GET`+`PUT /broadcast` added to `PlaceListController`; `BroadcastListIntegrationTest` (17 tests — auth, permission guard for free user, 3× duplicate 400, limit, order preserved, round-trip, clear) |
+| 0.6 | 2026-04-09 | Step 2.5 implemented: `MatchEvent` record, `WsSessionRegistry` stub in `ws/`, `userId` read-only FK on `UserPlaceList`, `MatchingService` real intersection logic (`@Transactional(readOnly=true)`, in-memory set intersection, notify both watcher and broadcaster), `MatchingServiceTest` (11 unit tests — empty list short-circuit, disjoint, single match, multiple names, two watchers partial overlap, symmetric watch dispatch) |
 
 When Phase 2 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. normalization library chosen for Dart NFC, in-memory vs DB intersection query, final `match` event field names).
