@@ -136,7 +136,7 @@ Implement per [API_CONTRACT.md](./API_CONTRACT.md) §6.6:
 
 ---
 
-### Step 2.6 — Payment webhook / callback
+### Step 2.6 — Payment webhook / callback ✅
 
 Handle the provider's server-to-server confirmation that a payment completed:
 
@@ -323,5 +323,6 @@ Make the broadcast permission gate visible in the app even before Phase 2 builds
 | 0.4 | 2026-04-09 | Step 2.3 implemented: PlanResponse DTO, PlanService, SubscriptionController (GET /plans), PlansIntegrationTest (6 tests — unauthenticated access, shape, ordering, inactive exclusion) |
 | 0.5 | 2026-04-09 | Step 2.4 implemented: PaymentProviderAdapter interface, CheckoutSession/WebhookEvent records, StubPaymentProviderAdapter (@Profile !prod), PaymentProviderProperties, PaymentException + GlobalExceptionHandler handler, StubPaymentProviderAdapterTest (8 unit tests) |
 | 0.6 | 2026-04-09 | Step 2.5 implemented: CheckoutRequest/CheckoutResponse DTOs, SubscriptionService (initiateCheckout with permission check, free-plan guard, idempotency), SubscriptionController updated, CheckoutIntegrationTest (6 tests — 401 no-auth, 400 missing/unknown/free plan, 200 happy path, idempotency) |
+| 0.7 | 2026-04-09 | Step 2.6 implemented: WebhookController (POST /api/v1/webhooks/payment, signature guard), SubscriptionService.confirmPayment (idempotent, activateSubscription 30+7 days), PaymentSessionRepository.findByProviderReference, SecurityConfig permits /webhooks/**, WebhookIntegrationTest (8 tests — success/failure paths, /me reflects paid tier, invalid signature 400, unknown ref, duplicate idempotency) |
 
 When Phase 1 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. actual payment provider chosen, any limits adjusted).

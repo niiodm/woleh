@@ -11,6 +11,8 @@ public interface PaymentSessionRepository extends JpaRepository<PaymentSession, 
 
 	Optional<PaymentSession> findBySessionId(String sessionId);
 
+	Optional<PaymentSession> findByProviderReference(String providerReference);
+
 	/**
 	 * Finds an existing pending checkout session for a user + plan combination,
 	 * used to return an existing session rather than creating a duplicate (idempotency).
