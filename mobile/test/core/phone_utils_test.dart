@@ -53,7 +53,7 @@ void main() {
       });
 
       test('maximum length (15 chars total)', () {
-        expect(isValidE164('+' + '1' * 14), isTrue);
+        expect(isValidE164('+${'1' * 14}'), isTrue);
       });
     });
 
@@ -71,7 +71,7 @@ void main() {
       });
 
       test('too long (more than 14 digits after +)', () {
-        expect(isValidE164('+' + '1' * 15), isFalse);
+        expect(isValidE164('+${'1' * 15}'), isFalse);
       });
 
       test('non-digit characters after +', () {

@@ -8,9 +8,24 @@ import '../features/auth/presentation/otp_screen.dart';
 import '../features/auth/presentation/phone_screen.dart';
 import '../features/auth/presentation/setup_name_screen.dart';
 import '../features/home/presentation/home_screen.dart';
+import '../features/me/data/me_dto.dart';
+import '../features/me/presentation/me_notifier.dart';
 import '../features/me/presentation/profile_edit_screen.dart';
+import '../features/subscription/presentation/broadcast_placeholder_screen.dart';
+import '../features/subscription/presentation/plans_screen.dart';
 
 part 'router.g.dart';
+
+/// Routes protected by a specific permission string.
+///
+/// When an authenticated user navigates to a guarded path without holding the
+/// required permission, the router redirects them to [_kUpgradeRedirect].
+const _permissionGuards = <String, String>{
+  '/broadcast': 'woleh.place.broadcast',
+};
+
+/// Redirect destination for authenticated users missing a required permission.
+const _kUpgradeRedirect = '/plans';
 
 @Riverpod(keepAlive: true)
 GoRouter router(Ref ref) {
@@ -46,15 +61,28 @@ GoRouter router(Ref ref) {
         path: '/me/edit',
         builder: (_, __) => const ProfileEditScreen(),
       ),
+      GoRoute(
+        path: '/plans',
+        builder: (_, __) => const PlansScreen(),
+      ),
+      GoRoute(
+        path: '/broadcast',
+        builder: (_, __) => const BroadcastPlaceholderScreen(),
+      ),
     ],
   );
 }
 
-/// Bridges Riverpod auth state changes into GoRouter's [Listenable] refresh
-/// so the router re-evaluates its redirect whenever the token changes.
+/// Bridges Riverpod state changes into GoRouter's [Listenable] refresh
+/// so the router re-evaluates its redirect whenever the token or the
+/// user's entitlements change (e.g. after a successful checkout).
 class _RouterNotifier extends ChangeNotifier {
   _RouterNotifier(this._ref) {
     _ref.listen<AsyncValue<String?>>(authStateProvider, (_, __) {
+      notifyListeners();
+    });
+    // Re-evaluate permission guards whenever GET /me resolves or updates.
+    _ref.listen<AsyncValue<MeResponse?>>(meNotifierProvider, (_, __) {
       notifyListeners();
     });
   }
@@ -78,6 +106,21 @@ class _RouterNotifier extends ChangeNotifier {
     if (isAuthenticated &&
         (location == '/auth/phone' || location == '/auth/otp')) {
       return '/home';
+    }
+
+    // Permission-based route guards (authenticated users only).
+    if (isAuthenticated) {
+      final meAsync = _ref.read(meNotifierProvider);
+
+      // Defer while entitlements are still loading to avoid a flash redirect.
+      if (meAsync.isLoading) return null;
+
+      final permissions = meAsync.valueOrNull?.permissions ?? const <String>[];
+      final requiredPermission = _permissionGuards[location];
+      if (requiredPermission != null &&
+          !permissions.contains(requiredPermission)) {
+        return _kUpgradeRedirect;
+      }
     }
 
     return null;

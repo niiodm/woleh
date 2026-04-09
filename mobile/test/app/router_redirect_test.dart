@@ -1,8 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
+import 'package:odm_clarity_woleh_mobile/app/router.dart';
 import 'package:odm_clarity_woleh_mobile/core/auth_state.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/data/me_dto.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/presentation/me_notifier.dart';
@@ -32,7 +35,7 @@ class _AuthLoading extends AuthState {
 }
 
 // ---------------------------------------------------------------------------
-// Stub me state (used when the home screen needs me data)
+// Stub me states
 // ---------------------------------------------------------------------------
 
 class _StubMeNotifier extends MeNotifier {
@@ -43,6 +46,43 @@ class _StubMeNotifier extends MeNotifier {
         tier: 'free',
         limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
         subscription: MeSubscription(status: 'none', inGracePeriod: false),
+      );
+}
+
+/// Free-tier user — has base permissions but NOT woleh.place.broadcast.
+class _FreeUserMeNotifier extends MeNotifier {
+  @override
+  Future<MeResponse?> build() async => const MeResponse(
+        profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
+        permissions: [
+          'woleh.account.profile',
+          'woleh.plans.read',
+          'woleh.place.watch',
+        ],
+        tier: 'free',
+        limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
+        subscription: MeSubscription(status: 'none', inGracePeriod: false),
+      );
+}
+
+/// Paid-tier user — holds all permissions including woleh.place.broadcast.
+class _PaidUserMeNotifier extends MeNotifier {
+  @override
+  Future<MeResponse?> build() async => const MeResponse(
+        profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
+        permissions: [
+          'woleh.account.profile',
+          'woleh.plans.read',
+          'woleh.place.watch',
+          'woleh.place.broadcast',
+        ],
+        tier: 'paid',
+        limits: MeLimits(placeWatchMax: 50, placeBroadcastMax: 50),
+        subscription: MeSubscription(
+          status: 'active',
+          currentPeriodEnd: '2026-05-09T00:00:00Z',
+          inGracePeriod: false,
+        ),
       );
 }
 
@@ -161,10 +201,88 @@ void main() {
 
         // The app is at /home. Verify the setup-name route is reachable by
         // confirming the router doesn't redirect it away on arrival — tested
-        // via the redirect function returning null for that path, which is
-        // covered by the redirect implementation not listing /auth/setup-name
+        // via the redirect implementation not listing /auth/setup-name
         // in the protected-auth-route set. This is a smoke test.
         expect(tester.takeException(), isNull);
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // Permission-gate tests (Step 3.1)
+    // -----------------------------------------------------------------------
+
+    group('broadcast permission gate', () {
+      testWidgets(
+          'free user navigating to /broadcast is redirected to /plans',
+          (tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authStateProvider.overrideWith(_Authenticated.new),
+              meNotifierProvider.overrideWith(_FreeUserMeNotifier.new),
+            ],
+            child: const WolehApp(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Navigate to the broadcast-gated route.
+        // Use a widget inside the router's InheritedWidget scope (Scaffold is
+        // rendered by HomeScreen which is a GoRouter child).
+        final context = tester.element(find.byType(Scaffold).first);
+        GoRouter.of(context).go('/broadcast');
+        await tester.pumpAndSettle();
+
+        // Missing woleh.place.broadcast → redirected to /plans.
+        expect(find.text('Plans'), findsOneWidget);
+        expect(find.text('Broadcast coming in Phase 2'), findsNothing);
+      });
+
+      testWidgets(
+          'paid user navigating to /broadcast is allowed through',
+          (tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authStateProvider.overrideWith(_Authenticated.new),
+              meNotifierProvider.overrideWith(_PaidUserMeNotifier.new),
+            ],
+            child: const WolehApp(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Navigate to the broadcast-gated route.
+        final context = tester.element(find.byType(Scaffold).first);
+        GoRouter.of(context).go('/broadcast');
+        await tester.pumpAndSettle();
+
+        // Holds woleh.place.broadcast → BroadcastPlaceholderScreen visible.
+        expect(find.text('Broadcast coming in Phase 2'), findsOneWidget);
+        expect(find.text('Plans'), findsNothing);
+      });
+    });
+
+    group('/plans route', () {
+      testWidgets(
+          'authenticated user can navigate to /plans without redirect',
+          (tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authStateProvider.overrideWith(_Authenticated.new),
+              meNotifierProvider.overrideWith(_StubMeNotifier.new),
+            ],
+            child: const WolehApp(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final context = tester.element(find.byType(Scaffold).first);
+        GoRouter.of(context).go('/plans');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Plans'), findsOneWidget);
       });
     });
   });
