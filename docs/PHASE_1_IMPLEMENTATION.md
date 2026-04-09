@@ -41,7 +41,7 @@ This document turns [PRD.md](./PRD.md) §10 **Phase 1 — Plans** into ordered, 
 
 ## 2. Server (Spring Boot)
 
-### Step 2.1 — Subscription schema
+### Step 2.1 — Subscription schema ✅
 
 Add three new tables via Flyway migration:
 
@@ -318,5 +318,6 @@ Make the broadcast permission gate visible in the app even before Phase 2 builds
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1 | 2026-04-07 | Initial Phase 1 codable breakdown |
+| 0.2 | 2026-04-09 | Step 2.1 implemented: V3/V4 migrations, StringListConverter, SubscriptionStatus/PaymentSessionStatus enums, Plan/Subscription/PaymentSession entities, PlanRepository/SubscriptionRepository/PaymentSessionRepository, PlanRepositoryTest (5 tests) |
 
 When Phase 1 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. actual payment provider chosen, any limits adjusted).
