@@ -136,21 +136,21 @@ Implement per [API_CONTRACT.md](./API_CONTRACT.md) §6.9–§6.10 — mirrors st
 
 ---
 
-### Step 2.6 — WebSocket endpoint: `/ws/v1/transit`
+### Step 2.6 — WebSocket endpoint: `/ws/v1/transit` ✅
 
 Implement the authenticated WebSocket channel per [API_CONTRACT.md](./API_CONTRACT.md) §8 and [ADR 0001](./adr/0001-websocket-authentication.md):
 
 - **Spring WebSocket configuration** (raw — not STOMP): register a `TextWebSocketHandler` at `/ws/v1/transit`; add a `HandshakeInterceptor` that reads `?access_token=<jwt>` from the query string, validates it with `JwtService`, checks the user has `woleh.place.watch` or `woleh.place.broadcast`, and stores the `userId` in the handshake attributes. Reject with HTTP 403 if validation fails (the WebSocket upgrade is a standard HTTP GET; return 403 before the upgrade completes).
-- **`WsSessionRegistry`**: thread-safe `ConcurrentHashMap<String userId, WebSocketSession>`; exposed as a Spring `@Component`. Register on `afterConnectionEstablished`; deregister on `afterConnectionClosed`.
+- **`WsSessionRegistry`**: thread-safe `ConcurrentHashMap<Long userId, WebSocketSession>`; exposed as a Spring `@Component`. Register on `afterConnectionEstablished`; deregister on `afterConnectionClosed`.
 - **Message envelope**: send JSON `{ "type": "...", "data": ... }` — serialize with Jackson.
 - **`WsEnvelope<T>` record**: `type` (String), `data` (T); used server-side to build outgoing messages.
 - **Heartbeat**: a `@Scheduled` task (15 s interval) iterates all open sessions in `WsSessionRegistry` and sends `{ "type": "heartbeat", "data": "ping" }`. Remove dead sessions (send throws) during this loop.
 - **Inbound messages**: ignore all inbound text for v1 (log at `DEBUG`; do not echo back). Forward compatibility: parse envelope `type` only; unknown types are no-ops.
-- **`SecurityConfig`**: permit `/ws/v1/transit` without JWT-filter chain auth (the handshake interceptor handles auth; Spring Security's HTTP filter cannot intercept WS upgrade correctly with `?access_token`).
+- **`SecurityConfig`**: permit `/ws/**` without JWT-filter chain auth (the handshake interceptor handles auth; Spring Security's HTTP filter cannot intercept WS upgrade correctly with `?access_token`).
 
-**Implementation:** `WsConfig` (`WebSocketConfigurer`); `TransitWebSocketHandler` (`TextWebSocketHandler`); `JwtHandshakeInterceptor`; `WsSessionRegistry`; `WsHeartbeatScheduler` (`@Scheduled`, `@EnableScheduling` on config); `WsEnvelope` record; `WsAuthIntegrationTest` (upgrade with valid token → 101; upgrade with missing/invalid token → 403; upgrade with token lacking both place permissions → 403).
+**Implementation:** [`WsConfig`](../server/src/main/java/odm/clarity/woleh/ws/WsConfig.java) (`@Configuration @EnableWebSocket @EnableScheduling`); [`TransitWebSocketHandler`](../server/src/main/java/odm/clarity/woleh/ws/TransitWebSocketHandler.java) (`TextWebSocketHandler` — register/deregister in `WsSessionRegistry`, ignore inbound); [`JwtHandshakeInterceptor`](../server/src/main/java/odm/clarity/woleh/ws/JwtHandshakeInterceptor.java) (query-param token → `JwtService` → `EntitlementService` → 403 on reject, stores `userId` in attributes); [`WsSessionRegistry`](../server/src/main/java/odm/clarity/woleh/ws/WsSessionRegistry.java) updated with `ConcurrentHashMap`, `register`/`deregister`, `sendToAllOpen` for heartbeat; [`WsHeartbeatScheduler`](../server/src/main/java/odm/clarity/woleh/ws/WsHeartbeatScheduler.java) (`@Scheduled(fixedDelay=15_000)`, evicts dead sessions on send error); [`WsEnvelope<T>`](../server/src/main/java/odm/clarity/woleh/ws/WsEnvelope.java) record; `SecurityConfig` updated with `.requestMatchers("/ws/**").permitAll()`; [`WsAuthIntegrationTest`](../server/src/test/java/odm/clarity/woleh/ws/WsAuthIntegrationTest.java) — 5 tests using Java 11 `HttpClient` WS API (`RANDOM_PORT`, `@MockBean EntitlementService`).
 
-**Done when:** a WebSocket client can connect with a valid JWT; heartbeats arrive at 15 s; a client without required permissions is rejected at handshake.
+**Done when:** a WebSocket client can connect with a valid JWT; heartbeats arrive at 15 s; a client without required permissions is rejected at handshake. ✅
 
 ---
 
@@ -336,5 +336,6 @@ Surface incoming `match` events to the user:
 | 0.4 | 2026-04-09 | Step 2.3 implemented: `PermissionDeniedException` → 403 `PERMISSION_DENIED`, `PlaceLimitExceededException` → 403 `OVER_LIMIT`, `PlaceNamesRequest`/`PlaceNamesResponse` DTOs, `MatchingService` no-op stub, `PlaceListService` (`getWatchList`/`putWatchList` — validate, dedupe, limit, upsert, dispatch stub), `PlaceListController` (`GET`+`PUT /watch`), `WatchListIntegrationTest` (16 tests — auth, permission guard via `@MockBean`, validation, limit, dedupe, round-trip, clear) |
 | 0.5 | 2026-04-09 | Step 2.4 implemented: `getBroadcastList`/`putBroadcastList` added to `PlaceListService` (validate → reject duplicate normalized names with 400 → limit → upsert → dispatch stub); `GET`+`PUT /broadcast` added to `PlaceListController`; `BroadcastListIntegrationTest` (17 tests — auth, permission guard for free user, 3× duplicate 400, limit, order preserved, round-trip, clear) |
 | 0.6 | 2026-04-09 | Step 2.5 implemented: `MatchEvent` record, `WsSessionRegistry` stub in `ws/`, `userId` read-only FK on `UserPlaceList`, `MatchingService` real intersection logic (`@Transactional(readOnly=true)`, in-memory set intersection, notify both watcher and broadcaster), `MatchingServiceTest` (11 unit tests — empty list short-circuit, disjoint, single match, multiple names, two watchers partial overlap, symmetric watch dispatch) |
+| 0.7 | 2026-04-09 | Step 2.6 implemented: `WsEnvelope<T>` record, `JwtHandshakeInterceptor` (query-param JWT → `JwtService` → `EntitlementService` → 403 on reject), `TransitWebSocketHandler` (register/deregister sessions, ignore inbound), `WsSessionRegistry` updated (`ConcurrentHashMap`, `register`/`deregister`, `sendToAllOpen`), `WsHeartbeatScheduler` (`@Scheduled` 15 s), `WsConfig` (`@EnableWebSocket @EnableScheduling`), `SecurityConfig` updated with `/ws/**` permitAll, `WsAuthIntegrationTest` (5 tests — valid token, missing token, invalid token, expired token, no place permission; all 185 tests green) |
 
 When Phase 2 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. normalization library chosen for Dart NFC, in-memory vs DB intersection query, final `match` event field names).

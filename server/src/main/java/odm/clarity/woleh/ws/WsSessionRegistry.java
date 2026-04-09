@@ -1,32 +1,61 @@
 package odm.clarity.woleh.ws;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
 
 /**
- * Central registry of live WebSocket sessions and the dispatch point for outbound messages.
+ * Thread-safe map of authenticated WebSocket sessions keyed by userId.
  *
- * <p><b>Phase 2 step 2.6 stub:</b> Session registration/deregistration and heartbeat
- * machinery will be added in step 2.6 when the WebSocket endpoint is wired up.
- *
- * <p><b>Phase 2 step 2.7:</b> {@link #sendMatchEvent} will be completed to serialize
- * a {@code WsEnvelope<MatchEvent>} and write it to the owner's open session.
- * The current no-op is safe — if no session is open the event is simply not delivered
- * (the client will receive current match state on next connect).
+ * <p>Step 2.6 adds session lifecycle methods and the heartbeat helper.
+ * {@link #sendMatchEvent} is still a no-op stub; real push logic is wired in step 2.7.
  */
 @Component
 public class WsSessionRegistry {
 
 	private static final Logger log = LoggerFactory.getLogger(WsSessionRegistry.class);
 
+	private final ConcurrentHashMap<Long, WebSocketSession> sessions = new ConcurrentHashMap<>();
+
+	/** Registers a newly-established session. Replaces any stale session for the same user. */
+	public void register(Long userId, WebSocketSession session) {
+		sessions.put(userId, session);
+	}
+
+	/** Removes the session for {@code userId}, if present. */
+	public void deregister(Long userId) {
+		sessions.remove(userId);
+	}
+
 	/**
-	 * Sends a {@code match} event to a connected user.
-	 * If the user has no open session the event is silently dropped.
-	 *
-	 * <p>Completed in step 2.7 once the WebSocket infrastructure (step 2.6) exists.
+	 * Sends {@code messageJson} to every open session; automatically deregisters sessions
+	 * whose underlying connection has closed or errors on send.
+	 */
+	public void sendToAllOpen(String messageJson) {
+		sessions.forEach((userId, session) -> {
+			if (!session.isOpen()) {
+				sessions.remove(userId, session);
+				return;
+			}
+			try {
+				session.sendMessage(new TextMessage(messageJson));
+			}
+			catch (IOException e) {
+				log.warn("Failed to send to userId={} — removing session", userId, e);
+				sessions.remove(userId, session);
+			}
+		});
+	}
+
+	/**
+	 * Dispatches a {@code match} event to the given user.
+	 * No-op stub — full implementation in step 2.7 once session serialisation is proven.
 	 */
 	public void sendMatchEvent(Long userId, List<String> matchedNames,
 			Long counterpartyUserId, String kind) {
