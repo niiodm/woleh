@@ -50,4 +50,28 @@ public class PlaceListController {
 				ApiEnvelope.success("Watch list updated",
 						placeListService.putWatchList(userId, request.names())));
 	}
+
+	// ── broadcast list ────────────────────────────────────────────────────
+
+	/** GET /api/v1/me/places/broadcast — requires {@code woleh.place.broadcast}. */
+	@GetMapping("/broadcast")
+	ResponseEntity<ApiEnvelope<PlaceNamesResponse>> getBroadcast(
+			@AuthenticationPrincipal Long userId) {
+		return ResponseEntity.ok(
+				ApiEnvelope.success("OK", placeListService.getBroadcastList(userId)));
+	}
+
+	/**
+	 * PUT /api/v1/me/places/broadcast — replaces the broadcast list; requires
+	 * {@code woleh.place.broadcast}.  Duplicate normalized names are rejected with 400.
+	 * Send {@code {"names":[]}} to clear.
+	 */
+	@PutMapping("/broadcast")
+	ResponseEntity<ApiEnvelope<PlaceNamesResponse>> putBroadcast(
+			@AuthenticationPrincipal Long userId,
+			@RequestBody @Valid PlaceNamesRequest request) {
+		return ResponseEntity.ok(
+				ApiEnvelope.success("Broadcast list updated",
+						placeListService.putBroadcastList(userId, request.names())));
+	}
 }

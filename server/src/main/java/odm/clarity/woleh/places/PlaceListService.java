@@ -7,6 +7,7 @@ import java.util.Set;
 
 import odm.clarity.woleh.common.error.PermissionDeniedException;
 import odm.clarity.woleh.common.error.PlaceLimitExceededException;
+import odm.clarity.woleh.common.error.PlaceNameValidationException;
 import odm.clarity.woleh.common.error.UserNotFoundException;
 import odm.clarity.woleh.model.PlaceListType;
 import odm.clarity.woleh.model.User;
@@ -91,6 +92,43 @@ public class PlaceListService {
 		return new PlaceNamesResponse(deduped.displayNames());
 	}
 
+	// ── broadcast list ────────────────────────────────────────────────────
+
+	/** Returns the user's current broadcast list in stored order (sequence is significant). */
+	@Transactional(readOnly = true)
+	public PlaceNamesResponse getBroadcastList(Long userId) {
+		requirePermission(userId, PERM_BROADCAST);
+		return placeListRepository.findByUser_IdAndListType(userId, PlaceListType.BROADCAST)
+				.map(l -> new PlaceNamesResponse(l.getDisplayNames()))
+				.orElse(new PlaceNamesResponse(List.of()));
+	}
+
+	/**
+	 * Replaces the user's broadcast list.
+	 *
+	 * <ul>
+	 *   <li>Each name is validated (non-empty after trim; ≤ 200 code points).</li>
+	 *   <li>Duplicate normalized names are <em>rejected</em> with a 400 — broadcast order
+	 *       is meaningful and ambiguous duplicates would corrupt the sequence.</li>
+	 *   <li>Count must not exceed {@code limits.placeBroadcastMax}.</li>
+	 *   <li>An empty list clears the broadcast list.</li>
+	 * </ul>
+	 */
+	public PlaceNamesResponse putBroadcastList(Long userId, List<String> rawNames) {
+		Entitlements ent = requirePermission(userId, PERM_BROADCAST);
+
+		DedupeResult deduped = validateNoDuplicates(rawNames);
+
+		if (deduped.displayNames().size() > ent.placeBroadcastMax()) {
+			throw new PlaceLimitExceededException("broadcast", ent.placeBroadcastMax());
+		}
+
+		upsert(userId, PlaceListType.BROADCAST, deduped);
+		matchingService.dispatchBroadcastMatches(userId, deduped.normalizedNames());
+
+		return new PlaceNamesResponse(deduped.displayNames());
+	}
+
 	// ── helpers ───────────────────────────────────────────────────────────
 
 	/**
@@ -139,6 +177,30 @@ public class PlaceListService {
 		list.setDisplayNames(deduped.displayNames());
 		list.setNormalizedNames(deduped.normalizedNames());
 		placeListRepository.save(list);
+	}
+
+	/**
+	 * Validates every raw name and <em>rejects</em> the list if any two names share the
+	 * same normalized form.  Used for broadcast lists where order is significant and
+	 * silently dropping a duplicate would corrupt the intended sequence.
+	 */
+	private DedupeResult validateNoDuplicates(List<String> rawNames) {
+		List<String> displayResult = new ArrayList<>();
+		List<String> normalizedResult = new ArrayList<>();
+		Set<String> seen = new LinkedHashSet<>();
+
+		for (String raw : rawNames) {
+			normalizer.validatePlaceName(raw);
+			String norm = normalizer.normalize(raw);
+			if (!seen.add(norm)) {
+				throw new PlaceNameValidationException(
+						"Duplicate place name in broadcast list (after normalization): \"" + raw + "\"");
+			}
+			displayResult.add(raw);
+			normalizedResult.add(norm);
+		}
+
+		return new DedupeResult(displayResult, normalizedResult);
 	}
 
 	private record DedupeResult(List<String> displayNames, List<String> normalizedNames) {

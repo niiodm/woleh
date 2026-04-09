@@ -93,7 +93,7 @@ Implement per [API_CONTRACT.md](./API_CONTRACT.md) §6.7–§6.8:
 
 ---
 
-### Step 2.4 — `GET` + `PUT /api/v1/me/places/broadcast`
+### Step 2.4 — `GET` + `PUT /api/v1/me/places/broadcast` ✅
 
 Implement per [API_CONTRACT.md](./API_CONTRACT.md) §6.9–§6.10 — mirrors step 2.3 but for broadcast:
 
@@ -106,9 +106,9 @@ Implement per [API_CONTRACT.md](./API_CONTRACT.md) §6.9–§6.10 — mirrors st
   - After save, call `MatchingService.dispatchBroadcastMatches(userId, normalizedNames)` (step 2.5).
   - Return `{ "names": [...] }` (display form, stored order).
 
-**Implementation:** `PlaceListService.getBroadcastList` / `putBroadcastList`; `PlaceListController` updated; `BroadcastListIntegrationTest` (401, 403 missing permission, 400 duplicate normalized names, 400 over-limit, 200 save + retrieve, order preserved).
+**Implementation:** [`PlaceListService`](../server/src/main/java/odm/clarity/woleh/places/PlaceListService.java) updated with `getBroadcastList` / `putBroadcastList` (validate → reject duplicate normalized names with 400 → limit check → upsert → `dispatchBroadcastMatches` stub); [`PlaceListController`](../server/src/main/java/odm/clarity/woleh/places/PlaceListController.java) updated with `GET`+`PUT /broadcast`; [`BroadcastListIntegrationTest`](../server/src/test/java/odm/clarity/woleh/places/BroadcastListIntegrationTest.java) — 17 tests.
 
-**Done when:** a paid user can PUT and GET an ordered broadcast list; free user with missing `woleh.place.broadcast` gets 403 on every broadcast endpoint.
+**Done when:** a paid user can PUT and GET an ordered broadcast list; free user with missing `woleh.place.broadcast` gets 403 on every broadcast endpoint. ✅
 
 ---
 
@@ -332,7 +332,8 @@ Surface incoming `match` events to the user:
 |---------|------|---------|
 | 0.1 | 2026-04-09 | Initial Phase 2 codable breakdown |
 | 0.2 | 2026-04-09 | Step 2.1 implemented: `PlaceNameNormalizer` (trim → NFC → case fold → collapse whitespace), `PlaceNameValidationException` → 400 in `GlobalExceptionHandler`, `PlaceNameNormalizerTest` (17 tests — 3 spec vectors + 14 edge cases) |
-| 0.4 | 2026-04-09 | Step 2.3 implemented: `PermissionDeniedException` → 403 `PERMISSION_DENIED`, `PlaceLimitExceededException` → 403 `OVER_LIMIT`, `PlaceNamesRequest`/`PlaceNamesResponse` DTOs, `MatchingService` no-op stub, `PlaceListService` (`getWatchList`/`putWatchList` — validate, dedupe, limit, upsert, dispatch stub), `PlaceListController` (`GET`+`PUT /watch`), `WatchListIntegrationTest` (16 tests — auth, permission guard via `@MockBean`, validation, limit, dedupe, round-trip, clear) |
 | 0.3 | 2026-04-09 | Step 2.2 implemented: `V5__user_place_lists.sql` (unique constraint on user+type, indexes on user_id and list_type), `PlaceListType` enum (`WATCH`/`BROADCAST`), `UserPlaceList` entity (display + normalized names via `StringListConverter`), `UserPlaceListRepository` (`findByUser_IdAndListType`, `findAllByListType`), `UserPlaceListRepositoryTest` (9 tests — round-trips, isolation, empty-list JSON) |
+| 0.4 | 2026-04-09 | Step 2.3 implemented: `PermissionDeniedException` → 403 `PERMISSION_DENIED`, `PlaceLimitExceededException` → 403 `OVER_LIMIT`, `PlaceNamesRequest`/`PlaceNamesResponse` DTOs, `MatchingService` no-op stub, `PlaceListService` (`getWatchList`/`putWatchList` — validate, dedupe, limit, upsert, dispatch stub), `PlaceListController` (`GET`+`PUT /watch`), `WatchListIntegrationTest` (16 tests — auth, permission guard via `@MockBean`, validation, limit, dedupe, round-trip, clear) |
+| 0.5 | 2026-04-09 | Step 2.4 implemented: `getBroadcastList`/`putBroadcastList` added to `PlaceListService` (validate → reject duplicate normalized names with 400 → limit → upsert → dispatch stub); `GET`+`PUT /broadcast` added to `PlaceListController`; `BroadcastListIntegrationTest` (17 tests — auth, permission guard for free user, 3× duplicate 400, limit, order preserved, round-trip, clear) |
 
 When Phase 2 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. normalization library chosen for Dart NFC, in-memory vs DB intersection query, final `match` event field names).
