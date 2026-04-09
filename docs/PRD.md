@@ -4,9 +4,9 @@
 |-------|--------|
 | **Product** | Woleh |
 | **Document type** | PRD (living document) |
-| **Status** | Active — Phase 1 complete; Phase 2 planning |
-| **Last updated** | 2026-04-09 (v0.13 Phase 1 complete) |
-| **Related** | [Architecture](./ARCHITECTURE.md), [API contract](./API_CONTRACT.md), [Phase 0 implementation](./PHASE_0_IMPLEMENTATION.md), [Phase 1 implementation](./PHASE_1_IMPLEMENTATION.md), [ADRs](./adr/README.md), [bus_finder learnings](./bus_finder-architecture-learnings.md) |
+| **Status** | Active — Phase 1 complete; Phase 2 in progress |
+| **Last updated** | 2026-04-09 (v0.14 Phase 2 codable breakdown) |
+| **Related** | [Architecture](./ARCHITECTURE.md), [API contract](./API_CONTRACT.md), [Phase 0 implementation](./PHASE_0_IMPLEMENTATION.md), [Phase 1 implementation](./PHASE_1_IMPLEMENTATION.md), [Phase 2 implementation](./PHASE_2_IMPLEMENTATION.md), [ADRs](./adr/README.md), [bus_finder learnings](./bus_finder-architecture-learnings.md) |
 
 ---
 
@@ -208,7 +208,7 @@ Metrics should be **instrumented** after baseline; initial candidates:
 |-------|--------|----------------|--------|
 | **0 — Foundation** | Repo layout, CI, auth, profile, health | User can sign in and see protected content ([codable steps](./PHASE_0_IMPLEMENTATION.md)) | ✅ Complete (2026-04-07) |
 | **1 — Plans** | Plans API, gating, payment integration | Paid plan unlocks gated features end-to-end ([codable steps](./PHASE_1_IMPLEMENTATION.md)) | ✅ Complete (2026-04-09) |
-| **2 — Core transit journey** | Domain models, REST + WS streams, **transit** mobile UX | Rider/operator place-name flow works in staging | Planned |
+| **2 — Core transit journey** | Domain models, REST + WS streams, **transit** mobile UX | Rider/operator place-name flow works in staging ([codable steps](./PHASE_2_IMPLEMENTATION.md)) | In progress |
 | **3 — Hardening** | Rate limits, observability, push (if needed) | SLOs met; runbooks for incidents | Planned |
 
 Phases are adjustable; **G1–G3** should not slip far past Phase 0–1.
@@ -314,5 +314,6 @@ Exact pricing and plan names are product/marketing; **limits** are the defaults 
 | 0.11 | 2026-04-07 | Phase 0 complete — status updated; phased rollout table gains Status column |
 || 0.12 | 2026-04-07 | Linked [Phase 1 implementation](./PHASE_1_IMPLEMENTATION.md) codable breakdown; Phase 1 row updated |
 | 0.13 | 2026-04-09 | Phase 1 complete — phased rollout table updated; deviations noted: `webview_flutter 4.13.1` used (not `flutter_inappwebview`); stub payment provider only (no real Ghana provider yet); paid plan price placeholder GHS 9.99 (999 pesewas) to be confirmed before production; `PermissionGatedButton` reusable widget added to `mobile/lib/shared/` as Phase 2-ready UI pattern |
+| 0.14 | 2026-04-09 | Phase 2 codable breakdown added ([PHASE_2_IMPLEMENTATION.md](./PHASE_2_IMPLEMENTATION.md)); Phase 2 row updated to "In progress" |
 
 When requirements change materially, bump version and summarize in this table.
