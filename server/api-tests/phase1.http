@@ -1,0 +1,158 @@
+### Phase 1 — manual QA collection
+# Covers the full paid-plan flow: list plans → checkout → stub success → GET /me (paid tier) →
+# GET /subscription/status.
+#
+# IntelliJ HTTP Client: select the "dev" environment from http-client.env.json.
+# VS Code REST Client: set @baseUrl, @token, and @planId manually below.
+#
+# How to run the happy path end-to-end (server must be running with the default/dev profile):
+#   1. Start server:  cd server && ./gradlew bootRun
+#   2. Authenticate:  run the "Send OTP" + "Verify OTP" requests in phase0.http.
+#                     Paste the returned accessToken into @token below.
+#   3. Run "List plans" — note the planId of the paid plan.
+#   4. Run "Checkout" — the stub checkoutUrl is returned; @sessionId is captured automatically
+#                       by the IntelliJ response handler (or copy it manually).
+#   5. Run "Open stub page" in your browser, or run "Simulate success" here.
+#   6. Run "GET /me — after checkout" — tier should now be "paid".
+#   7. Run "GET /subscription/status" — full entitlements block.
+
+@baseUrl  = {{baseUrl}}
+@token    = PASTE_ACCESS_TOKEN_HERE
+@planId   = {{planId}}
+@sessionId = CAPTURE_FROM_CHECKOUT_RESPONSE
+
+###############################################################################
+# 1. Plans catalog — public, no auth required
+###############################################################################
+
+### List all active plans (expects 200, free plan first)
+GET {{baseUrl}}/api/v1/subscription/plans
+Accept: application/json
+
+### List plans — verify unauthenticated access works
+GET {{baseUrl}}/api/v1/subscription/plans
+
+###############################################################################
+# 2. Checkout — initiate a paid-plan checkout session
+###############################################################################
+
+### Checkout — happy path (expects 200 with checkoutUrl pointing at /dev/checkout-stub)
+# @name checkout
+POST {{baseUrl}}/api/v1/subscription/checkout
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "planId": "{{planId}}"
+}
+
+> {%
+  if (response.status === 200) {
+    client.global.set("sessionId", response.body.data.sessionId);
+    client.log("sessionId captured: " + response.body.data.sessionId);
+    client.log("Open this URL to see the stub page: " + response.body.data.checkoutUrl);
+  }
+%}
+
+### Checkout — duplicate request (expects 200, same sessionId — idempotency check)
+POST {{baseUrl}}/api/v1/subscription/checkout
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "planId": "{{planId}}"
+}
+
+### Checkout — unknown plan (expects 400 PAYMENT_ERROR)
+POST {{baseUrl}}/api/v1/subscription/checkout
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "planId": "woleh_nonexistent"
+}
+
+### Checkout — free plan (expects 400 PAYMENT_ERROR — free plan has no checkout)
+POST {{baseUrl}}/api/v1/subscription/checkout
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "planId": "woleh_free"
+}
+
+### Checkout — no auth (expects 401 UNAUTHORIZED)
+POST {{baseUrl}}/api/v1/subscription/checkout
+Content-Type: application/json
+
+{
+  "planId": "{{planId}}"
+}
+
+###############################################################################
+# 3. Dev checkout stub — simulate payment outcome
+###############################################################################
+
+### Open stub page — renders HTML with success/failure links (open in browser for WebView sim)
+GET {{baseUrl}}/api/v1/dev/checkout-stub?sessionId={{sessionId}}
+Accept: text/html
+
+### Simulate success — processes payment and redirects to woleh:// deep link (expects 302)
+# After this, GET /me should return tier=paid.
+GET {{baseUrl}}/api/v1/dev/checkout-stub?sessionId={{sessionId}}&result=success
+
+### Simulate failure — marks session FAILED (expects 302 to status=failure deep link)
+# Use this instead of "Simulate success" to test the failed-payment UI.
+GET {{baseUrl}}/api/v1/dev/checkout-stub?sessionId={{sessionId}}&result=failure
+
+### Stub — unknown sessionId (expects 400 NOT_FOUND)
+GET {{baseUrl}}/api/v1/dev/checkout-stub?sessionId=bogus-session-id
+
+###############################################################################
+# 4. Profile — verify paid tier
+###############################################################################
+
+### GET /me — after successful checkout (expects tier=paid, woleh.place.broadcast in permissions)
+GET {{baseUrl}}/api/v1/me
+Authorization: Bearer {{token}}
+
+### GET /me — no auth (expects 401)
+GET {{baseUrl}}/api/v1/me
+
+###############################################################################
+# 5. Subscription status
+###############################################################################
+
+### GET /subscription/status — full entitlements block (expects 200 with tier, limits, subscription)
+GET {{baseUrl}}/api/v1/subscription/status
+Authorization: Bearer {{token}}
+
+### GET /subscription/status — no auth (expects 401)
+GET {{baseUrl}}/api/v1/subscription/status
+
+###############################################################################
+# 6. Payment webhook — programmatic callback (bypasses WebView for API-level testing)
+###############################################################################
+
+### Webhook — payment_success (expects 200; triggers subscription activation)
+# Use when testing the webhook path directly instead of via the stub redirect.
+# First run "Checkout" above to get a fresh session; copy providerReference from the DB
+# or from the checkoutUrl (it equals the sessionId for the stub provider).
+POST {{baseUrl}}/api/v1/webhooks/payment
+Content-Type: application/json
+X-Payment-Signature: stub-always-valid
+
+{
+  "type": "payment_success",
+  "providerReference": "{{sessionId}}"
+}
+
+### Webhook — payment_failed
+POST {{baseUrl}}/api/v1/webhooks/payment
+Content-Type: application/json
+X-Payment-Signature: stub-always-valid
+
+{
+  "type": "payment_failed",
+  "providerReference": "{{sessionId}}"
+}

@@ -185,7 +185,7 @@ Add a **`dev`-only** endpoint that simulates a payment-provider redirect, enabli
 
 ---
 
-### Step 2.9 — Tests and API artifacts
+### Step 2.9 — Tests and API artifacts ✅
 
 - **Unit tests:** `EntitlementServiceTest` — free tier when no subscription; active paid subscription; subscription in grace period; subscription past grace period (reverts to free).
 - **Integration tests:** as noted in steps 2.1–2.8 above.
@@ -326,5 +326,6 @@ Make the broadcast permission gate visible in the app even before Phase 2 builds
 | 0.7 | 2026-04-09 | Step 2.6 implemented: WebhookController (POST /api/v1/webhooks/payment, signature guard), SubscriptionService.confirmPayment (idempotent, activateSubscription 30+7 days), PaymentSessionRepository.findByProviderReference, SecurityConfig permits /webhooks/**, WebhookIntegrationTest (8 tests — success/failure paths, /me reflects paid tier, invalid signature 400, unknown ref, duplicate idempotency) |
 | 0.8 | 2026-04-09 | Step 2.7 implemented: SubscriptionStatusResponse DTO, SubscriptionController GET /subscription/status, SubscriptionStatusIntegrationTest (4 tests — 401, free tier shape, paid tier shape, grace period flag) |
 | 0.9 | 2026-04-09 | Step 2.8 implemented: DevController (@Profile !prod) with GET /api/v1/dev/checkout-stub (HTML page + success/failure redirect to woleh:// deep link), SecurityConfig permits GET /api/v1/dev/**, DevCheckoutStubTest (7 tests — HTML page, success redirect, subscription activated, failure redirect, unknown session 400, invalid result 400, full loop end-to-end) |
+| 1.0 | 2026-04-09 | Step 2.9 implemented: server/api-tests/phase1.http (6 sections: plans, checkout with IntelliJ response-handler variable capture, dev stub, /me verification, /subscription/status, webhook), http-client.env.json updated with planId in dev + staging environments |
 
 When Phase 1 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. actual payment provider chosen, any limits adjusted).
