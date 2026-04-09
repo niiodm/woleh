@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -31,9 +32,19 @@ ApiClient apiClient(Ref ref) {
     ),
   );
 
-  dio.interceptors
-    ..add(_AuthInterceptor(ref))
-    ..add(_ErrorInterceptor());
+  dio.interceptors.add(_AuthInterceptor(ref));
+
+  if (kDebugMode) {
+    dio.interceptors.add(
+      LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+        logPrint: (msg) => debugPrint('[API] $msg'),
+      ),
+    );
+  }
+
+  dio.interceptors.add(_ErrorInterceptor());
 
   return ApiClient(dio);
 }

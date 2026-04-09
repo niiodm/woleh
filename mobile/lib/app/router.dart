@@ -12,6 +12,7 @@ import '../features/me/data/me_dto.dart';
 import '../features/me/presentation/me_notifier.dart';
 import '../features/me/presentation/profile_edit_screen.dart';
 import '../features/subscription/presentation/broadcast_placeholder_screen.dart';
+import '../features/subscription/presentation/checkout_webview_screen.dart';
 import '../features/subscription/presentation/plans_screen.dart';
 
 part 'router.g.dart';
@@ -68,6 +69,12 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: '/broadcast',
         builder: (_, __) => const BroadcastPlaceholderScreen(),
+      ),
+      GoRoute(
+        path: '/checkout/:planId',
+        builder: (_, state) => CheckoutWebViewScreen(
+          planId: state.pathParameters['planId']!,
+        ),
       ),
     ],
   );

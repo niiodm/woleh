@@ -45,5 +45,15 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- woleh:// custom scheme so the payment provider redirect returns to the app. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>woleh</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
