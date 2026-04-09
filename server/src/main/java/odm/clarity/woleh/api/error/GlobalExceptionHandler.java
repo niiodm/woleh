@@ -3,6 +3,7 @@ package odm.clarity.woleh.api.error;
 import odm.clarity.woleh.api.dto.ApiEnvelope;
 import odm.clarity.woleh.common.error.InvalidOtpException;
 import odm.clarity.woleh.common.error.PaymentException;
+import odm.clarity.woleh.common.error.PlaceNameValidationException;
 import odm.clarity.woleh.common.error.RateLimitedException;
 import odm.clarity.woleh.common.error.UserNotFoundException;
 
@@ -72,6 +73,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	ResponseEntity<ApiEnvelope<Void>> handleRateLimited(RateLimitedException ex) {
 		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
 				.body(ApiEnvelope.error(ex.getMessage(), "RATE_LIMITED"));
+	}
+
+	@ExceptionHandler(PlaceNameValidationException.class)
+	ResponseEntity<ApiEnvelope<Void>> handlePlaceNameValidation(PlaceNameValidationException ex) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(ApiEnvelope.error(ex.getMessage(), "VALIDATION_ERROR"));
 	}
 
 	@ExceptionHandler(PaymentException.class)

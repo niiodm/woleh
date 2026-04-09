@@ -40,7 +40,7 @@ This document turns [PRD.md](./PRD.md) §10 **Phase 2 — Core transit journey**
 
 ## 2. Server (Spring Boot)
 
-### Step 2.1 — Place-name normalization utility
+### Step 2.1 — Place-name normalization utility ✅
 
 Implement `PlaceNameNormalizer` per [PLACE_NAMES.md](./PLACE_NAMES.md) §1:
 
@@ -53,9 +53,9 @@ Implement `PlaceNameNormalizer` per [PLACE_NAMES.md](./PLACE_NAMES.md) §1:
 - Implement validation helper `validatePlaceName(String raw)` used by both watch and broadcast write paths: rejects empty-after-trim; rejects over-200 Unicode scalar values.
 - Add unit tests **`PlaceNameNormalizerTest`** covering the three canonical test vectors from [PLACE_NAMES.md](./PLACE_NAMES.md) §5 plus edge cases (null-like empty, 201-char name, internal tab, mixed case).
 
-**Implementation:** `PlaceNameNormalizer` (`odm.clarity.woleh.places.util.PlaceNameNormalizer`); `PlaceNameNormalizerTest`.
+**Implementation:** [`PlaceNameNormalizer`](../server/src/main/java/odm/clarity/woleh/places/util/PlaceNameNormalizer.java); [`PlaceNameValidationException`](../server/src/main/java/odm/clarity/woleh/common/error/PlaceNameValidationException.java) (registered → 400 in `GlobalExceptionHandler`); [`PlaceNameNormalizerTest`](../server/src/test/java/odm/clarity/woleh/places/util/PlaceNameNormalizerTest.java) — 17 tests (3 spec vectors + 14 edge cases).
 
-**Done when:** all test vectors in [PLACE_NAMES.md](./PLACE_NAMES.md) §5 pass; `normalize` is idempotent (calling it twice produces the same result).
+**Done when:** all test vectors in [PLACE_NAMES.md](./PLACE_NAMES.md) §5 pass; `normalize` is idempotent (calling it twice produces the same result). ✅
 
 ---
 
@@ -331,5 +331,6 @@ Surface incoming `match` events to the user:
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1 | 2026-04-09 | Initial Phase 2 codable breakdown |
+| 0.2 | 2026-04-09 | Step 2.1 implemented: `PlaceNameNormalizer` (trim → NFC → case fold → collapse whitespace), `PlaceNameValidationException` → 400 in `GlobalExceptionHandler`, `PlaceNameNormalizerTest` (17 tests — 3 spec vectors + 14 edge cases) |
 
 When Phase 2 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. normalization library chosen for Dart NFC, in-memory vs DB intersection query, final `match` event field names).
