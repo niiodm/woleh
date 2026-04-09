@@ -55,6 +55,7 @@ public class SecurityConfig {
 						.permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/subscription/plans").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/webhooks/**").permitAll()
+						.requestMatchers(HttpMethod.GET, "/api/v1/dev/**").permitAll()
 						.requestMatchers("/api/v1/**").authenticated()
 						.anyRequest().permitAll())
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
