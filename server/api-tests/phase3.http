@@ -1,0 +1,244 @@
+### Phase 3 — manual QA collection
+# Covers Phase 3 hardening features:
+#   rate limiting · observability (Actuator / Prometheus) · correlation IDs · refresh tokens.
+#
+# IntelliJ HTTP Client: select the "dev" environment from http-client.env.json.
+# VS Code REST Client: fill in @token / @refreshToken manually from step 1 output.
+#
+# ── Walkthrough ─────────────────────────────────────────────────────────────
+#   1. Start the server:
+#        cd server && ./gradlew bootRun
+#
+#   2. Run "Send OTP" then "Verify OTP" (§1). Paste the returned
+#      accessToken into @token and refreshToken into @refreshToken below.
+#
+#   3. Run the rate-limit demo (§2): first 10 PUT requests succeed;
+#      the 11th returns 429 with a Retry-After header.
+#
+#   4. Inspect Actuator health and metrics (§3).
+#      Note: in production, /actuator/metrics and /actuator/prometheus should
+#      be served on a separate management port and blocked from the internet.
+#
+#   5. Run the correlation-ID echo (§4): the response echoes the custom
+#      X-Request-Id header. Omit the header on the second request and observe
+#      that the server generates a UUID automatically.
+#
+#   6. Run the refresh token flow (§5): exchange the refresh token for a new
+#      access + refresh token pair; verify the old refresh token is rejected.
+#
+#   7. Run the logout flow (§6): after logout, the refresh token is invalidated.
+#
+# ── Variables ────────────────────────────────────────────────────────────────
+
+@baseUrl       = {{baseUrl}}
+@mgmtUrl       = {{managementBaseUrl}}
+@phone         = {{phone}}
+@token         = PASTE_ACCESS_TOKEN_HERE
+@refreshToken  = PASTE_REFRESH_TOKEN_HERE
+
+###############################################################################
+# 1. Authentication — get an access token + refresh token
+###############################################################################
+
+### Send OTP
+POST {{baseUrl}}/api/v1/auth/send-otp
+Content-Type: application/json
+
+{
+  "phoneE164": "{{phone}}"
+}
+
+### Verify OTP  →  copy data.accessToken → @token, data.refreshToken → @refreshToken
+# Replace 123456 with the OTP printed in the [DEV] server log.
+POST {{baseUrl}}/api/v1/auth/verify-otp
+Content-Type: application/json
+
+{
+  "phoneE164": "{{phone}}",
+  "otp": "123456"
+}
+
+###############################################################################
+# 2. Rate limiting  (FR-RL1) — PUT /me/places/watch
+#
+# Default limit: 10 requests/user/minute (PLACE_LIST_RPM env var).
+# Requests 1–10 below return 200; request 11 returns 429 with Retry-After.
+###############################################################################
+
+### PUT watch list 1/10 — within limit (expects 200)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "names": ["Madina"] }
+
+### PUT watch list 2/10 (expects 200)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "names": ["Lapaz"] }
+
+### PUT watch list 3/10 (expects 200)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "names": ["Legon"] }
+
+### PUT watch list 4/10 (expects 200)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "names": ["Kaneshie"] }
+
+### PUT watch list 5/10 (expects 200)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "names": ["Circle"] }
+
+### PUT watch list 6/10 (expects 200)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "names": ["Accra Mall"] }
+
+### PUT watch list 7/10 (expects 200)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "names": ["Tema"] }
+
+### PUT watch list 8/10 (expects 200)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "names": ["Adabraka"] }
+
+### PUT watch list 9/10 (expects 200)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "names": ["Osu"] }
+
+### PUT watch list 10/10 — last allowed request in this window (expects 200)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "names": ["Madina", "Lapaz"] }
+
+### PUT watch list 11/10 — OVER LIMIT (expects 429 RATE_LIMITED + Retry-After header)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "names": ["Madina"] }
+
+###############################################################################
+# 3. Observability (FR-O1) — Actuator health, info, metrics, Prometheus
+#
+# NOTE: in production, {{managementBaseUrl}} differs from {{baseUrl}}
+#       (separate management port 8081, blocked from the public internet).
+#       In dev both are on 8080, so managementBaseUrl == baseUrl.
+###############################################################################
+
+### GET /actuator/health — expects { "status": "UP", components: { ws: {...}, db: {...} } }
+GET {{mgmtUrl}}/actuator/health
+
+### GET /actuator/info — expects build-info fields (name, version, time) from buildInfo()
+GET {{mgmtUrl}}/actuator/info
+
+### GET /actuator/metrics — list all registered meters
+GET {{mgmtUrl}}/actuator/metrics
+
+### GET woleh.ws.sessions.active gauge (expects numeric measurement)
+GET {{mgmtUrl}}/actuator/metrics/woleh.ws.sessions.active
+
+### GET woleh.place.list.put counter — watch list writes (expects count after §2 above)
+GET {{mgmtUrl}}/actuator/metrics/woleh.place.list.put?tag=list_type:watch
+
+### GET woleh.api.errors counter — 4xx errors (rate-limit hits from §2 count here)
+GET {{mgmtUrl}}/actuator/metrics/woleh.api.errors?tag=status_class:4xx
+
+### GET /actuator/prometheus — full Prometheus scrape output (text/plain)
+GET {{mgmtUrl}}/actuator/prometheus
+
+###############################################################################
+# 4. Correlation IDs (Architecture §5.7)
+#
+# Every request returns X-Request-Id in the response header.
+# If the client supplies one it is echoed back unchanged.
+###############################################################################
+
+### GET /me — server generates a UUID X-Request-Id (inspect response headers)
+GET {{baseUrl}}/api/v1/me
+Authorization: Bearer {{token}}
+
+### GET /me — client-supplied X-Request-Id echoed back unchanged
+GET {{baseUrl}}/api/v1/me
+Authorization: Bearer {{token}}
+X-Request-Id: my-client-trace-id-abc123
+
+###############################################################################
+# 5. Refresh token rotation (FR-A2)
+#
+# Use @refreshToken obtained from §1. After rotation the old token is rejected.
+###############################################################################
+
+### POST /auth/refresh — exchange refresh token for new access + refresh pair
+# Copy the new data.refreshToken into @refreshToken for the next call.
+POST {{baseUrl}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### POST /auth/refresh — use OLD token again (expects 401 INVALID_REFRESH_TOKEN)
+# Paste the original refresh token (before rotation) here to confirm rejection.
+POST {{baseUrl}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### POST /auth/refresh — completely unknown token (expects 401 INVALID_REFRESH_TOKEN)
+POST {{baseUrl}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "0000000000000000000000000000000000000000000000000000000000000000"
+}
+
+###############################################################################
+# 6. Logout (FR-A2)
+###############################################################################
+
+### POST /auth/logout — revokes all refresh tokens for this user (expects 200)
+POST {{baseUrl}}/api/v1/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### POST /auth/refresh — after logout, refresh token is gone (expects 401 INVALID_REFRESH_TOKEN)
+POST {{baseUrl}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### POST /auth/logout — no body is fine (expects 200, silent no-op)
+POST {{baseUrl}}/api/v1/auth/logout
+Content-Type: application/json

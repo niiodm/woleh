@@ -171,12 +171,14 @@ FR-A2 ("token refresh or re-auth policy documented and implemented") has been de
 
 ---
 
-### Step 2.5 — API tests and Phase 3 artifacts
+### Step 2.5 — API tests and Phase 3 artifacts ✅
 
 - **`server/api-tests/phase3.http`**: rate limit demo (11× PUT watch → 429 with `Retry-After`), health check (`GET /actuator/health`), correlation ID echo (`GET /api/v1/me` → inspect `X-Request-Id` response header), refresh token flow (verify OTP → refresh → new tokens).
 - **`http-client.env.json`**: add `managementBaseUrl` (e.g. `http://localhost:8081`).
 
-**Done when:** CI is green; `.http` file documents Phase 3 server flows for manual QA.
+**Implementation:** [`phase3.http`](../server/api-tests/phase3.http) — 6 sections: auth, 11-request rate-limit demo (10 succeed, 11th → 429 + Retry-After), Actuator health/info/metrics/prometheus, correlation-ID echo (custom + auto-generated), refresh token rotation + rejection of old token, logout + post-logout rejection; [`http-client.env.json`](../server/api-tests/http-client.env.json) — `managementBaseUrl` added to `dev` and `staging` environments.
+
+**Done when:** CI is green; `.http` file documents Phase 3 server flows for manual QA. ✅
 
 ---
 
@@ -349,3 +351,4 @@ Create `docs/runbooks/INCIDENT_RESPONSE.md` covering the most likely failure sce
 | 0.3 | 2026-04-10 | Step 2.2 implemented: `micrometer-registry-prometheus` + `buildInfo()`; `metrics` + `prometheus` exposure + percentile histogram config; `WsHealthIndicator` (`ws` component, `activeSessions` detail); `WsSessionRegistry` Gauge + `sessionCount()`; `PlaceListService` watch/broadcast PUT counters; `MatchingService` evaluation Timer; `GlobalExceptionHandler` 4xx/5xx error counters; `MatchingServiceTest` updated; `HealthIntegrationTest` + `MetricsIntegrationTest` (6 new tests); 206 server tests green |
 | 0.4 | 2026-04-10 | Step 2.3 implemented: `CorrelationIdFilter` (`HIGHEST_PRECEDENCE + 1`, MDC `requestId`, echo `X-Request-Id`); `JwtAuthenticationFilter` MDC `userId` + `finally` clear; `logback-spring.xml` with correlation-ID pattern + `prod` profile stub; `TransitWebSocketHandler` connect/disconnect to INFO; `GlobalExceptionHandler` logging (5xx ERROR with stack trace, 4xx DEBUG); `CorrelationIdFilterIntegrationTest` (2 tests); 208 server tests green |
 | 0.5 | 2026-04-10 | Step 2.4 implemented: `V6__refresh_tokens.sql`; `RefreshToken` entity + `RefreshTokenRepository`; `JwtService` — `generateRefreshToken()` + `hashToken()`; `WolehJwtProperties` — `refreshTokenTtl`; `RefreshTokenService` — issue/rotate/revokeByRawToken; `InvalidRefreshTokenException` → 401; `VerifyOtpResponse` + `AuthController` updated; `POST /auth/refresh` + `POST /auth/logout` endpoints; `RefreshTokenIntegrationTest` (6 tests); 215 server tests green |
+| 0.6 | 2026-04-10 | Step 2.5 implemented: `phase3.http` (6 sections: auth, rate-limit demo, Actuator, correlation IDs, refresh token rotation, logout); `http-client.env.json` — `managementBaseUrl` added; 215 server tests green |
