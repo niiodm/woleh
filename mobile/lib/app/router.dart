@@ -8,6 +8,7 @@ import '../features/auth/presentation/otp_screen.dart';
 import '../features/auth/presentation/phone_screen.dart';
 import '../features/auth/presentation/setup_name_screen.dart';
 import '../features/home/presentation/home_screen.dart';
+import '../features/location/presentation/live_map_screen.dart';
 import '../features/me/data/me_dto.dart';
 import '../features/me/presentation/me_notifier.dart';
 import '../features/me/presentation/profile_edit_screen.dart';
@@ -25,6 +26,11 @@ part 'router.g.dart';
 const _permissionGuards = <String, String>{
   '/watch': 'woleh.place.watch',
   '/broadcast': 'woleh.place.broadcast',
+};
+
+/// Routes that require **any** of these permissions (e.g. live map: watch or broadcast).
+const _permissionGuardsAny = <String, List<String>>{
+  '/map': ['woleh.place.watch', 'woleh.place.broadcast'],
 };
 
 /// Redirect destination for authenticated users missing a required permission.
@@ -59,6 +65,10 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: '/home',
         builder: (_, __) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/map',
+        builder: (_, __) => const LiveMapScreen(),
       ),
       GoRoute(
         path: '/me/edit',
@@ -133,6 +143,12 @@ class _RouterNotifier extends ChangeNotifier {
       final requiredPermission = _permissionGuards[location];
       if (requiredPermission != null &&
           !permissions.contains(requiredPermission)) {
+        return _kUpgradeRedirect;
+      }
+
+      final requiredAny = _permissionGuardsAny[location];
+      if (requiredAny != null &&
+          !requiredAny.any(permissions.contains)) {
         return _kUpgradeRedirect;
       }
     }

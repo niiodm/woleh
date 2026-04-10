@@ -212,6 +212,15 @@ class _MeView extends StatelessWidget {
             onTap: () => context.push('/broadcast'),
             onLockedTap: () => context.push('/plans'),
           ),
+          const SizedBox(height: 8),
+          PermissionGatedButton(
+            icon: Icons.map_outlined,
+            label: 'Live map',
+            hasPermission: me.permissions.contains('woleh.place.watch') ||
+                me.permissions.contains('woleh.place.broadcast'),
+            onTap: () => context.push('/map'),
+            onLockedTap: () => context.push('/plans'),
+          ),
         ],
       ),
     );
@@ -266,10 +275,20 @@ class _MatchCard extends StatelessWidget {
               .bodySmall
               ?.copyWith(color: colors.onSurfaceVariant),
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.close, size: 18),
-          onPressed: onDismiss,
-          tooltip: 'Dismiss',
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.map_outlined, size: 20),
+              tooltip: 'Live map',
+              onPressed: () => context.push('/map'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 18),
+              onPressed: onDismiss,
+              tooltip: 'Dismiss',
+            ),
+          ],
         ),
         onTap: onTap,
       ),
