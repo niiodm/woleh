@@ -44,7 +44,7 @@ ApiClient apiClient(Ref ref) {
     );
   }
 
-  dio.interceptors.add(_ErrorInterceptor());
+  dio.interceptors.add(AppErrorInterceptor());
 
   return ApiClient(dio);
 }
@@ -71,17 +71,29 @@ class _AuthInterceptor extends Interceptor {
   }
 }
 
-/// Maps HTTP status codes to typed [AppError] subclasses so callers can
-/// pattern-match without inspecting raw [DioException] objects.
-class _ErrorInterceptor extends Interceptor {
+/// Maps HTTP status codes (and server error codes) to typed [AppError]
+/// subclasses so callers can pattern-match without inspecting raw
+/// [DioException] objects.
+///
+/// Exposed publicly so tests can add it to a mock [Dio] instance and verify
+/// that responses are mapped to the correct [AppError] type.
+class AppErrorInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     final status = err.response?.statusCode;
     final serverMsg = _extractMessage(err.response);
+    final serverCode = _extractCode(err.response);
 
     final appError = switch (status) {
       null => NetworkError(),
       401 => UnauthorizedError(serverMsg ?? 'Session expired'),
+      // 400 VALIDATION_ERROR covers: empty name, over-limit code points,
+      // duplicate normalised name in broadcast list.
+      400 when serverCode == 'VALIDATION_ERROR' =>
+        PlaceValidationError(serverMsg ?? 'Invalid place name'),
+      // 403 OVER_LIMIT: user has the permission but exceeded their list cap.
+      403 when serverCode == 'OVER_LIMIT' =>
+        PlaceLimitError(serverMsg ?? 'Place list limit exceeded'),
       403 => ForbiddenError(serverMsg ?? 'Access denied'),
       429 => RateLimitedError(serverMsg ?? 'Too many requests, please wait'),
       final s when s >= 500 => ServerError(serverMsg ?? 'Server error'),
@@ -102,6 +114,14 @@ class _ErrorInterceptor extends Interceptor {
     final data = response?.data;
     if (data is Map<String, dynamic>) {
       return data['message'] as String?;
+    }
+    return null;
+  }
+
+  String? _extractCode(Response<dynamic>? response) {
+    final data = response?.data;
+    if (data is Map<String, dynamic>) {
+      return data['code'] as String?;
     }
     return null;
   }

@@ -200,7 +200,7 @@ Implement the same four-step pipeline ([PLACE_NAMES.md](./PLACE_NAMES.md) §1) i
 
 ---
 
-### Step 3.2 — Place-list DTOs and repository
+### Step 3.2 — Place-list DTOs and repository ✅
 
 Wire the REST place-list endpoints into the mobile data layer:
 
@@ -212,9 +212,9 @@ Wire the REST place-list endpoints into the mobile data layer:
   - `putBroadcastList(List<String> names): Future<List<String>>`
 - Map `AppError` types from HTTP 400 / 403 responses (`PlaceLimitError`, `PlaceValidationError` extending the sealed failure hierarchy in `app_error.dart`).
 
-**Implementation:** `place_names_dto.dart`; `place_list_repository.dart`; `app_error.dart` extended with `PlaceLimitError` and `PlaceValidationError`.
+**Implementation:** [`app_error.dart`](../mobile/lib/core/app_error.dart) extended with `PlaceValidationError` (400 `VALIDATION_ERROR`) and `PlaceLimitError` (403 `OVER_LIMIT`); [`api_client.dart`](../mobile/lib/core/api_client.dart) — `_ErrorInterceptor` renamed to `AppErrorInterceptor` (public) and updated to map 400/403 with server `code` field; [`place_names_dto.dart`](../mobile/lib/features/places/data/place_names_dto.dart) — simple `PlaceNamesDto` with `fromJson`/`toJson`; [`place_list_repository.dart`](../mobile/lib/features/places/data/place_list_repository.dart) — `@Riverpod(keepAlive: true)` with `getWatchList`, `putWatchList`, `getBroadcastList`, `putBroadcastList`; [`place_list_repository_test.dart`](../mobile/test/features/places/place_list_repository_test.dart) — 11 tests (`_MockAdapter` + `AppErrorInterceptor`: happy-path parsing for all 4 methods, 401 → `UnauthorizedError`, 403 `PERMISSION_DENIED` → `ForbiddenError`, 400 `VALIDATION_ERROR` → `PlaceValidationError`, 403 `OVER_LIMIT` → `PlaceLimitError`, broadcast duplicate 400).
 
-**Done when:** `PlaceListRepository` methods compile and map errors correctly; unit-testable with stub HTTP responses.
+**Done when:** `PlaceListRepository` methods compile and map errors correctly; unit-testable with stub HTTP responses. ✅
 
 ---
 
@@ -340,5 +340,6 @@ Surface incoming `match` events to the user:
 | 0.8 | 2026-04-09 | Step 2.7 implemented: `MatchEvent` moved to `ws/` package, `WsSessionRegistry.sendMatchEvent` real implementation (`ObjectMapper`, `WsEnvelope<MatchEvent>`, skip-on-no-session, evict-on-IOException), `MatchDispatchIntegrationTest` (2 end-to-end tests — broadcast PUT → watcher notified, watch PUT → broadcaster notified; 187 tests total green) |
 | 0.9 | 2026-04-09 | Step 2.8 complete: all 187 server tests green; `phase2.http` (auth ×2, watch list, broadcast list, WebSocket connection, 5-step match flow); `http-client.env.json` updated (`wsBaseUrl`, `watchPhone`, `broadcastPhone`) |
 | 1.0 | 2026-04-09 | Step 3.1 implemented: `unorm_dart 0.3.2` dependency; `normalizePlaceName` + `validatePlaceName` Dart utilities (4-step pipeline matching server); `place_name_normalizer_test.dart` (17 tests — all 3 PLACE_NAMES.md §5 vectors pass including NFC vector 2; 115 mobile tests green) |
+| 1.1 | 2026-04-09 | Step 3.2 implemented: `PlaceValidationError` + `PlaceLimitError` added to `app_error.dart`; `AppErrorInterceptor` (public, maps 400 `VALIDATION_ERROR` → `PlaceValidationError`, 403 `OVER_LIMIT` → `PlaceLimitError`); `PlaceNamesDto`; `PlaceListRepository` (`keepAlive`, 4 methods); `place_list_repository_test.dart` (11 tests — happy path + 5 error-type assertions; 126 mobile tests green) |
 
 When Phase 2 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. normalization library chosen for Dart NFC, in-memory vs DB intersection query, final `match` event field names).

@@ -27,3 +27,16 @@ final class NetworkError extends AppError {
 final class UnknownError extends AppError {
   const UnknownError([super.message = 'Unknown error']);
 }
+
+/// A place name failed server-side validation (HTTP 400 `VALIDATION_ERROR`).
+/// Covers: empty-after-trim, over-200-code-points, duplicate normalized name
+/// in a broadcast list.
+final class PlaceValidationError extends AppError {
+  const PlaceValidationError([super.message = 'Invalid place name']);
+}
+
+/// The user has exceeded their place-list limit (HTTP 403 `OVER_LIMIT`).
+/// Distinct from [ForbiddenError] which covers missing permissions.
+final class PlaceLimitError extends AppError {
+  const PlaceLimitError([super.message = 'Place list limit exceeded']);
+}

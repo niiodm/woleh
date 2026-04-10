@@ -1,27 +1,28 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'api_client.dart';
+part of 'place_list_repository.dart';
 
 // **************************************************************************
 // RiverpodGenerator
 // **************************************************************************
 
-String _$apiClientHash() => r'5a84ce8a934e94cae113d7d1ac5368d2e457c6f8';
+String _$placeListRepositoryHash() =>
+    r'5941b0a1170a4106118e012bdb94b61a9c939a3c';
 
-/// See also [apiClient].
-@ProviderFor(apiClient)
-final apiClientProvider = Provider<ApiClient>.internal(
-  apiClient,
-  name: r'apiClientProvider',
+/// See also [placeListRepository].
+@ProviderFor(placeListRepository)
+final placeListRepositoryProvider = Provider<PlaceListRepository>.internal(
+  placeListRepository,
+  name: r'placeListRepositoryProvider',
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
       ? null
-      : _$apiClientHash,
+      : _$placeListRepositoryHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef ApiClientRef = ProviderRef<ApiClient>;
+typedef PlaceListRepositoryRef = ProviderRef<PlaceListRepository>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
