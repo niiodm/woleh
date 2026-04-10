@@ -7,9 +7,19 @@
 # 3. PUT /me/location-sharing { "enabled": true } → 200.
 # 4. POST /me/location → 200 (matched peers with an open WS get `peer_location` — §8.2).
 # 5. Rapid second POST → 429 RATE_LIMITED (default min interval 1000 ms).
+#
+# §3.5 — WS behaviour is not visible in this file; use a WS client or run:
+#   ./gradlew test --tests odm.clarity.woleh.ws.PeerLocationDispatchIntegrationTest
+#
+# Two-user manual flow (REST only): watcher token @tokenW, broadcaster @tokenB.
+# Overlap watch names with broadcast, enable sharing on B, POST /location as B.
+# After B PUTs a disjoint broadcast list, further POSTs must not reach W on WS
+# (verified in PeerLocationDispatchIntegrationTest.afterBroadcasterRemovesMatch_*).
 
 @baseUrl = {{baseUrl}}
 @token   = PASTE_ACCESS_TOKEN_HERE
+@tokenW  = PASTE_WATCHER_ACCESS_TOKEN
+@tokenB  = PASTE_BROADCASTER_ACCESS_TOKEN
 
 ### GET me (see profile.locationSharingEnabled)
 GET {{baseUrl}}/api/v1/me
@@ -52,4 +62,31 @@ Content-Type: application/json
 
 {
   "enabled": false
+}
+
+### §3.5 — Watcher place list (use {{tokenW}})
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{tokenW}}
+Content-Type: application/json
+
+{
+  "names": ["Madina", "Lapaz"]
+}
+
+### §3.5 — Broadcaster list overlapping watcher (use {{tokenB}}); then enable sharing + POST /location above
+PUT {{baseUrl}}/api/v1/me/places/broadcast
+Authorization: Bearer {{tokenB}}
+Content-Type: application/json
+
+{
+  "names": ["MADINA", "Kaneshie"]
+}
+
+### §3.5 — Break match: disjoint broadcast (no `peer_location_revoked`; further publishes simply do not fan out)
+PUT {{baseUrl}}/api/v1/me/places/broadcast
+Authorization: Bearer {{tokenB}}
+Content-Type: application/json
+
+{
+  "names": ["Kumasi", "Sunyani"]
 }

@@ -13,6 +13,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 import odm.clarity.woleh.model.User;
@@ -131,6 +132,31 @@ class PeerLocationDispatchIntegrationTest {
 	}
 
 	@Test
+	void afterBroadcasterRemovesMatch_secondPostDoesNotDeliverPeerLocation() throws Exception {
+		assertPutOk(WATCH_URL, watcherToken, "{\"names\":[\"Madina\",\"Lapaz\"]}");
+		assertPutOk(BROADCAST_URL, broadcasterToken, "{\"names\":[\"MADINA\",\"Kaneshie\"]}");
+		assertPutOk(SHARING_URL, broadcasterToken, "{\"enabled\":true}");
+
+		ConcurrentLinkedQueue<String> peerLocations = new ConcurrentLinkedQueue<>();
+		WebSocket ws = connectWsCollectingPeerLocations(watcherToken, peerLocations);
+		try {
+			assertPostLocationOk(broadcasterToken, 5.6037, -0.187);
+			waitUntilQueueSizeAtLeast(peerLocations, 1, 5, TimeUnit.SECONDS);
+
+			assertPutOk(BROADCAST_URL, broadcasterToken, "{\"names\":[\"Kumasi\",\"Sunyani\"]}");
+			locationPublishRateLimiter.clearForTesting();
+
+			assertPostLocationOk(broadcasterToken, 5.61, -0.19);
+			Thread.sleep(1500);
+			assertThat(peerLocations).hasSize(1);
+			assertThat(peerLocations.peek()).contains("\"latitude\":5.6037");
+		}
+		finally {
+			closeQuietly(ws);
+		}
+	}
+
+	@Test
 	void disablingSharing_sendsPeerLocationRevokedToMatchedWatcher() throws Exception {
 		assertPutOk(WATCH_URL, watcherToken, "{\"names\":[\"Madina\",\"Lapaz\"]}");
 		assertPutOk(BROADCAST_URL, broadcasterToken, "{\"names\":[\"MADINA\",\"Kaneshie\"]}");
@@ -167,6 +193,64 @@ class PeerLocationDispatchIntegrationTest {
 		ResponseEntity<String> resp = restTemplate.exchange(
 				LOCATION_URL, POST, new HttpEntity<>(json, headers), String.class);
 		assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+	}
+
+	private WebSocket connectWsCollectingPeerLocations(String token, ConcurrentLinkedQueue<String> peerLocationMessages)
+			throws Exception {
+		URI uri = URI.create("ws://localhost:" + port + "/ws/v1/transit?access_token=" + token);
+		return HttpClient.newHttpClient()
+				.newWebSocketBuilder()
+				.buildAsync(uri, peerLocationCollectorListener(peerLocationMessages))
+				.get(5, TimeUnit.SECONDS);
+	}
+
+	private static WebSocket.Listener peerLocationCollectorListener(ConcurrentLinkedQueue<String> target) {
+		return new WebSocket.Listener() {
+
+			private final StringBuilder buffer = new StringBuilder();
+
+			@Override
+			public void onOpen(WebSocket ws) {
+				ws.request(1);
+			}
+
+			@Override
+			public CompletionStage<?> onText(WebSocket ws, CharSequence data, boolean last) {
+				buffer.append(data);
+				if (last) {
+					String msg = buffer.toString();
+					buffer.setLength(0);
+					if (msg.contains("\"peer_location\"")) {
+						target.add(msg);
+					}
+					ws.request(1);
+				}
+				else {
+					ws.request(1);
+				}
+				return null;
+			}
+
+			@Override
+			public CompletionStage<?> onClose(WebSocket ws, int statusCode, String reason) {
+				return null;
+			}
+
+			@Override
+			public void onError(WebSocket ws, Throwable error) {
+			}
+		};
+	}
+
+	private static void waitUntilQueueSizeAtLeast(
+			ConcurrentLinkedQueue<?> queue, int minSize, long timeout, TimeUnit unit) throws InterruptedException {
+		long deadline = System.currentTimeMillis() + unit.toMillis(timeout);
+		while (queue.size() < minSize && System.currentTimeMillis() < deadline) {
+			Thread.sleep(25);
+		}
+		assertThat(queue.size())
+				.as("expected at least %d peer_location message(s) within %s %s", minSize, timeout, unit)
+				.isGreaterThanOrEqualTo(minSize);
 	}
 
 	private WebSocket connectWs(String token, CompletableFuture<String> future, String completeWhenContains)
