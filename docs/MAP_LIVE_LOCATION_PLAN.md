@@ -90,10 +90,10 @@ For location, the server needs a **fast, consistent** answer to: *“Is user A m
 
 ### 3.4 Stopping sharing
 
-**Implementation status:** `PUT /api/v1/me/location-sharing` with `{ "enabled": false }` (same endpoint for on/off). `DELETE` is not used in v1.
+**Implementation status:** `PUT /api/v1/me/location-sharing` with `{ "enabled": false }`; persist flag; **403** on `POST /me/location` until re-enabled; **`peer_location_revoked`** WebSocket to each matched counterparty **after commit** ([API_CONTRACT.md](./API_CONTRACT.md) §8.3). `DELETE` is not used in v1.
 
 - **Client:** Set `enabled` to `false` via `PUT /api/v1/me/location-sharing`.  
-- **Server:** Persist flag; **reject** further `POST /me/location` with **403** `LOCATION_SHARING_OFF` until re-enabled.
+- **Server:** Persist flag; **reject** further `POST /me/location` with **403** `LOCATION_SHARING_OFF` until re-enabled; notify open WS sessions of matched peers so they can drop the publisher’s marker.
 
 ### 3.5 Testing
 

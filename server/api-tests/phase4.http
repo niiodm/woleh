@@ -45,7 +45,7 @@ Content-Type: application/json
   "recordedAt": "2026-04-10T12:00:00Z"
 }
 
-### Disable sharing
+### Disable sharing (matched peers with open WS receive `peer_location_revoked` — §8.3)
 PUT {{baseUrl}}/api/v1/me/location-sharing
 Authorization: Bearer {{token}}
 Content-Type: application/json

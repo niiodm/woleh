@@ -20,10 +20,12 @@ import odm.clarity.woleh.ws.WsSessionRegistry;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Accepts authenticated location fixes and fans them out to matched peers over WebSocket
- * (MAP_LIVE_LOCATION_PLAN §3.2–3.3).
+ * (MAP_LIVE_LOCATION_PLAN §3.2–3.3). Turning sharing off notifies peers (§3.4).
  */
 @Service
 public class LocationPublishService {
@@ -89,8 +91,33 @@ public class LocationPublishService {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new UserNotFoundException(userId));
 		requireWatchOrBroadcast(entitlementService.computeEntitlements(userId));
+
+		boolean wasEnabled = user.isLocationSharingEnabled();
 		user.setLocationSharingEnabled(enabled);
 		userRepository.save(user);
+
+		// §3.4: tell matched peers to drop this user's marker (after successful commit).
+		if (wasEnabled && !enabled) {
+			Set<Long> peers = Set.copyOf(matchAdjacencyRegistry.getCounterparties(userId));
+			String publisherId = String.valueOf(userId);
+			Runnable notify = () -> {
+				for (Long peerId : peers) {
+					wsSessionRegistry.sendPeerLocationRevoked(peerId, publisherId);
+				}
+			};
+			if (TransactionSynchronizationManager.isSynchronizationActive()) {
+				TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+					@Override
+					public void afterCommit() {
+						notify.run();
+					}
+				});
+			}
+			else {
+				notify.run();
+			}
+		}
+
 		return user.isLocationSharingEnabled();
 	}
 

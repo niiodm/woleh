@@ -142,4 +142,34 @@ public class WsSessionRegistry {
 			sessions.remove(recipientUserId, session);
 		}
 	}
+
+	/**
+	 * Notifies {@code recipientUserId} that {@code publisherUserId} stopped location sharing
+	 * (MAP_LIVE_LOCATION_PLAN §3.4).
+	 */
+	public void sendPeerLocationRevoked(Long recipientUserId, String publisherUserId) {
+		WebSocketSession session = sessions.get(recipientUserId);
+		if (session == null || !session.isOpen()) {
+			log.debug("sendPeerLocationRevoked: no open session for recipientUserId={}, skipping",
+					recipientUserId);
+			return;
+		}
+
+		WsEnvelope<PeerLocationRevokedEvent> envelope =
+				new WsEnvelope<>("peer_location_revoked", new PeerLocationRevokedEvent(publisherUserId));
+		try {
+			String json = objectMapper.writeValueAsString(envelope);
+			session.sendMessage(new TextMessage(json));
+			log.debug("sendPeerLocationRevoked: publisher={} → recipientUserId={}",
+					publisherUserId, recipientUserId);
+		}
+		catch (JsonProcessingException e) {
+			log.error("sendPeerLocationRevoked: serialise failed recipientUserId={}", recipientUserId, e);
+		}
+		catch (IOException e) {
+			log.warn("sendPeerLocationRevoked: send failed recipientUserId={} — removing session",
+					recipientUserId, e);
+			sessions.remove(recipientUserId, session);
+		}
+	}
 }

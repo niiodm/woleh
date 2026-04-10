@@ -291,7 +291,7 @@ Immutable fields (e.g. phone) are not patchable unless product allows.
 }
 ```
 
-When `enabled` is `false`, `POST /api/v1/me/location` returns **403** `LOCATION_SHARING_OFF` until turned on again.
+When `enabled` is `false`, `POST /api/v1/me/location` returns **403** `LOCATION_SHARING_OFF` until turned on again. Matched counterparties with an open WebSocket receive **`peer_location_revoked`** (§8.3).
 
 ---
 
@@ -465,6 +465,7 @@ Error body uses envelope §2.2.
 { "type": "heartbeat", "data": "ping" }
 { "type": "match", "data": { } }
 { "type": "peer_location", "data": { } }
+{ "type": "peer_location_revoked", "data": { } }
 ```
 
 ### 8.1 `type: match` (illustrative v1)
@@ -512,6 +513,21 @@ Sent to each **matched** peer when the other party publishes a fix via **`POST /
 
 The publisher does **not** receive their own `peer_location` on the wire.
 
+### 8.3 `type: peer_location_revoked` (Phase 4, §3.4)
+
+Sent to each **matched** peer when the other user turns **off** location sharing (`PUT /me/location-sharing` with `enabled: false`). Clients should **remove** that user’s last-known position from the map.
+
+```json
+{
+  "type": "peer_location_revoked",
+  "data": {
+    "userId": "42"
+  }
+}
+```
+
+`userId` is the party who stopped sharing.
+
 ---
 
 ## 9. Client responsibilities
@@ -530,4 +546,4 @@ The publisher does **not** receive their own `peer_location` on the wire.
 | 1.0 | 2026-04-06 | Initial v1 REST + permission matrix + WS outline |
 | 1.1 | 2026-04-06 | Auth: removed `purpose` from send/verify OTP; `verify-otp` returns `flow`: `login` \| `signup` |
 | 1.2 | 2026-04-06 | WebSocket auth: query `access_token` per ADR 0001; `POST …/subscription/checkout` for WebView payment per ADR 0005 |
-| 1.3 | 2026-04-10 | Phase 4: `POST /me/location`, `PUT /me/location-sharing`, profile `locationSharingEnabled`, WebSocket `peer_location` (§8.2) |
+| 1.3 | 2026-04-10 | Phase 4: `POST /me/location`, `PUT /me/location-sharing`, profile `locationSharingEnabled`, WebSocket `peer_location` (§8.2), `peer_location_revoked` (§8.3) |

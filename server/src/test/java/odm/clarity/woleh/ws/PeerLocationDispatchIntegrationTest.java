@@ -38,7 +38,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Match-scoped {@code peer_location} fan-out (MAP_LIVE_LOCATION_PLAN §3.3).
+ * Match-scoped {@code peer_location} fan-out (§3.3) and {@code peer_location_revoked} on
+ * sharing off (§3.4).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class PeerLocationDispatchIntegrationTest {
@@ -113,7 +114,7 @@ class PeerLocationDispatchIntegrationTest {
 		assertPutOk(SHARING_URL, broadcasterToken, "{\"enabled\":true}");
 
 		CompletableFuture<String> peerLocFuture = new CompletableFuture<>();
-		WebSocket ws = connectWs(watcherToken, peerLocFuture);
+		WebSocket ws = connectWs(watcherToken, peerLocFuture, "\"peer_location\"");
 		try {
 			assertPostLocationOk(broadcasterToken, 5.6037, -0.187);
 
@@ -123,6 +124,26 @@ class PeerLocationDispatchIntegrationTest {
 			assertThat(message).contains("\"latitude\":5.6037");
 			assertThat(message).contains("\"longitude\":-0.187");
 			assertThat(message).contains("\"receivedAt\"");
+		}
+		finally {
+			closeQuietly(ws);
+		}
+	}
+
+	@Test
+	void disablingSharing_sendsPeerLocationRevokedToMatchedWatcher() throws Exception {
+		assertPutOk(WATCH_URL, watcherToken, "{\"names\":[\"Madina\",\"Lapaz\"]}");
+		assertPutOk(BROADCAST_URL, broadcasterToken, "{\"names\":[\"MADINA\",\"Kaneshie\"]}");
+		assertPutOk(SHARING_URL, broadcasterToken, "{\"enabled\":true}");
+
+		CompletableFuture<String> revokeFuture = new CompletableFuture<>();
+		WebSocket ws = connectWs(watcherToken, revokeFuture, "\"peer_location_revoked\"");
+		try {
+			assertPutOk(SHARING_URL, broadcasterToken, "{\"enabled\":false}");
+
+			String message = revokeFuture.get(5, TimeUnit.SECONDS);
+			assertThat(message).contains("\"peer_location_revoked\"");
+			assertThat(message).contains("\"userId\":\"" + broadcaster.getId() + "\"");
 		}
 		finally {
 			closeQuietly(ws);
@@ -148,16 +169,16 @@ class PeerLocationDispatchIntegrationTest {
 		assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
 	}
 
-	private WebSocket connectWs(String token, CompletableFuture<String> peerLocationFuture)
+	private WebSocket connectWs(String token, CompletableFuture<String> future, String completeWhenContains)
 			throws Exception {
 		URI uri = URI.create("ws://localhost:" + port + "/ws/v1/transit?access_token=" + token);
 		return HttpClient.newHttpClient()
 				.newWebSocketBuilder()
-				.buildAsync(uri, peerLocationListener(peerLocationFuture))
+				.buildAsync(uri, wsListener(future, completeWhenContains))
 				.get(5, TimeUnit.SECONDS);
 	}
 
-	private static WebSocket.Listener peerLocationListener(CompletableFuture<String> target) {
+	private static WebSocket.Listener wsListener(CompletableFuture<String> target, String marker) {
 		return new WebSocket.Listener() {
 
 			private final StringBuilder buffer = new StringBuilder();
@@ -173,7 +194,7 @@ class PeerLocationDispatchIntegrationTest {
 				if (last) {
 					String msg = buffer.toString();
 					buffer.setLength(0);
-					if (msg.contains("\"peer_location\"")) {
+					if (msg.contains(marker)) {
 						target.complete(msg);
 					}
 					else {
@@ -189,7 +210,7 @@ class PeerLocationDispatchIntegrationTest {
 			@Override
 			public CompletionStage<?> onClose(WebSocket ws, int statusCode, String reason) {
 				target.completeExceptionally(
-						new RuntimeException("WS closed before peer_location: " + statusCode));
+						new RuntimeException("WS closed before expected message (" + marker + "): " + statusCode));
 				return null;
 			}
 
