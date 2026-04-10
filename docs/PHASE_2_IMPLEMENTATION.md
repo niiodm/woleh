@@ -328,23 +328,23 @@ All test files were already created incrementally during steps 3.1–3.6. This s
 
 ---
 
-## 4. Definition of done (Phase 2)
+## 4. Definition of done (Phase 2) ✅
 
-- [ ] `PlaceNameNormalizer` (server) and `normalizePlaceName` (Dart) produce identical output for all [PLACE_NAMES.md](./PLACE_NAMES.md) §5 test vectors.
-- [ ] `GET` + `PUT /api/v1/me/places/watch` enforces permission, limit, dedupe; returns saved list.
-- [ ] `GET` + `PUT /api/v1/me/places/broadcast` enforces permission, limit, ordered dedupe; returns saved list.
-- [ ] Free user: capped at 5 watch names; 403 on attempt to exceed; no broadcast access.
-- [ ] Paid user: up to 50 watch names; up to 50 ordered broadcast names.
-- [ ] `MatchingService` correctly computes non-empty name intersection and dispatches match events.
-- [ ] `/ws/v1/transit` rejects upgrade without valid JWT or without place permissions; accepts valid JWT with either place permission.
-- [ ] Heartbeat sent to all open WS sessions every 15 s.
-- [ ] End-to-end: watcher connected via WS receives `match` event when broadcaster PUTs an overlapping list.
-- [ ] Mobile Watch screen: add/remove names, save, reload; preview shows normalized form; over-limit error shown.
-- [ ] Mobile Broadcast screen: ordered add/reorder/remove, save, reload; replaces Phase 1 placeholder.
-- [ ] Mobile WS client: connects on login; reconnects with backoff on drop; heartbeats discarded; unknown types ignored.
-- [ ] Mobile home screen displays match card when a `match` event arrives via WS.
-- [ ] CI passes: server + mobile tests green.
-- [ ] `server/api-tests/phase2.http` documents the watch → broadcast → match flow for manual QA.
+- [x] `PlaceNameNormalizer` (server) and `normalizePlaceName` (Dart) produce identical output for all [PLACE_NAMES.md](./PLACE_NAMES.md) §5 test vectors. *(Steps 2.1 + 3.1 — 17 tests each, including NFC decomposed/precomposed vector)*
+- [x] `GET` + `PUT /api/v1/me/places/watch` enforces permission, limit, dedupe; returns saved list. *(Step 2.3 — WatchListIntegrationTest 16 tests)*
+- [x] `GET` + `PUT /api/v1/me/places/broadcast` enforces permission, limit, ordered dedupe; returns saved list. *(Step 2.4 — BroadcastListIntegrationTest 17 tests)*
+- [x] Free user: capped at 5 watch names; 403 on attempt to exceed; no broadcast access. *(Steps 2.3–2.4)*
+- [x] Paid user: up to 50 watch names; up to 50 ordered broadcast names. *(Steps 2.3–2.4)*
+- [x] `MatchingService` correctly computes non-empty name intersection and dispatches match events. *(Step 2.5 — 11 unit tests; Step 2.7 — 2 end-to-end tests)*
+- [x] `/ws/v1/transit` rejects upgrade without valid JWT or without place permissions; accepts valid JWT with either place permission. *(Step 2.6 — WsAuthIntegrationTest 5 tests)*
+- [x] Heartbeat sent to all open WS sessions every 15 s. *(Step 2.6 — `WsHeartbeatScheduler` `@Scheduled(fixedDelay=15_000)`; client discards silently per step 3.5)*
+- [x] End-to-end: watcher connected via WS receives `match` event when broadcaster PUTs an overlapping list. *(Step 2.7 — MatchDispatchIntegrationTest 2 tests)*
+- [x] Mobile Watch screen: add/remove names, save, reload; preview shows normalized form; over-limit error shown. *(Step 3.3 — 7 widget tests)*
+- [x] Mobile Broadcast screen: ordered add/reorder/remove, save, reload; replaces Phase 1 placeholder. *(Step 3.4 — 5 widget tests)*
+- [x] Mobile WS client: connects on login; reconnects with backoff on drop; heartbeats discarded; unknown types ignored. *(Step 3.5 — 6 unit tests)*
+- [x] Mobile home screen displays match card when a `match` event arrives via WS. *(Step 3.6 — MatchNotifier + _MatchCard; 5 unit tests)*
+- [x] CI passes: server + mobile tests green. *(187 server tests + 151 mobile tests = 338 total)*
+- [x] `server/api-tests/phase2.http` documents the watch → broadcast → match flow for manual QA. *(Step 2.8)*
 
 ---
 
@@ -365,8 +365,7 @@ All test files were already created incrementally during steps 3.1–3.6. This s
 | 1.1 | 2026-04-09 | Step 3.2 implemented: `PlaceValidationError` + `PlaceLimitError` added to `app_error.dart`; `AppErrorInterceptor` (public, maps 400 `VALIDATION_ERROR` → `PlaceValidationError`, 403 `OVER_LIMIT` → `PlaceLimitError`); `PlaceNamesDto`; `PlaceListRepository` (`keepAlive`, 4 methods); `place_list_repository_test.dart` (11 tests — happy path + 5 error-type assertions; 126 mobile tests green) |
 | 1.2 | 2026-04-09 | Step 3.3 implemented: `WatchNotifier` (sealed state machine, `add`/`remove`/`save`/`refresh`); `WatchScreen` (add field with normalized preview, Dismissible list, save-error banner, save bar, pull-to-refresh); `/watch` route + permission guard in router; "My Watch List" home-screen entry; `watch_screen_test.dart` (7 widget tests; 133 mobile tests green) |
 | 1.3 | 2026-04-09 | Step 3.4 implemented: `BroadcastNotifier` (ordered sealed state, `add`/`remove`/`reorder`/`save`/`refresh`); `BroadcastScreen` (`ReorderableListView` with drag handles, Dismissible, save-error banner, `PlaceLimitError` upgrade message); `/broadcast` route wired to real screen (placeholder removed); `broadcast_screen_test.dart` (5 widget tests); `router_redirect_test.dart` updated with `_EmptyPlaceListRepository` stub (138 mobile tests green) |
-| 1.6 | 2026-04-09 | Step 3.7 complete: `watch permission gate` group added to `router_redirect_test.dart` (2 tests — no `woleh.place.watch` → redirected to /plans; with permission → "Watch List" shown); all other test files confirmed in place from steps 3.1–3.6; 151 mobile tests green |
 | 1.4 | 2026-04-09 | Step 3.5 implemented: `ws_message.dart` (sealed `WsMessage`: `MatchMessage`, `UnknownMessage`); `ws_client.dart` (`@Riverpod(keepAlive: true)` notifier — `connect`/`disconnect`, backoff `min(2s×2^attempt, 60s)`, heartbeat filter, `UnknownMessage` forward-compat, `createChannel` overridable for tests, dispose guard prevents stray timer in `fakeAsync`); `WolehApp.build()` watches `wsClientProvider` for eager init; `web_socket_channel` added; `ws_client_test.dart` (6 unit tests — backoff table, reconnect timing via `fakeAsync`, heartbeat filtered, unknown type emitted, `MatchMessage` fields, backoff reset on receipt; 144 mobile tests green) |
 | 1.5 | 2026-04-09 | Step 3.6 implemented: `MatchNotifier` (`keepAlive`, accumulates newest-first, cap 20, clear on sign-out, `dismiss(int)`); `_MatchCard` widget on `HomeScreen` ("A bus is heading through: …" / "A watcher needs: …", dismiss + navigate); `WatchScreen` + `BroadcastScreen` floating SnackBar via direct `wsClientProvider.notifier.messages` stream subscription in `initState`/`dispose`; `match_notifier_test.dart` (5 unit tests — accumulate, cap, sign-out, dismiss, UnknownMessage ignored; 149 mobile tests green) |
-
-When Phase 2 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. normalization library chosen for Dart NFC, in-memory vs DB intersection query, final `match` event field names).
+| 1.6 | 2026-04-09 | Step 3.7 complete: `watch permission gate` group added to `router_redirect_test.dart` (2 tests — no `woleh.place.watch` → redirected to /plans; with permission → "Watch List" shown); all other test files confirmed in place from steps 3.1–3.6; 151 mobile tests green |
+| 2.0 | 2026-04-09 | **Phase 2 complete.** All 15 DoD criteria satisfied. Server: 187 tests green. Mobile: 151 tests green (338 total). Deviations from original plan: (1) Dart NFC normalization via `unorm_dart 0.3.2` (no built-in NFC in Dart SDK); (2) `MatchingService` uses in-memory set intersection — both lists loaded per `PUT`, no DB-level intersection query; (3) `match` envelope fields settled as `matchedNames`, `counterpartyUserId`, `kind`; (4) `UnknownMessage` is emitted on `messages` stream for forward-compat in addition to a debug log. PRD §10 updated to ✅ Complete (2026-04-09). |
