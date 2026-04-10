@@ -51,6 +51,8 @@ For location, the server needs a **fast, consistent** answer to: *“Is user A m
 
 **Recommended approach (v1):**
 
+**Implementation status:** `MatchAdjacencyRegistry` + `PlaceListService` hook + unit tests are **done** (`server/.../places/MatchAdjacencyRegistry.java`). REST publish, WS `peer_location`, and mobile map are **not** started.
+
 1. **`MatchAdjacencyRegistry` (in-process component)**  
    - Maintains `Map<Long userId, Set<Long> counterparties>` (bidirectional: if A is in B’s set, B is in A’s).  
    - **Update** whenever [`MatchingService`](../server/src/main/java/odm/clarity/woleh/places/MatchingService.java) finds intersections: on each `dispatchBroadcastMatches` / `dispatchWatchMatches`, merge in new pairs for the users involved.  
@@ -131,7 +133,7 @@ For location, the server needs a **fast, consistent** answer to: *“Is user A m
 | [API_CONTRACT.md](./API_CONTRACT.md) | Add location publish + sharing toggle; WS `type` values. |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | **§5.8** match-scoped live location; **§4.1** map stack; **§6.2** note on `peer_location`. |
 | [PRD.md](./PRD.md) | §7.5 match-scoped sharing rule, **FR-L4**, Phase 4 in §10, executive summary (v0.18). |
-| New ADR | `docs/adr/00xx-match-scoped-live-location.md` (still to add when implementation starts) |
+| New ADR | [0008-match-scoped-live-location.md](./adr/0008-match-scoped-live-location.md) |
 
 ---
 

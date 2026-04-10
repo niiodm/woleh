@@ -45,6 +45,7 @@ public class PlaceListService {
 	private final EntitlementService entitlementService;
 	private final PlaceNameNormalizer normalizer;
 	private final MatchingService matchingService;
+	private final MatchAdjacencyRegistry matchAdjacencyRegistry;
 	private final Counter watchPutCounter;
 	private final Counter broadcastPutCounter;
 
@@ -54,12 +55,14 @@ public class PlaceListService {
 			EntitlementService entitlementService,
 			PlaceNameNormalizer normalizer,
 			MatchingService matchingService,
+			MatchAdjacencyRegistry matchAdjacencyRegistry,
 			MeterRegistry meterRegistry) {
 		this.placeListRepository = placeListRepository;
 		this.userRepository = userRepository;
 		this.entitlementService = entitlementService;
 		this.normalizer = normalizer;
 		this.matchingService = matchingService;
+		this.matchAdjacencyRegistry = matchAdjacencyRegistry;
 		this.watchPutCounter = Counter.builder("woleh.place.list.put")
 				.tag("list_type", "watch")
 				.description("Successful PUT operations on the watch place-name list")
@@ -102,6 +105,7 @@ public class PlaceListService {
 
 		upsert(userId, PlaceListType.WATCH, deduped);
 		watchPutCounter.increment();
+		matchAdjacencyRegistry.rebuildAdjacencyForUser(userId);
 		matchingService.dispatchWatchMatches(userId, deduped.normalizedNames());
 
 		return new PlaceNamesResponse(deduped.displayNames());
@@ -140,6 +144,7 @@ public class PlaceListService {
 
 		upsert(userId, PlaceListType.BROADCAST, deduped);
 		broadcastPutCounter.increment();
+		matchAdjacencyRegistry.rebuildAdjacencyForUser(userId);
 		matchingService.dispatchBroadcastMatches(userId, deduped.normalizedNames());
 
 		return new PlaceNamesResponse(deduped.displayNames());

@@ -11,3 +11,4 @@ Records for **non-obvious** or **costly-to-reverse** choices. Specs (API envelop
 | [0005](0005-payment-checkout-webview.md) | Payment via local provider in secure WebView |
 | [0006](0006-rate-limiting-and-scaling.md) | Rate limits MVP vs multi-instance |
 | [0007](0007-single-tenant-deployment.md) | Single-tenant deployment for Woleh v1 |
+| [0008](0008-match-scoped-live-location.md) | Match-scoped live location (map / Phase 4) |
