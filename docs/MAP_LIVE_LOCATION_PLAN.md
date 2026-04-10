@@ -68,7 +68,7 @@ For location, the server needs a **fast, consistent** answer to: *“Is user A m
 
 ### 3.2 REST: publish location (authenticated)
 
-**Implementation status:** `POST /api/v1/me/location`, `PUT /api/v1/me/location-sharing`, `LocationPublishService`, `LocationPublishRateLimiter`, Flyway `V8__user_location_sharing.sql`, `GET /me` profile field `locationSharingEnabled` — **done**. WebSocket fan-out is §3.3.
+**Implementation status:** `POST /api/v1/me/location`, `PUT /api/v1/me/location-sharing`, `LocationPublishService`, `LocationPublishRateLimiter`, Flyway `V8__user_location_sharing.sql`, `GET /me` profile field `locationSharingEnabled` — **done**. WebSocket **`peer_location`** fan-out: §3.3.
 
 - **Endpoint:** `POST /api/v1/me/location` — documented in [API_CONTRACT.md](./API_CONTRACT.md) §6.4.1.
 - **Body:** `{ "latitude", "longitude", "accuracyMeters?", "heading?", "speed?", "recordedAt" }` (ISO-8601).
@@ -78,6 +78,8 @@ For location, the server needs a **fast, consistent** answer to: *“Is user A m
   - If user has **no** current counterparty, accept but **no fan-out** (or204—product choice; prefer accept+no-op to simplify client).
 
 ### 3.3 WebSocket: fan-out to matched peers only
+
+**Implementation status:** `PeerLocationEvent`, `WsSessionRegistry#sendPeerLocationEvent`, fan-out from `LocationPublishService` via `MatchAdjacencyRegistry#getCounterparties` — **done**. [API_CONTRACT.md](./API_CONTRACT.md) §8.2.
 
 - **Transport:** Existing path [`/ws/v1/transit`](../server/src/main/java/odm/clarity/woleh/ws/) and envelope [`WsEnvelope`](../server/src/main/java/odm/clarity/woleh/ws/WsEnvelope.java) pattern.
 - **New message `type` (example):** `peer_location`  

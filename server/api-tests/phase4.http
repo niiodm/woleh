@@ -5,7 +5,7 @@
 # 1. GET /me — profile includes locationSharingEnabled (default false).
 # 2. POST /me/location without sharing → 403 LOCATION_SHARING_OFF.
 # 3. PUT /me/location-sharing { "enabled": true } → 200.
-# 4. POST /me/location → 200.
+# 4. POST /me/location → 200 (matched peers with an open WS get `peer_location` — §8.2).
 # 5. Rapid second POST → 429 RATE_LIMITED (default min interval 1000 ms).
 
 @baseUrl = {{baseUrl}}

@@ -199,7 +199,7 @@ Standardize on:
 { "type": "<domain_event>", "data": { } }
 ```
 
-Event types and handshake auth: [API_CONTRACT.md](./API_CONTRACT.md) §8. **Phase 4** may add domain events such as `peer_location` (and optional revoke) for match-scoped map updates—document each new `type` in the contract when implemented.
+Event types and handshake auth: [API_CONTRACT.md](./API_CONTRACT.md) §8, including **`peer_location`** for match-scoped live position (Phase 4).
 
 ## 7. Testing strategy
 

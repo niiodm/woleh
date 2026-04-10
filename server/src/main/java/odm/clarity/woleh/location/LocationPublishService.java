@@ -7,17 +7,23 @@ import odm.clarity.woleh.api.dto.PublishLocationRequest;
 import odm.clarity.woleh.common.error.LocationSharingDisabledException;
 import odm.clarity.woleh.common.error.PermissionDeniedException;
 import odm.clarity.woleh.common.error.UserNotFoundException;
+import java.time.Instant;
+import java.util.Set;
+
 import odm.clarity.woleh.model.User;
+import odm.clarity.woleh.places.MatchAdjacencyRegistry;
 import odm.clarity.woleh.repository.UserRepository;
 import odm.clarity.woleh.subscription.EntitlementService;
 import odm.clarity.woleh.subscription.Entitlements;
+import odm.clarity.woleh.ws.PeerLocationEvent;
+import odm.clarity.woleh.ws.WsSessionRegistry;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Accepts authenticated location fixes for match-scoped fan-out (Phase 4).
- * WebSocket delivery is {@linkplain odm.clarity.woleh.ws.WsSessionRegistry separate (§3.3)}.
+ * Accepts authenticated location fixes and fans them out to matched peers over WebSocket
+ * (MAP_LIVE_LOCATION_PLAN §3.2–3.3).
  */
 @Service
 public class LocationPublishService {
@@ -29,15 +35,24 @@ public class LocationPublishService {
 
 	private final UserRepository userRepository;
 	private final EntitlementService entitlementService;
+	private final MatchAdjacencyRegistry matchAdjacencyRegistry;
+	private final WsSessionRegistry wsSessionRegistry;
 
 	public LocationPublishService(
 			UserRepository userRepository,
-			EntitlementService entitlementService) {
+			EntitlementService entitlementService,
+			MatchAdjacencyRegistry matchAdjacencyRegistry,
+			WsSessionRegistry wsSessionRegistry) {
 		this.userRepository = userRepository;
 		this.entitlementService = entitlementService;
+		this.matchAdjacencyRegistry = matchAdjacencyRegistry;
+		this.wsSessionRegistry = wsSessionRegistry;
 	}
 
-	@Transactional
+	/**
+	 * Validates and fans out {@code peer_location} to open WS sessions of users in
+	 * {@link MatchAdjacencyRegistry} for {@code userId}. No DB writes — not transactional.
+	 */
 	public void publish(Long userId, PublishLocationRequest request) {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new UserNotFoundException(userId));
@@ -48,11 +63,25 @@ public class LocationPublishService {
 			throw new LocationSharingDisabledException();
 		}
 
-		if (log.isTraceEnabled()) {
-			log.trace("location publish accepted userId={} lat={} lng={}",
-					userId, request.latitude(), request.longitude());
+		Instant receivedAt = Instant.now();
+		PeerLocationEvent event = new PeerLocationEvent(
+				String.valueOf(userId),
+				request.latitude(),
+				request.longitude(),
+				request.accuracyMeters(),
+				request.heading(),
+				request.speed(),
+				receivedAt);
+
+		Set<Long> peers = matchAdjacencyRegistry.getCounterparties(userId);
+		for (Long peerId : peers) {
+			wsSessionRegistry.sendPeerLocationEvent(peerId, event);
 		}
-		// Fan-out to MatchAdjacencyRegistry peers: MAP_LIVE_LOCATION_PLAN §3.3.
+
+		if (log.isTraceEnabled()) {
+			log.trace("location publish userId={} lat={} lng={} peers={}",
+					userId, request.latitude(), request.longitude(), peers);
+		}
 	}
 
 	@Transactional

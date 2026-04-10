@@ -12,7 +12,7 @@ Woleh may add map UI and device position sharing. Coordinates must **not** repla
 
 - Maintain an in-process **`MatchAdjacencyRegistry`** (`server/.../places/MatchAdjacencyRegistry.java`): bidirectional `userId → matched peer ids`, rebuilt on each successful watch or broadcast list PUT via `PlaceListService`.
 - **REST ingest:** `POST /api/v1/me/location` (rate-limited, requires watch or broadcast permission and `users.location_sharing_enabled`). **`PUT /api/v1/me/location-sharing`** toggles the flag. **`GET /api/v1/me`** exposes `profile.locationSharingEnabled`.
-- **WebSocket `peer_location`** fan-out will use `MatchAdjacencyRegistry#getCounterparties` in a later step; delivery must not go outside matched peers.
+- **WebSocket `peer_location`:** on each accepted location POST, `LocationPublishService` sends `WsEnvelope("peer_location", PeerLocationEvent)` to each open session in `MatchAdjacencyRegistry#getCounterparties(publisherId)`.
 - **Single JVM v1** is acceptable; multi-instance requires a shared view of adjacency (or recomputation on publish) — align with [0006](0006-rate-limiting-and-scaling.md).
 
 ## Consequences

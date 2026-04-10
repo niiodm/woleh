@@ -3,8 +3,9 @@ package odm.clarity.woleh.ws;
 /**
  * JSON envelope for all outbound WebSocket messages (API_CONTRACT.md §8).
  *
- * <pre>{@code { "type": "heartbeat", "data": "ping" }
- * { "type": "match",     "data": { "matchedNames": [...], ... } }}</pre>
+ * <pre>{@code { "type": "heartbeat",     "data": "ping" }
+ * { "type": "match",         "data": { "matchedNames": [...], ... } }
+ * { "type": "peer_location", "data": { "userId", "latitude", ... } }}</pre>
  *
  * @param <T> type of the {@code data} payload
  */

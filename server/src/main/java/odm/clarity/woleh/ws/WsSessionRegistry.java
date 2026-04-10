@@ -114,4 +114,32 @@ public class WsSessionRegistry {
 			sessions.remove(userId, session);
 		}
 	}
+
+	/**
+	 * Sends a {@code peer_location} event to {@code recipientUserId}'s open WebSocket session.
+	 * Used for match-scoped live location (MAP_LIVE_LOCATION_PLAN §3.3).
+	 */
+	public void sendPeerLocationEvent(Long recipientUserId, PeerLocationEvent event) {
+		WebSocketSession session = sessions.get(recipientUserId);
+		if (session == null || !session.isOpen()) {
+			log.debug("sendPeerLocationEvent: no open session for recipientUserId={}, skipping", recipientUserId);
+			return;
+		}
+
+		WsEnvelope<PeerLocationEvent> envelope = new WsEnvelope<>("peer_location", event);
+		try {
+			String json = objectMapper.writeValueAsString(envelope);
+			session.sendMessage(new TextMessage(json));
+			log.debug("sendPeerLocationEvent: sent publisher={} to recipientUserId={}",
+					event.userId(), recipientUserId);
+		}
+		catch (JsonProcessingException e) {
+			log.error("sendPeerLocationEvent: failed to serialise for recipientUserId={}", recipientUserId, e);
+		}
+		catch (IOException e) {
+			log.warn("sendPeerLocationEvent: failed to send to recipientUserId={} — removing session",
+					recipientUserId, e);
+			sessions.remove(recipientUserId, session);
+		}
+	}
 }

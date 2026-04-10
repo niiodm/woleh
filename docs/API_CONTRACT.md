@@ -265,7 +265,7 @@ Immutable fields (e.g. phone) are not patchable unless product allows.
 | `speed` | no | ≥ 0 if present |
 | `recordedAt` | no | Device time (ISO-8601); server may use receive time for fan-out |
 
-**Success:** `200`, `data` may be `null`. Coordinates are **not** stored on place names; WebSocket fan-out to **matched** peers is specified in [MAP_LIVE_LOCATION_PLAN.md](./MAP_LIVE_LOCATION_PLAN.md) §3.3.
+**Success:** `200`, `data` may be `null`. Coordinates are **not** stored on place names. Open WebSocket sessions for **matched** peers receive **`peer_location`** (see §8.2).
 
 **Rate limit:** **429** `RATE_LIMITED` with `Retry-After` when posts arrive faster than configured minimum interval per user (default ~1 Hz; `LOCATION_PUBLISH_MIN_INTERVAL_MS`).
 
@@ -464,6 +464,7 @@ Error body uses envelope §2.2.
 ```json
 { "type": "heartbeat", "data": "ping" }
 { "type": "match", "data": { } }
+{ "type": "peer_location", "data": { } }
 ```
 
 ### 8.1 `type: match` (illustrative v1)
@@ -483,6 +484,34 @@ Sent when a normalized place-name intersection exists between another user’s b
 
 Field names are **illustrative**; finalize when implementing realtime matching. **Heartbeat** interval: server-defined (e.g. 15s).
 
+### 8.2 `type: peer_location` (Phase 4)
+
+Sent to each **matched** peer when the other party publishes a fix via **`POST /api/v1/me/location`** (same watch ∩ broadcast rule as matching). Only users with an **open** WebSocket receive the event.
+
+```json
+{
+  "type": "peer_location",
+  "data": {
+    "userId": "42",
+    "latitude": 5.6037,
+    "longitude": -0.187,
+    "accuracyMeters": 12.5,
+    "heading": 90.0,
+    "speed": 8.2,
+    "receivedAt": "2026-04-10T12:00:00Z"
+  }
+}
+```
+
+| Field | Notes |
+|-------|--------|
+| `userId` | Publisher’s user id (string) |
+| `latitude` / `longitude` | WGS-84 |
+| `accuracyMeters`, `heading`, `speed` | Omitted when not sent on REST publish |
+| `receivedAt` | Server time when the event was sent (UTC) |
+
+The publisher does **not** receive their own `peer_location` on the wire.
+
 ---
 
 ## 9. Client responsibilities
@@ -501,3 +530,4 @@ Field names are **illustrative**; finalize when implementing realtime matching. 
 | 1.0 | 2026-04-06 | Initial v1 REST + permission matrix + WS outline |
 | 1.1 | 2026-04-06 | Auth: removed `purpose` from send/verify OTP; `verify-otp` returns `flow`: `login` \| `signup` |
 | 1.2 | 2026-04-06 | WebSocket auth: query `access_token` per ADR 0001; `POST …/subscription/checkout` for WebView payment per ADR 0005 |
+| 1.3 | 2026-04-10 | Phase 4: `POST /me/location`, `PUT /me/location-sharing`, profile `locationSharingEnabled`, WebSocket `peer_location` (§8.2) |
