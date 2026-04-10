@@ -35,6 +35,8 @@ bool locationPublishLifecycleAllowsStream(AppLifecycleState? state) {
 /// Subscribes only when the user is signed in, has watch or broadcast permission,
 /// and `locationSharingEnabled` is true. Pauses when the app is not in a
 /// foreground-eligible lifecycle state.
+///
+/// [state] is the latest device fix for map UI (§4.4); cleared when not publishing.
 @Riverpod(keepAlive: true)
 class LocationPublishNotifier extends _$LocationPublishNotifier {
   /// Aligns with server default `LOCATION_PUBLISH_MIN_INTERVAL_MS` (~1 Hz).
@@ -47,7 +49,7 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
   DateTime? _lastSentAt;
 
   @override
-  void build() {
+  LocationFix? build() {
     _disposed = false;
     _foreground = locationPublishLifecycleAllowsStream(
       WidgetsBinding.instance.lifecycleState,
@@ -74,6 +76,8 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
     });
 
     unawaited(_syncSubscription());
+
+    return null;
   }
 
   void _onLifecycleChanged(AppLifecycleState state) {
@@ -93,10 +97,12 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
 
     if (_disposed || !_foreground) {
       _lastSentAt = null;
+      state = null;
       return;
     }
     if (ref.read(authStateProvider).valueOrNull == null) {
       _lastSentAt = null;
+      state = null;
       return;
     }
 
@@ -105,10 +111,12 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
     final me = snap.me;
     if (!me.profile.locationSharingEnabled) {
       _lastSentAt = null;
+      state = null;
       return;
     }
     if (!_hasLocationPermission(me)) {
       _lastSentAt = null;
+      state = null;
       return;
     }
 
@@ -117,6 +125,7 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
     if (authz != LocationAuthorization.whileInUse &&
         authz != LocationAuthorization.always) {
       _lastSentAt = null;
+      state = null;
       return;
     }
     if (_disposed) return;
@@ -148,6 +157,8 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
     if (!me.profile.locationSharingEnabled) return;
     if (!_hasLocationPermission(me)) return;
 
+    state = fix;
+
     final now = DateTime.now();
     if (_lastSentAt != null &&
         now.difference(_lastSentAt!) < minPostInterval) {
@@ -176,7 +187,10 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
   void _stopPositionStream({required bool resetThrottle}) {
     _posSub?.cancel();
     _posSub = null;
-    if (resetThrottle) _lastSentAt = null;
+    if (resetThrottle) {
+      _lastSentAt = null;
+      state = null;
+    }
   }
 }
 
