@@ -218,7 +218,7 @@ Wire the REST place-list endpoints into the mobile data layer:
 
 ---
 
-### Step 3.3 — Watch screen
+### Step 3.3 — Watch screen ✅
 
 Build the watch-list editor for users with `woleh.place.watch`:
 
@@ -231,9 +231,9 @@ Build the watch-list editor for users with `woleh.place.watch`:
 - Route: `/watch` — accessible only to users with `woleh.place.watch`; redirect to Plans if missing (reuse `PermissionGuard` from Phase 1).
 - Entry point: add a **"My Watch List"** entry to the home screen's "Actions" section alongside the existing "Broadcast" entry (using `PermissionGatedButton`).
 
-**Implementation:** `watch_notifier.dart`; `watch_screen.dart`; router `/watch` route; home screen entry updated; `watch_screen_test.dart` (stub notifier: idle layout, add name, remove name, save loading state, over-limit error, empty-list state).
+**Implementation:** [`watch_notifier.dart`](../mobile/lib/features/places/presentation/watch_notifier.dart) — sealed `WatchState` (`WatchLoading` / `WatchReady` / `WatchLoadError`); `@riverpod` notifier with `add`, `remove`, `save`, `refresh`; sentinel `copyWith` for nullable `saveError`; [`watch_screen.dart`](../mobile/lib/features/places/presentation/watch_screen.dart) — `ConsumerStatefulWidget`; state-driven body; `_AddNameField` with `ValueListenableBuilder` normalized preview; `Dismissible` name tiles; `_SaveErrorBanner` surfaces `PlaceLimitError` with upgrade message; `_SaveBar` with in-button loading indicator; pull-to-refresh; [`router.dart`](../mobile/lib/app/router.dart) — `/watch` added to `_permissionGuards` and routes list; [`home_screen.dart`](../mobile/lib/features/home/presentation/home_screen.dart) — "My Watch List" `PermissionGatedButton` added above Broadcast entry; [`watch_screen_test.dart`](../mobile/test/features/places/watch_screen_test.dart) — 7 widget tests (idle layout, add-field present, normalized preview, remove buttons, save loading, over-limit error, empty state).
 
-**Done when:** a user with `woleh.place.watch` can add/remove names, save to server, and re-open the screen to see saved names.
+**Done when:** a user with `woleh.place.watch` can add/remove names, save to server, and re-open the screen to see saved names. ✅
 
 ---
 
@@ -341,5 +341,6 @@ Surface incoming `match` events to the user:
 | 0.9 | 2026-04-09 | Step 2.8 complete: all 187 server tests green; `phase2.http` (auth ×2, watch list, broadcast list, WebSocket connection, 5-step match flow); `http-client.env.json` updated (`wsBaseUrl`, `watchPhone`, `broadcastPhone`) |
 | 1.0 | 2026-04-09 | Step 3.1 implemented: `unorm_dart 0.3.2` dependency; `normalizePlaceName` + `validatePlaceName` Dart utilities (4-step pipeline matching server); `place_name_normalizer_test.dart` (17 tests — all 3 PLACE_NAMES.md §5 vectors pass including NFC vector 2; 115 mobile tests green) |
 | 1.1 | 2026-04-09 | Step 3.2 implemented: `PlaceValidationError` + `PlaceLimitError` added to `app_error.dart`; `AppErrorInterceptor` (public, maps 400 `VALIDATION_ERROR` → `PlaceValidationError`, 403 `OVER_LIMIT` → `PlaceLimitError`); `PlaceNamesDto`; `PlaceListRepository` (`keepAlive`, 4 methods); `place_list_repository_test.dart` (11 tests — happy path + 5 error-type assertions; 126 mobile tests green) |
+| 1.2 | 2026-04-09 | Step 3.3 implemented: `WatchNotifier` (sealed state machine, `add`/`remove`/`save`/`refresh`); `WatchScreen` (add field with normalized preview, Dismissible list, save-error banner, save bar, pull-to-refresh); `/watch` route + permission guard in router; "My Watch List" home-screen entry; `watch_screen_test.dart` (7 widget tests; 133 mobile tests green) |
 
 When Phase 2 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. normalization library chosen for Dart NFC, in-memory vs DB intersection query, final `match` event field names).

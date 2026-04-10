@@ -11,6 +11,7 @@ import '../features/home/presentation/home_screen.dart';
 import '../features/me/data/me_dto.dart';
 import '../features/me/presentation/me_notifier.dart';
 import '../features/me/presentation/profile_edit_screen.dart';
+import '../features/places/presentation/watch_screen.dart';
 import '../features/subscription/presentation/broadcast_placeholder_screen.dart';
 import '../features/subscription/presentation/checkout_webview_screen.dart';
 import '../features/subscription/presentation/plans_screen.dart';
@@ -22,6 +23,7 @@ part 'router.g.dart';
 /// When an authenticated user navigates to a guarded path without holding the
 /// required permission, the router redirects them to [_kUpgradeRedirect].
 const _permissionGuards = <String, String>{
+  '/watch': 'woleh.place.watch',
   '/broadcast': 'woleh.place.broadcast',
 };
 
@@ -65,6 +67,10 @@ GoRouter router(Ref ref) {
       GoRoute(
         path: '/plans',
         builder: (_, __) => const PlansScreen(),
+      ),
+      GoRoute(
+        path: '/watch',
+        builder: (_, __) => const WatchScreen(),
       ),
       GoRoute(
         path: '/broadcast',

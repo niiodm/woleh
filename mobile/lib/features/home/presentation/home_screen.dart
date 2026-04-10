@@ -141,6 +141,14 @@ class _MeView extends StatelessWidget {
           Text('Actions', style: textTheme.titleMedium),
           const SizedBox(height: 12),
           PermissionGatedButton(
+            icon: Icons.visibility_outlined,
+            label: 'My Watch List',
+            hasPermission: me.permissions.contains('woleh.place.watch'),
+            onTap: () => context.push('/watch'),
+            onLockedTap: () => context.push('/plans'),
+          ),
+          const SizedBox(height: 8),
+          PermissionGatedButton(
             icon: Icons.radio_outlined,
             label: 'Broadcast your route',
             hasPermission:
