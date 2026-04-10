@@ -20,8 +20,19 @@ class AuthState extends _$AuthState {
     state = AsyncData(token);
   }
 
+  /// Stores both the access token and the refresh token, then updates state.
+  /// Use this after OTP verification and after a successful token refresh.
+  Future<void> setTokens(String accessToken, String refreshToken) async {
+    final storage = ref.read(authTokenStorageProvider);
+    await storage.write(accessToken);
+    await storage.writeRefreshToken(refreshToken);
+    state = AsyncData(accessToken);
+  }
+
   Future<void> signOut() async {
-    await ref.read(authTokenStorageProvider).delete();
+    final storage = ref.read(authTokenStorageProvider);
+    await storage.delete();
+    await storage.deleteRefreshToken();
     state = const AsyncData(null);
   }
 }

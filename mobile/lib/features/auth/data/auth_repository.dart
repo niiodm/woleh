@@ -36,4 +36,23 @@ class AuthRepository {
     final data = (response.data!['data'] as Map<String, dynamic>);
     return VerifyOtpResponse.fromJson(data);
   }
+
+  /// Exchanges a refresh token for a new access + refresh token pair (FR-A2).
+  Future<RefreshResponse> refresh(String refreshToken) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/auth/refresh',
+      data: {'refreshToken': refreshToken},
+    );
+    return RefreshResponse.fromJson(
+        response.data!['data'] as Map<String, dynamic>);
+  }
+
+  /// Revokes all refresh tokens for the token's owner (FR-A2).
+  /// Clears stored tokens from secure storage regardless of server response.
+  Future<void> logout({String? refreshToken}) async {
+    await _dio.post<void>(
+      '/auth/logout',
+      data: {'refreshToken': refreshToken},
+    );
+  }
 }

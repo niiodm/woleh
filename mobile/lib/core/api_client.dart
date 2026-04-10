@@ -5,6 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'app_error.dart';
 import 'auth_state.dart';
+import 'auth_token_storage.dart';
 
 part 'api_client.g.dart';
 
@@ -23,6 +24,20 @@ const _kApiBaseUrl = String.fromEnvironment(
 
 @Riverpod(keepAlive: true)
 ApiClient apiClient(Ref ref) {
+  final storage = ref.read(authTokenStorageProvider);
+  final authNotifier = ref.read(authStateProvider.notifier);
+
+  // Separate bare Dio used only for the refresh endpoint so that refresh calls
+  // do not recurse through TokenRefreshInterceptor.
+  final refreshDio = Dio(
+    BaseOptions(
+      baseUrl: '$_kApiBaseUrl/api/v1',
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+      headers: {'Content-Type': 'application/json'},
+    ),
+  );
+
   final dio = Dio(
     BaseOptions(
       baseUrl: '$_kApiBaseUrl/api/v1',
@@ -32,19 +47,38 @@ ApiClient apiClient(Ref ref) {
     ),
   );
 
-  dio.interceptors.add(_AuthInterceptor(ref));
+  final tokenRefreshInterceptor = TokenRefreshInterceptor(
+    getRefreshToken: storage.readRefreshToken,
+    storeTokens: (accessToken, refreshToken) async {
+      // setTokens updates in-memory state (so _AuthInterceptor picks it up on
+      // retry) and writes both tokens to secure storage.
+      await authNotifier.setTokens(accessToken, refreshToken);
+    },
+    signOut: authNotifier.signOut,
+    refreshTokens: (rawRefreshToken) async {
+      final resp = await refreshDio.post<Map<String, dynamic>>(
+        '/auth/refresh',
+        data: {'refreshToken': rawRefreshToken},
+      );
+      final data = resp.data!['data'] as Map<String, dynamic>;
+      return (data['accessToken'] as String, data['refreshToken'] as String);
+    },
+    retry: dio.fetch,
+  );
 
-  if (kDebugMode) {
-    dio.interceptors.add(
+  dio.interceptors.addAll([
+    _AuthInterceptor(ref),
+    if (kDebugMode)
       LogInterceptor(
         requestBody: true,
         responseBody: true,
         logPrint: (msg) => debugPrint('[API] $msg'),
       ),
-    );
-  }
-
-  dio.interceptors.add(AppErrorInterceptor());
+    AppErrorInterceptor(),
+    // TokenRefreshInterceptor is last so it runs first on errors (interceptors
+    // are called in reverse-add order for onError).
+    tokenRefreshInterceptor,
+  ]);
 
   return ApiClient(dio);
 }
@@ -53,6 +87,63 @@ class ApiClient {
   const ApiClient(this.dio);
 
   final Dio dio;
+}
+
+/// Intercepts 401 responses, attempts a silent token refresh, and retries the
+/// original request. On refresh failure, clears stored tokens and triggers
+/// sign-out.
+///
+/// Add this interceptor **last** so it runs **first** during error handling
+/// (Dio calls error interceptors in reverse-add order).
+///
+/// The [retry] callback is [Dio.fetch] on the parent Dio. It is injected so
+/// tests can supply a mock without a real network call.
+class TokenRefreshInterceptor extends Interceptor {
+  TokenRefreshInterceptor({
+    required Future<String?> Function() getRefreshToken,
+    required Future<void> Function(String accessToken, String refreshToken)
+        storeTokens,
+    required Future<void> Function() signOut,
+    required Future<(String, String)> Function(String rawRefreshToken)
+        refreshTokens,
+    required Future<Response<dynamic>> Function(RequestOptions) retry,
+  })  : _getRefreshToken = getRefreshToken,
+        _storeTokens = storeTokens,
+        _signOut = signOut,
+        _refreshTokens = refreshTokens,
+        _retry = retry;
+
+  final Future<String?> Function() _getRefreshToken;
+  final Future<void> Function(String, String) _storeTokens;
+  final Future<void> Function() _signOut;
+  final Future<(String, String)> Function(String) _refreshTokens;
+  final Future<Response<dynamic>> Function(RequestOptions) _retry;
+
+  @override
+  Future<void> onError(
+      DioException err, ErrorInterceptorHandler handler) async {
+    if (err.response?.statusCode != 401) {
+      return handler.next(err);
+    }
+
+    final refreshToken = await _getRefreshToken();
+    if (refreshToken == null) {
+      return handler.next(err);
+    }
+
+    try {
+      final (newAccessToken, newRefreshToken) =
+          await _refreshTokens(refreshToken);
+      // Update in-memory auth state so _AuthInterceptor attaches the new token
+      // on the retry, and persist both tokens to secure storage.
+      await _storeTokens(newAccessToken, newRefreshToken);
+      final retryResponse = await _retry(err.requestOptions);
+      handler.resolve(retryResponse);
+    } catch (_) {
+      await _signOut();
+      handler.next(err);
+    }
+  }
 }
 
 /// Attaches `Authorization: Bearer <token>` when a token is present.
@@ -100,7 +191,9 @@ class AppErrorInterceptor extends Interceptor {
       _ => UnknownError(serverMsg ?? 'Unexpected error ($status)'),
     };
 
-    handler.reject(
+    // Use next() (not reject()) so subsequent interceptors — e.g.
+    // TokenRefreshInterceptor — can still see and act on this error.
+    handler.next(
       DioException(
         requestOptions: err.requestOptions,
         error: appError,

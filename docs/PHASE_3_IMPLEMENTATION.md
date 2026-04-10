@@ -184,7 +184,7 @@ FR-A2 ("token refresh or re-auth policy documented and implemented") has been de
 
 ## 3. Mobile (Flutter)
 
-### Step 3.1 — Refresh token integration (FR-A2, client side)
+### Step 3.1 — Refresh token integration (FR-A2, client side) ✅
 
 Wire the new refresh token flow into the mobile auth layer:
 
@@ -195,7 +195,9 @@ Wire the new refresh token flow into the mobile auth layer:
 
 **Tests:** `TokenRefreshInterceptorTest` (unit — mock HTTP: first request 401, refresh 200, retry 200 → original response returned; refresh 401 → sign-out emitted; mock `flutter_secure_storage`).
 
-**Done when:** a user with an expired access token has requests transparently retried after background refresh; a failed refresh signs the user out cleanly.
+**Done when:** a user with an expired access token has requests transparently retried after background refresh; a failed refresh signs the user out cleanly. ✅
+
+**Implementation:** 7 files changed — `auth_token_storage.dart` (+ `readRefreshToken` / `writeRefreshToken` / `deleteRefreshToken`); `auth_state.dart` (`setTokens()`, `signOut()` clears both tokens); `auth_dto.dart` (`refreshToken` field on `VerifyOtpResponse`, new `RefreshResponse` DTO); `auth_repository.dart` (`refresh()` + `logout()`); `api_client.dart` (new `TokenRefreshInterceptor` class, separate `refreshDio` to avoid recursion, `AppErrorInterceptor` changed from `reject()` → `next()` so `TokenRefreshInterceptor` runs after it in Dio 5's forward error chain); `otp_screen.dart` (stores both tokens on verify). 4 unit tests in `test/core/token_refresh_interceptor_test.dart`. 155 Flutter tests passing.
 
 ---
 
@@ -352,3 +354,4 @@ Create `docs/runbooks/INCIDENT_RESPONSE.md` covering the most likely failure sce
 | 0.4 | 2026-04-10 | Step 2.3 implemented: `CorrelationIdFilter` (`HIGHEST_PRECEDENCE + 1`, MDC `requestId`, echo `X-Request-Id`); `JwtAuthenticationFilter` MDC `userId` + `finally` clear; `logback-spring.xml` with correlation-ID pattern + `prod` profile stub; `TransitWebSocketHandler` connect/disconnect to INFO; `GlobalExceptionHandler` logging (5xx ERROR with stack trace, 4xx DEBUG); `CorrelationIdFilterIntegrationTest` (2 tests); 208 server tests green |
 | 0.5 | 2026-04-10 | Step 2.4 implemented: `V6__refresh_tokens.sql`; `RefreshToken` entity + `RefreshTokenRepository`; `JwtService` — `generateRefreshToken()` + `hashToken()`; `WolehJwtProperties` — `refreshTokenTtl`; `RefreshTokenService` — issue/rotate/revokeByRawToken; `InvalidRefreshTokenException` → 401; `VerifyOtpResponse` + `AuthController` updated; `POST /auth/refresh` + `POST /auth/logout` endpoints; `RefreshTokenIntegrationTest` (6 tests); 215 server tests green |
 | 0.6 | 2026-04-10 | Step 2.5 implemented: `phase3.http` (6 sections: auth, rate-limit demo, Actuator, correlation IDs, refresh token rotation, logout); `http-client.env.json` — `managementBaseUrl` added; 215 server tests green |
+| 0.7 | 2026-04-10 | Step 3.1 implemented: `AuthTokenStorage` + refresh token storage; `AuthState.setTokens()` + `signOut()` clears both tokens; `VerifyOtpResponse.refreshToken` + `RefreshResponse` DTO; `AuthRepository.refresh()` + `logout()`; `TokenRefreshInterceptor` (401 → silent refresh → retry; failed refresh → signOut); `AppErrorInterceptor` changed `reject()` → `next()` for Dio 5 forward error chain; `otp_screen.dart` stores both tokens; `token_refresh_interceptor_test.dart` (4 unit tests); 155 Flutter tests green |

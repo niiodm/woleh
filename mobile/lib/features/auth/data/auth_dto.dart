@@ -18,6 +18,7 @@ class VerifyOtpResponse {
     required this.expiresInSeconds,
     required this.userId,
     required this.flow,
+    required this.refreshToken,
   });
 
   final String accessToken;
@@ -28,6 +29,9 @@ class VerifyOtpResponse {
   /// `"login"` — existing account; `"signup"` — new account created.
   final String flow;
 
+  /// Opaque refresh token for obtaining new access tokens (FR-A2).
+  final String refreshToken;
+
   bool get isSignup => flow == 'signup';
 
   factory VerifyOtpResponse.fromJson(Map<String, dynamic> json) =>
@@ -37,5 +41,28 @@ class VerifyOtpResponse {
         expiresInSeconds: json['expiresInSeconds'] as int,
         userId: json['userId'].toString(),
         flow: json['flow'] as String,
+        refreshToken: json['refreshToken'] as String,
+      );
+}
+
+/// Response body for `POST /api/v1/auth/refresh`.
+class RefreshResponse {
+  const RefreshResponse({
+    required this.accessToken,
+    required this.refreshToken,
+    required this.expiresIn,
+  });
+
+  final String accessToken;
+  final String refreshToken;
+
+  /// Seconds until the new access token expires.
+  final int expiresIn;
+
+  factory RefreshResponse.fromJson(Map<String, dynamic> json) =>
+      RefreshResponse(
+        accessToken: json['accessToken'] as String,
+        refreshToken: json['refreshToken'] as String,
+        expiresIn: json['expiresIn'] as int,
       );
 }

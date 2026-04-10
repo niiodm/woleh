@@ -55,8 +55,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         .verify(otp);
     if (result == null || !mounted) return;
 
-    // Persist the access token — triggers router redirect.
-    await ref.read(authStateProvider.notifier).setToken(result.accessToken);
+    // Persist access + refresh tokens — triggers router redirect.
+    await ref
+        .read(authStateProvider.notifier)
+        .setTokens(result.accessToken, result.refreshToken);
 
     if (!mounted) return;
     if (result.isSignup) {
