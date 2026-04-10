@@ -7,6 +7,7 @@ import 'core/push_bootstrap.dart';
 import 'core/push_hook.dart';
 import 'core/shared_preferences_provider.dart';
 import 'core/ws_client.dart';
+import 'features/location/presentation/location_publish_notifier.dart';
 import 'features/location/presentation/peer_locations_notifier.dart';
 
 Future<void> main() async {
@@ -38,6 +39,8 @@ class WolehApp extends ConsumerWidget {
     ref.watch(wsClientProvider);
     // Phase 4: subscribe to peer_location / peer_location_revoked for the map.
     ref.watch(peerLocationsNotifierProvider);
+    // Phase 4: foreground GPS → throttled POST /me/location when sharing on.
+    ref.watch(locationPublishNotifierProvider);
     return MaterialApp.router(
       title: 'Woleh',
       scaffoldMessengerKey: rootScaffoldMessengerKey,

@@ -6,3 +6,4 @@ library;
 export 'geolocator_location_source.dart';
 export 'location_fix.dart';
 export 'location_source.dart';
+export 'location_source_provider.dart';

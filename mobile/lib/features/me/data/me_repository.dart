@@ -55,6 +55,28 @@ class MeRepository {
     );
   }
 
+  /// Publishes a device fix to matched peers ([`API_CONTRACT.md`](../../../../../docs/API_CONTRACT.md) §6.4.1).
+  Future<void> postLocation({
+    required double latitude,
+    required double longitude,
+    double? accuracyMeters,
+    double? heading,
+    double? speed,
+    DateTime? recordedAt,
+  }) async {
+    final body = <String, dynamic>{
+      'latitude': latitude,
+      'longitude': longitude,
+    };
+    if (accuracyMeters != null) body['accuracyMeters'] = accuracyMeters;
+    if (heading != null) body['heading'] = heading;
+    if (speed != null) body['speed'] = speed;
+    if (recordedAt != null) {
+      body['recordedAt'] = recordedAt.toUtc().toIso8601String();
+    }
+    await _dio.post<void>('/me/location', data: body);
+  }
+
   /// Registers or refreshes the FCM device token (Phase 3.4).
   Future<void> registerDeviceToken({
     required String token,
