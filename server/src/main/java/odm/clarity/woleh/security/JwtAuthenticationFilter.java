@@ -11,6 +11,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import odm.clarity.woleh.api.dto.ApiEnvelope;
 
+import org.slf4j.MDC;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -38,27 +40,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
-		String header = request.getHeader(HttpHeaders.AUTHORIZATION);
-		if (header != null && header.startsWith("Bearer ")) {
-			String token = header.substring(7).trim();
-			if (!token.isEmpty()) {
-				try {
-					long userId = jwtService.parseUserId(token);
-					var auth = new UsernamePasswordAuthenticationToken(
-							userId,
-							null,
-							Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
-					auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-					SecurityContextHolder.getContext().setAuthentication(auth);
-				}
-				catch (JwtException | IllegalArgumentException e) {
-					SecurityContextHolder.clearContext();
-					writeUnauthorized(response, "Invalid or expired token");
-					return;
+		try {
+			String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+			if (header != null && header.startsWith("Bearer ")) {
+				String token = header.substring(7).trim();
+				if (!token.isEmpty()) {
+					try {
+						long userId = jwtService.parseUserId(token);
+						MDC.put("userId", String.valueOf(userId));
+						var auth = new UsernamePasswordAuthenticationToken(
+								userId,
+								null,
+								Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
+						auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+						SecurityContextHolder.getContext().setAuthentication(auth);
+					}
+					catch (JwtException | IllegalArgumentException e) {
+						SecurityContextHolder.clearContext();
+						writeUnauthorized(response, "Invalid or expired token");
+						return;
+					}
 				}
 			}
+			filterChain.doFilter(request, response);
 		}
-		filterChain.doFilter(request, response);
+		finally {
+			MDC.remove("userId");
+		}
 	}
 
 	private void writeUnauthorized(HttpServletResponse response, String message) throws IOException {

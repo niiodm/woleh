@@ -112,7 +112,7 @@ Secure `/actuator/**` by restricting to the management port in `SecurityConfig` 
 
 ---
 
-### Step 2.3 — Structured logging with correlation IDs (Architecture §5.7)
+### Step 2.3 — Structured logging with correlation IDs (Architecture §5.7) ✅
 
 Add `CorrelationIdFilter extends OncePerRequestFilter` registered at `HIGHEST_PRECEDENCE + 1`:
 - Read `X-Request-Id` from the incoming request header; generate a `UUID.randomUUID()` if absent.
@@ -137,7 +137,9 @@ Log updates:
 
 **Tests:** `CorrelationIdFilterIntegrationTest` — fire any authenticated request; assert response contains `X-Request-Id` header; fire same request with a custom `X-Request-Id` → assert echoed back unchanged.
 
-**Done when:** every log line for a request carries `requestId`; authenticated requests also carry `userId`; responses echo `X-Request-Id`.
+**Implementation:** [`CorrelationIdFilter`](../server/src/main/java/odm/clarity/woleh/security/CorrelationIdFilter.java) — `@Component @Order(HIGHEST_PRECEDENCE + 1)`, reads/generates `X-Request-Id`, `MDC.put("requestId", ...)`, echoes header, clears in `finally`; `JwtAuthenticationFilter` — `MDC.put("userId", ...)` after successful JWT parse, clears in `finally`; [`logback-spring.xml`](../server/src/main/resources/logback-spring.xml) created with `[%X{requestId:-no-rid}] [userId:%X{userId:-anon}]` pattern; `!prod` / `prod` Spring profiles (prod stub awaiting logstash-logback-encoder); `TransitWebSocketHandler` connect/disconnect upgraded to INFO; `GlobalExceptionHandler` gets `Logger` — 5xx at ERROR with stack trace, 4xx at DEBUG; [`CorrelationIdFilterIntegrationTest`](../server/src/test/java/odm/clarity/woleh/api/CorrelationIdFilterIntegrationTest.java) — 2 tests (auto-generated UUID, custom echoed back).
+
+**Done when:** every log line for a request carries `requestId`; authenticated requests also carry `userId`; responses echo `X-Request-Id`. ✅
 
 ---
 
@@ -343,3 +345,4 @@ Create `docs/runbooks/INCIDENT_RESPONSE.md` covering the most likely failure sce
 | 0.1 | 2026-04-10 | Initial Phase 3 codable breakdown |
 | 0.2 | 2026-04-10 | Step 2.1 implemented: `RateLimitProperties` + `PlaceListRateLimiter` (fixed-window `ConcurrentHashMap`); `RateLimitedException` gains `retryAfterSeconds`; `GlobalExceptionHandler` emits `Retry-After` header; `PlaceListController` calls rate limiter on PUTs; `application.yml` + `WolehApplication` wired; `UserPlaceList` constructor populates read-only `userId` projection; `RateLimiterTest` (7 unit) + `RateLimitIntegrationTest` (5 integration); 199 server tests green |
 | 0.3 | 2026-04-10 | Step 2.2 implemented: `micrometer-registry-prometheus` + `buildInfo()`; `metrics` + `prometheus` exposure + percentile histogram config; `WsHealthIndicator` (`ws` component, `activeSessions` detail); `WsSessionRegistry` Gauge + `sessionCount()`; `PlaceListService` watch/broadcast PUT counters; `MatchingService` evaluation Timer; `GlobalExceptionHandler` 4xx/5xx error counters; `MatchingServiceTest` updated; `HealthIntegrationTest` + `MetricsIntegrationTest` (6 new tests); 206 server tests green |
+| 0.4 | 2026-04-10 | Step 2.3 implemented: `CorrelationIdFilter` (`HIGHEST_PRECEDENCE + 1`, MDC `requestId`, echo `X-Request-Id`); `JwtAuthenticationFilter` MDC `userId` + `finally` clear; `logback-spring.xml` with correlation-ID pattern + `prod` profile stub; `TransitWebSocketHandler` connect/disconnect to INFO; `GlobalExceptionHandler` logging (5xx ERROR with stack trace, 4xx DEBUG); `CorrelationIdFilterIntegrationTest` (2 tests); 208 server tests green |

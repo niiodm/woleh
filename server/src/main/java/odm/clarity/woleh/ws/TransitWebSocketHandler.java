@@ -38,7 +38,7 @@ public class TransitWebSocketHandler extends TextWebSocketHandler {
 			return;
 		}
 		registry.register(userId, session);
-		log.debug("WS connected: userId={} sessionId={}", userId, session.getId());
+		log.info("WS connected: userId={} sessionId={}", userId, session.getId());
 	}
 
 	@Override
@@ -47,7 +47,7 @@ public class TransitWebSocketHandler extends TextWebSocketHandler {
 		if (userId != null) {
 			registry.deregister(userId);
 		}
-		log.debug("WS disconnected: userId={} status={}", userId, status);
+		log.info("WS disconnected: userId={} status={}", userId, status);
 	}
 
 	@Override
