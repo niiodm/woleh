@@ -13,7 +13,7 @@ part 'permission_provider.g.dart';
 @Riverpod(keepAlive: true)
 List<String> permissions(Ref ref) {
   final meAsync = ref.watch(meNotifierProvider);
-  return meAsync.valueOrNull?.permissions ?? const [];
+  return meAsync.valueOrNull?.me.permissions ?? const [];
 }
 
 /// Returns `true` when the authenticated user holds [permission].

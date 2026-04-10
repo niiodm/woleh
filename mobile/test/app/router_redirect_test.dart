@@ -11,6 +11,7 @@ import 'package:odm_clarity_woleh_mobile/features/me/data/me_dto.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/presentation/me_notifier.dart';
 import 'package:odm_clarity_woleh_mobile/features/places/data/place_list_repository.dart';
 import 'package:odm_clarity_woleh_mobile/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ---------------------------------------------------------------------------
 // Stub auth states
@@ -41,48 +42,54 @@ class _AuthLoading extends AuthState {
 
 class _StubMeNotifier extends MeNotifier {
   @override
-  Future<MeResponse?> build() async => const MeResponse(
-        profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
-        permissions: [],
-        tier: 'free',
-        limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
-        subscription: MeSubscription(status: 'none', inGracePeriod: false),
+  Future<MeLoadSnapshot?> build() async => MeLoadSnapshot(
+        me: const MeResponse(
+          profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
+          permissions: [],
+          tier: 'free',
+          limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
+          subscription: MeSubscription(status: 'none', inGracePeriod: false),
+        ),
       );
 }
 
 /// Free-tier user — has base permissions but NOT woleh.place.broadcast.
 class _FreeUserMeNotifier extends MeNotifier {
   @override
-  Future<MeResponse?> build() async => const MeResponse(
-        profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
-        permissions: [
-          'woleh.account.profile',
-          'woleh.plans.read',
-          'woleh.place.watch',
-        ],
-        tier: 'free',
-        limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
-        subscription: MeSubscription(status: 'none', inGracePeriod: false),
+  Future<MeLoadSnapshot?> build() async => MeLoadSnapshot(
+        me: const MeResponse(
+          profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
+          permissions: [
+            'woleh.account.profile',
+            'woleh.plans.read',
+            'woleh.place.watch',
+          ],
+          tier: 'free',
+          limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
+          subscription: MeSubscription(status: 'none', inGracePeriod: false),
+        ),
       );
 }
 
 /// Paid-tier user — holds all permissions including woleh.place.broadcast.
 class _PaidUserMeNotifier extends MeNotifier {
   @override
-  Future<MeResponse?> build() async => const MeResponse(
-        profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
-        permissions: [
-          'woleh.account.profile',
-          'woleh.plans.read',
-          'woleh.place.watch',
-          'woleh.place.broadcast',
-        ],
-        tier: 'paid',
-        limits: MeLimits(placeWatchMax: 50, placeBroadcastMax: 50),
-        subscription: MeSubscription(
-          status: 'active',
-          currentPeriodEnd: '2026-05-09T00:00:00Z',
-          inGracePeriod: false,
+  Future<MeLoadSnapshot?> build() async => MeLoadSnapshot(
+        me: const MeResponse(
+          profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
+          permissions: [
+            'woleh.account.profile',
+            'woleh.plans.read',
+            'woleh.place.watch',
+            'woleh.place.broadcast',
+          ],
+          tier: 'paid',
+          limits: MeLimits(placeWatchMax: 50, placeBroadcastMax: 50),
+          subscription: MeSubscription(
+            status: 'active',
+            currentPeriodEnd: '2026-05-09T00:00:00Z',
+            inGracePeriod: false,
+          ),
         ),
       );
 }
@@ -96,13 +103,15 @@ class _PaidUserMeNotifier extends MeNotifier {
 // ---------------------------------------------------------------------------
 
 class _EmptyPlaceListRepository extends PlaceListRepository {
-  _EmptyPlaceListRepository() : super(Dio());
+  _EmptyPlaceListRepository(SharedPreferences prefs) : super(Dio(), prefs);
 
   @override
-  Future<List<String>> getWatchList() async => [];
+  Future<PlaceListSnapshot> getWatchList() async =>
+      const PlaceListSnapshot(names: []);
 
   @override
-  Future<List<String>> getBroadcastList() async => [];
+  Future<PlaceListSnapshot> getBroadcastList() async =>
+      const PlaceListSnapshot(names: []);
 
   @override
   Future<List<String>> putWatchList(List<String> names) async => names;
@@ -116,6 +125,14 @@ class _EmptyPlaceListRepository extends PlaceListRepository {
 // ---------------------------------------------------------------------------
 
 void main() {
+  late SharedPreferences routerTestPrefs;
+
+  setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({});
+    routerTestPrefs = await SharedPreferences.getInstance();
+  });
+
   group('Router redirect', () {
     group('unauthenticated', () {
       testWidgets('shows phone/sign-in screen as initial route', (tester) async {
@@ -274,8 +291,9 @@ void main() {
             overrides: [
               authStateProvider.overrideWith(_Authenticated.new),
               meNotifierProvider.overrideWith(_FreeUserMeNotifier.new),
-              placeListRepositoryProvider
-                  .overrideWith((_) => _EmptyPlaceListRepository()),
+              placeListRepositoryProvider.overrideWith(
+                (_) => _EmptyPlaceListRepository(routerTestPrefs),
+              ),
             ],
             child: const WolehApp(),
           ),
@@ -301,8 +319,9 @@ void main() {
             overrides: [
               authStateProvider.overrideWith(_Authenticated.new),
               meNotifierProvider.overrideWith(_FreeUserMeNotifier.new),
-              placeListRepositoryProvider
-                  .overrideWith((_) => _EmptyPlaceListRepository()),
+              placeListRepositoryProvider.overrideWith(
+                (_) => _EmptyPlaceListRepository(routerTestPrefs),
+              ),
             ],
             child: const WolehApp(),
           ),
@@ -329,8 +348,9 @@ void main() {
             overrides: [
               authStateProvider.overrideWith(_Authenticated.new),
               meNotifierProvider.overrideWith(_PaidUserMeNotifier.new),
-              placeListRepositoryProvider
-                  .overrideWith((_) => _EmptyPlaceListRepository()),
+              placeListRepositoryProvider.overrideWith(
+                (_) => _EmptyPlaceListRepository(routerTestPrefs),
+              ),
             ],
             child: const WolehApp(),
           ),

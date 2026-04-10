@@ -35,12 +35,14 @@ class _FailedCheckoutNotifier extends CheckoutNotifier {
 
 class _FreeMeNotifier extends MeNotifier {
   @override
-  Future<MeResponse?> build() async => const MeResponse(
-        profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
-        permissions: ['woleh.account.profile', 'woleh.plans.read'],
-        tier: 'free',
-        limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
-        subscription: MeSubscription(status: 'none', inGracePeriod: false),
+  Future<MeLoadSnapshot?> build() async => MeLoadSnapshot(
+        me: const MeResponse(
+          profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
+          permissions: ['woleh.account.profile', 'woleh.plans.read'],
+          tier: 'free',
+          limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
+          subscription: MeSubscription(status: 'none', inGracePeriod: false),
+        ),
       );
 }
 

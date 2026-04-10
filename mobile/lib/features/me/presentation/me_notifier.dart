@@ -20,13 +20,15 @@ part 'me_notifier.g.dart';
 @riverpod
 class MeNotifier extends _$MeNotifier {
   @override
-  Future<MeResponse?> build() async {
+  Future<MeLoadSnapshot?> build() async {
     // Re-run this provider whenever the auth token changes.
     final token = await ref.watch(authStateProvider.future);
     if (token == null) return null;
 
     try {
       return await ref.read(meRepositoryProvider).getMe();
+    } on OfflineError {
+      rethrow;
     } catch (e) {
       final appError =
           e is DioException && e.error is AppError ? e.error as AppError : null;

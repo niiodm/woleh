@@ -27,6 +27,7 @@ final class BroadcastReady extends BroadcastState {
     required this.names,
     this.isSaving = false,
     this.saveError,
+    this.readOnlyOffline = false,
   });
 
   /// Display-form names in the current working set (not yet saved).
@@ -38,12 +39,16 @@ final class BroadcastReady extends BroadcastState {
   /// The last save error, cleared on the next successful save or edit.
   final AppError? saveError;
 
+  /// Data was loaded from offline cache; mutations are disabled in the UI.
+  final bool readOnlyOffline;
+
   static const Object _noChange = Object();
 
   BroadcastReady copyWith({
     List<String>? names,
     bool? isSaving,
     Object? saveError = _noChange,
+    bool? readOnlyOffline,
   }) {
     return BroadcastReady(
       names: names ?? this.names,
@@ -51,15 +56,17 @@ final class BroadcastReady extends BroadcastState {
       saveError: identical(saveError, _noChange)
           ? this.saveError
           : saveError as AppError?,
+      readOnlyOffline: readOnlyOffline ?? this.readOnlyOffline,
     );
   }
 }
 
 /// Initial server load failed.
 final class BroadcastLoadError extends BroadcastState {
-  const BroadcastLoadError({required this.message});
+  const BroadcastLoadError({required this.message, this.isOffline = false});
 
   final String message;
+  final bool isOffline;
 }
 
 // ---------------------------------------------------------------------------
@@ -77,9 +84,14 @@ class BroadcastNotifier extends _$BroadcastNotifier {
   Future<void> _load() async {
     state = const BroadcastLoading();
     try {
-      final names =
+      final snapshot =
           await ref.read(placeListRepositoryProvider).getBroadcastList();
-      state = BroadcastReady(names: names);
+      state = BroadcastReady(
+        names: snapshot.names,
+        readOnlyOffline: snapshot.fromCache,
+      );
+    } on OfflineError catch (e) {
+      state = BroadcastLoadError(message: e.message, isOffline: true);
     } on DioException catch (e) {
       state = BroadcastLoadError(message: _extractMessage(e.error));
     } catch (_) {
@@ -92,7 +104,7 @@ class BroadcastNotifier extends _$BroadcastNotifier {
   /// previous save error.
   void add(String name) {
     final ready = state as BroadcastReady?;
-    if (ready == null || name.trim().isEmpty) return;
+    if (ready == null || ready.readOnlyOffline || name.trim().isEmpty) return;
     state = ready.copyWith(
       names: [...ready.names, name.trim()],
       saveError: null,
@@ -102,7 +114,7 @@ class BroadcastNotifier extends _$BroadcastNotifier {
   /// Removes the first occurrence of [name] from the working list.
   void remove(String name) {
     final ready = state as BroadcastReady?;
-    if (ready == null) return;
+    if (ready == null || ready.readOnlyOffline) return;
     state = ready.copyWith(
       names: ready.names.where((n) => n != name).toList(),
     );
@@ -115,7 +127,7 @@ class BroadcastNotifier extends _$BroadcastNotifier {
   /// adjustment is needed here).
   void reorder(int oldIndex, int newIndex) {
     final ready = state as BroadcastReady?;
-    if (ready == null) return;
+    if (ready == null || ready.readOnlyOffline) return;
     // ReorderableListView passes a post-removal newIndex when moving downward,
     // so subtract 1 to compensate before re-inserting.
     final adjusted = newIndex > oldIndex ? newIndex - 1 : newIndex;
@@ -132,13 +144,13 @@ class BroadcastNotifier extends _$BroadcastNotifier {
   /// On failure, stores a typed [AppError] on [BroadcastReady.saveError].
   Future<void> save() async {
     final ready = state as BroadcastReady?;
-    if (ready == null || ready.isSaving) return;
+    if (ready == null || ready.isSaving || ready.readOnlyOffline) return;
     state = ready.copyWith(isSaving: true, saveError: null);
     try {
       final saved = await ref
           .read(placeListRepositoryProvider)
           .putBroadcastList(ready.names);
-      state = BroadcastReady(names: saved);
+      state = BroadcastReady(names: saved, readOnlyOffline: false);
     } on DioException catch (e) {
       final appError = _toAppError(e.error);
       state = (state as BroadcastReady).copyWith(

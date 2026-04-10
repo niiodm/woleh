@@ -25,6 +25,7 @@ final class WatchReady extends WatchState {
     required this.names,
     this.isSaving = false,
     this.saveError,
+    this.readOnlyOffline = false,
   });
 
   /// Display-form names in the current working set (not yet saved).
@@ -36,6 +37,9 @@ final class WatchReady extends WatchState {
   /// The last save error, cleared on the next successful save or add/remove.
   final AppError? saveError;
 
+  /// Data was loaded from offline cache; mutations are disabled in the UI.
+  final bool readOnlyOffline;
+
   // Sentinel object so that copyWith can distinguish "clear saveError" (pass
   // null) from "keep existing saveError" (omit the parameter).
   static const Object _noChange = Object();
@@ -44,6 +48,7 @@ final class WatchReady extends WatchState {
     List<String>? names,
     bool? isSaving,
     Object? saveError = _noChange,
+    bool? readOnlyOffline,
   }) {
     return WatchReady(
       names: names ?? this.names,
@@ -51,15 +56,17 @@ final class WatchReady extends WatchState {
       saveError: identical(saveError, _noChange)
           ? this.saveError
           : saveError as AppError?,
+      readOnlyOffline: readOnlyOffline ?? this.readOnlyOffline,
     );
   }
 }
 
 /// Initial server load failed.
 final class WatchLoadError extends WatchState {
-  const WatchLoadError({required this.message});
+  const WatchLoadError({required this.message, this.isOffline = false});
 
   final String message;
+  final bool isOffline;
 }
 
 // ---------------------------------------------------------------------------
@@ -77,9 +84,14 @@ class WatchNotifier extends _$WatchNotifier {
   Future<void> _load() async {
     state = const WatchLoading();
     try {
-      final names =
+      final snapshot =
           await ref.read(placeListRepositoryProvider).getWatchList();
-      state = WatchReady(names: names);
+      state = WatchReady(
+        names: snapshot.names,
+        readOnlyOffline: snapshot.fromCache,
+      );
+    } on OfflineError catch (e) {
+      state = WatchLoadError(message: e.message, isOffline: true);
     } on DioException catch (e) {
       state = WatchLoadError(message: _extractMessage(e.error));
     } catch (_) {
@@ -91,7 +103,7 @@ class WatchNotifier extends _$WatchNotifier {
   /// Appends [name] to the working list; clears any previous save error.
   void add(String name) {
     final ready = state as WatchReady?;
-    if (ready == null || name.trim().isEmpty) return;
+    if (ready == null || ready.readOnlyOffline || name.trim().isEmpty) return;
     state = ready.copyWith(
       names: [...ready.names, name.trim()],
       saveError: null,
@@ -101,7 +113,7 @@ class WatchNotifier extends _$WatchNotifier {
   /// Removes the first occurrence of [name] from the working list.
   void remove(String name) {
     final ready = state as WatchReady?;
-    if (ready == null) return;
+    if (ready == null || ready.readOnlyOffline) return;
     state = ready.copyWith(
       names: ready.names.where((n) => n != name).toList(),
     );
@@ -113,13 +125,13 @@ class WatchNotifier extends _$WatchNotifier {
   /// On failure, stores a typed [AppError] on [WatchReady.saveError].
   Future<void> save() async {
     final ready = state as WatchReady?;
-    if (ready == null || ready.isSaving) return;
+    if (ready == null || ready.isSaving || ready.readOnlyOffline) return;
     state = ready.copyWith(isSaving: true, saveError: null);
     try {
       final saved = await ref
           .read(placeListRepositoryProvider)
           .putWatchList(ready.names);
-      state = WatchReady(names: saved);
+      state = WatchReady(names: saved, readOnlyOffline: false);
     } on DioException catch (e) {
       final appError = _toAppError(e.error);
       state = (state as WatchReady).copyWith(

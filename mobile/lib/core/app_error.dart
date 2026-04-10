@@ -28,6 +28,13 @@ final class UnknownError extends AppError {
   const UnknownError([super.message = 'Unknown error']);
 }
 
+/// No connectivity and no cached copy available for the requested resource.
+final class OfflineError extends AppError {
+  const OfflineError([
+    super.message = 'No saved data available while offline.',
+  ]);
+}
+
 /// A place name failed server-side validation (HTTP 400 `VALIDATION_ERROR`).
 /// Covers: empty-after-trim, over-200-code-points, duplicate normalized name
 /// in a broadcast list.

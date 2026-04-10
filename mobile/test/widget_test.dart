@@ -61,18 +61,24 @@ class _AuthenticatedState extends AuthState {
 
 class _StubMeNotifier extends MeNotifier {
   @override
-  Future<MeResponse?> build() async => const MeResponse(
-        profile: MeProfile(
-          userId: '1',
-          phoneE164: '+233241234567',
-          displayName: 'Ama',
-        ),
-        permissions: ['woleh.account.profile', 'woleh.plans.read', 'woleh.place.watch'],
-        tier: 'free',
-        limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
-        subscription: MeSubscription(
-          status: 'none',
-          inGracePeriod: false,
+  Future<MeLoadSnapshot?> build() async => MeLoadSnapshot(
+        me: const MeResponse(
+          profile: MeProfile(
+            userId: '1',
+            phoneE164: '+233241234567',
+            displayName: 'Ama',
+          ),
+          permissions: [
+            'woleh.account.profile',
+            'woleh.plans.read',
+            'woleh.place.watch',
+          ],
+          tier: 'free',
+          limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
+          subscription: MeSubscription(
+            status: 'none',
+            inGracePeriod: false,
+          ),
         ),
       );
 }

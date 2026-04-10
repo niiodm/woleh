@@ -7,7 +7,7 @@ part of 'place_list_repository.dart';
 // **************************************************************************
 
 String _$placeListRepositoryHash() =>
-    r'5941b0a1170a4106118e012bdb94b61a9c939a3c';
+    r'7acb57e8a0b5c724d6e9e4017eef2ea9dfe27466';
 
 /// See also [placeListRepository].
 @ProviderFor(placeListRepository)

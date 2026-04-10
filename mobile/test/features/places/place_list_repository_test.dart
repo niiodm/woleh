@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:odm_clarity_woleh_mobile/core/api_client.dart';
 import 'package:odm_clarity_woleh_mobile/core/app_error.dart';
 import 'package:odm_clarity_woleh_mobile/features/places/data/place_list_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ── Mock Dio adapter ─────────────────────────────────────────────────────────
 
@@ -46,8 +47,17 @@ Dio _buildDio({required int statusCode, required Map<String, dynamic> body}) {
   return dio;
 }
 
-PlaceListRepository _repo(int statusCode, Map<String, dynamic> body) =>
-    PlaceListRepository(_buildDio(statusCode: statusCode, body: body));
+Future<PlaceListRepository> _repo(
+  int statusCode,
+  Map<String, dynamic> body,
+) async {
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
+  return PlaceListRepository(
+    _buildDio(statusCode: statusCode, body: body),
+    prefs,
+  );
+}
 
 Map<String, dynamic> _okEnvelope(List<String> names) => {
       'result': 'OK',
@@ -68,17 +78,20 @@ void main() {
 
   group('getWatchList', () {
     test('200 — returns parsed names', () async {
-      final repo = _repo(200, _okEnvelope(['Madina', 'Lapaz']));
-      expect(await repo.getWatchList(), ['Madina', 'Lapaz']);
+      final repo = await _repo(200, _okEnvelope(['Madina', 'Lapaz']));
+      final snap = await repo.getWatchList();
+      expect(snap.names, ['Madina', 'Lapaz']);
+      expect(snap.fromCache, isFalse);
     });
 
     test('200 — empty list returns empty', () async {
-      final repo = _repo(200, _okEnvelope([]));
-      expect(await repo.getWatchList(), isEmpty);
+      final repo = await _repo(200, _okEnvelope([]));
+      final snap = await repo.getWatchList();
+      expect(snap.names, isEmpty);
     });
 
     test('401 — throws UnauthorizedError', () async {
-      final repo = _repo(
+      final repo = await _repo(
           401, _errEnvelope('UNAUTHORIZED', 'Session expired'));
       expect(
         () => repo.getWatchList(),
@@ -88,7 +101,7 @@ void main() {
     });
 
     test('403 PERMISSION_DENIED — throws ForbiddenError', () async {
-      final repo = _repo(
+      final repo = await _repo(
           403, _errEnvelope('PERMISSION_DENIED', 'Permission required'));
       expect(
         () => repo.getWatchList(),
@@ -103,12 +116,12 @@ void main() {
   group('putWatchList', () {
     test('200 — returns saved list (server may dedupe)', () async {
       // Server dedupes "circle " → "Circle" is kept; returns deduped list.
-      final repo = _repo(200, _okEnvelope(['Circle']));
+      final repo = await _repo(200, _okEnvelope(['Circle']));
       expect(await repo.putWatchList(['Circle', 'circle ']), ['Circle']);
     });
 
     test('400 VALIDATION_ERROR — throws PlaceValidationError', () async {
-      final repo = _repo(
+      final repo = await _repo(
           400, _errEnvelope('VALIDATION_ERROR', 'Place name must not be empty'));
       expect(
         () => repo.putWatchList(['  ']),
@@ -118,7 +131,7 @@ void main() {
     });
 
     test('403 OVER_LIMIT — throws PlaceLimitError', () async {
-      final repo = _repo(
+      final repo = await _repo(
           403, _errEnvelope('OVER_LIMIT', 'Exceeded watch list limit of 5'));
       expect(
         () => repo.putWatchList(['A', 'B', 'C', 'D', 'E', 'F']),
@@ -132,13 +145,13 @@ void main() {
 
   group('getBroadcastList', () {
     test('200 — returns ordered names', () async {
-      final repo = _repo(200, _okEnvelope(['Kaneshie', 'Madina', 'Circle']));
-      expect(
-          await repo.getBroadcastList(), ['Kaneshie', 'Madina', 'Circle']);
+      final repo = await _repo(200, _okEnvelope(['Kaneshie', 'Madina', 'Circle']));
+      final snap = await repo.getBroadcastList();
+      expect(snap.names, ['Kaneshie', 'Madina', 'Circle']);
     });
 
     test('403 PERMISSION_DENIED — throws ForbiddenError', () async {
-      final repo = _repo(
+      final repo = await _repo(
           403, _errEnvelope('PERMISSION_DENIED', 'Permission required: woleh.place.broadcast'));
       expect(
         () => repo.getBroadcastList(),
@@ -152,7 +165,7 @@ void main() {
 
   group('putBroadcastList', () {
     test('200 — returns saved list preserving order', () async {
-      final repo = _repo(200, _okEnvelope(['Circle', 'Madina', 'Lapaz']));
+      final repo = await _repo(200, _okEnvelope(['Circle', 'Madina', 'Lapaz']));
       expect(
         await repo.putBroadcastList(['Circle', 'Madina', 'Lapaz']),
         ['Circle', 'Madina', 'Lapaz'],
@@ -161,7 +174,7 @@ void main() {
 
     test('400 VALIDATION_ERROR for duplicate normalized name — throws PlaceValidationError',
         () async {
-      final repo = _repo(
+      final repo = await _repo(
           400,
           _errEnvelope('VALIDATION_ERROR',
               'Duplicate place name in broadcast list (after normalization): "madina "'));

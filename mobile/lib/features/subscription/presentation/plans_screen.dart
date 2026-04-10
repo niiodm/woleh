@@ -13,7 +13,7 @@ class PlansScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final plansAsync = ref.watch(plansNotifierProvider);
     final meAsync = ref.watch(meNotifierProvider);
-    final currentTier = meAsync.valueOrNull?.tier ?? 'free';
+    final currentTier = meAsync.valueOrNull?.me.tier ?? 'free';
 
     return Scaffold(
       appBar: AppBar(

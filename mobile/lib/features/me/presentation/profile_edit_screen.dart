@@ -102,7 +102,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     final meAsync = ref.watch(meNotifierProvider);
 
     // Pre-fill once me data arrives.
-    meAsync.whenData((me) => _maybeInit(me?.profile.displayName));
+    meAsync.whenData((s) => _maybeInit(s?.me.profile.displayName));
 
     final colors = Theme.of(context).colorScheme;
 

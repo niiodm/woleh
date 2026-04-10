@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/app_error.dart';
 import '../../../core/place_name_normalizer.dart';
+import '../../../shared/offline_read_only_hint.dart';
 import '../../../core/ws_client.dart';
 import '../../../core/ws_message.dart';
 import 'broadcast_notifier.dart';
@@ -81,6 +82,7 @@ class _BroadcastScreenState extends ConsumerState<BroadcastScreen> {
             state: broadcastState,
             nameController: _nameController,
             fieldFocus: _fieldFocus,
+            readOnlyOffline: broadcastState.readOnlyOffline,
             onSubmitAdd: _submitAdd,
             onRemove: (name) =>
                 ref.read(broadcastNotifierProvider.notifier).remove(name),
@@ -94,6 +96,7 @@ class _BroadcastScreenState extends ConsumerState<BroadcastScreen> {
       bottomNavigationBar: broadcastState is BroadcastReady
           ? _SaveBar(
               state: broadcastState,
+              readOnlyOffline: broadcastState.readOnlyOffline,
               onSave: () =>
                   ref.read(broadcastNotifierProvider.notifier).save(),
             )
@@ -111,6 +114,7 @@ class _ReadyBody extends StatelessWidget {
     required this.state,
     required this.nameController,
     required this.fieldFocus,
+    required this.readOnlyOffline,
     required this.onSubmitAdd,
     required this.onRemove,
     required this.onReorder,
@@ -120,6 +124,7 @@ class _ReadyBody extends StatelessWidget {
   final BroadcastReady state;
   final TextEditingController nameController;
   final FocusNode fieldFocus;
+  final bool readOnlyOffline;
   final VoidCallback onSubmitAdd;
   final void Function(String name) onRemove;
   final void Function(int oldIndex, int newIndex) onReorder;
@@ -130,9 +135,18 @@ class _ReadyBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (readOnlyOffline)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: ShowingSavedDataChip(),
+            ),
+          ),
         _AddNameField(
           controller: nameController,
           focusNode: fieldFocus,
+          readOnlyOffline: readOnlyOffline,
           onSubmit: onSubmitAdd,
         ),
         if (state.saveError != null)
@@ -148,6 +162,7 @@ class _ReadyBody extends StatelessWidget {
                   child: _StopList(
                     names: state.names,
                     isSaving: state.isSaving,
+                    readOnlyOffline: readOnlyOffline,
                     onRemove: onRemove,
                     onReorder: onReorder,
                   ),
@@ -166,11 +181,13 @@ class _AddNameField extends StatelessWidget {
   const _AddNameField({
     required this.controller,
     required this.focusNode,
+    required this.readOnlyOffline,
     required this.onSubmit,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
+  final bool readOnlyOffline;
   final VoidCallback onSubmit;
 
   @override
@@ -186,6 +203,8 @@ class _AddNameField extends StatelessWidget {
                 child: TextField(
                   controller: controller,
                   focusNode: focusNode,
+                  readOnly: readOnlyOffline,
+                  enabled: !readOnlyOffline,
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
                     labelText: 'Append a stop',
@@ -197,9 +216,12 @@ class _AddNameField extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              FilledButton.tonal(
-                onPressed: onSubmit,
-                child: const Icon(Icons.add),
+              Tooltip(
+                message: readOnlyOffline ? kOfflineMutationsTooltip : '',
+                child: FilledButton.tonal(
+                  onPressed: readOnlyOffline ? null : onSubmit,
+                  child: const Icon(Icons.add),
+                ),
               ),
             ],
           ),
@@ -234,26 +256,30 @@ class _StopList extends StatelessWidget {
   const _StopList({
     required this.names,
     required this.isSaving,
+    required this.readOnlyOffline,
     required this.onRemove,
     required this.onReorder,
   });
 
   final List<String> names;
   final bool isSaving;
+  final bool readOnlyOffline;
   final void Function(String) onRemove;
   final void Function(int oldIndex, int newIndex) onReorder;
 
   @override
   Widget build(BuildContext context) {
     return ReorderableListView.builder(
-      onReorder: isSaving ? (_, __) {} : onReorder,
+      onReorder: isSaving || readOnlyOffline ? (_, __) {} : onReorder,
       itemCount: names.length,
       itemBuilder: (context, index) {
         final name = names[index];
         final normalized = normalizePlaceName(name);
         return Dismissible(
           key: ValueKey(name),
-          direction: DismissDirection.endToStart,
+          direction: readOnlyOffline || isSaving
+              ? DismissDirection.none
+              : DismissDirection.endToStart,
           confirmDismiss: isSaving ? (_) async => false : null,
           onDismissed: (_) => onRemove(name),
           background: Container(
@@ -267,13 +293,21 @@ class _StopList extends StatelessWidget {
           ),
           child: ListTile(
             key: ValueKey('tile:$name'),
-            leading: ReorderableDragStartListener(
-              index: index,
-              child: Icon(
-                Icons.drag_handle,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
+            leading: readOnlyOffline
+                ? Icon(
+                    Icons.drag_handle,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant
+                        .withValues(alpha: 0.38),
+                  )
+                : ReorderableDragStartListener(
+                    index: index,
+                    child: Icon(
+                      Icons.drag_handle,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
             title: Text(name),
             subtitle: normalized != name.trim()
                 ? Text(
@@ -289,8 +323,11 @@ class _StopList extends StatelessWidget {
                 ? null
                 : IconButton(
                     icon: const Icon(Icons.close, size: 18),
-                    onPressed: () => onRemove(name),
-                    tooltip: 'Remove',
+                    onPressed:
+                        readOnlyOffline ? null : () => onRemove(name),
+                    tooltip: readOnlyOffline
+                        ? kOfflineMutationsTooltip
+                        : 'Remove',
                   ),
           ),
         );
@@ -391,9 +428,14 @@ class _SaveErrorBanner extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _SaveBar extends StatelessWidget {
-  const _SaveBar({required this.state, required this.onSave});
+  const _SaveBar({
+    required this.state,
+    required this.readOnlyOffline,
+    required this.onSave,
+  });
 
   final BroadcastReady state;
+  final bool readOnlyOffline;
   final VoidCallback onSave;
 
   @override
@@ -403,15 +445,18 @@ class _SaveBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         child: SizedBox(
           width: double.infinity,
-          child: FilledButton(
-            onPressed: state.isSaving ? null : onSave,
-            child: state.isSaving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Save'),
+          child: Tooltip(
+            message: readOnlyOffline ? kOfflineMutationsTooltip : '',
+            child: FilledButton(
+              onPressed: state.isSaving || readOnlyOffline ? null : onSave,
+              child: state.isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Save'),
+            ),
           ),
         ),
       ),

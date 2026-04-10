@@ -6,7 +6,7 @@ part of 'auth_state.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$authStateHash() => r'bd9327f17ef23da42df6dcedc14592854325f942';
+String _$authStateHash() => r'0fab0c10c325abfca4c335e369b26b470c1af075';
 
 /// Holds the current access token (null = unauthenticated).
 ///

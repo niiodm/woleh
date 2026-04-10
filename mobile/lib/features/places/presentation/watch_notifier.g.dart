@@ -6,7 +6,7 @@ part of 'watch_notifier.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$watchNotifierHash() => r'dfa55d1e2ebce21f18c353a500aeb8e772bd1dc2';
+String _$watchNotifierHash() => r'7dff91651496d9276a9a1077bb78f2ffc2415c12';
 
 /// See also [WatchNotifier].
 @ProviderFor(WatchNotifier)

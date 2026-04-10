@@ -1,5 +1,7 @@
 // DTOs for GET /api/v1/me (see API_CONTRACT.md §6.3 and §4).
 
+import 'package:flutter/foundation.dart';
+
 class MeProfile {
   const MeProfile({
     required this.userId,
@@ -19,6 +21,12 @@ class MeProfile {
         phoneE164: json['phoneE164'] as String,
         displayName: json['displayName'] as String?,
       );
+
+  Map<String, dynamic> toJson() => {
+        'userId': userId,
+        'phoneE164': phoneE164,
+        'displayName': displayName,
+      };
 }
 
 class MeLimits {
@@ -34,6 +42,11 @@ class MeLimits {
         placeWatchMax: json['placeWatchMax'] as int,
         placeBroadcastMax: json['placeBroadcastMax'] as int,
       );
+
+  Map<String, dynamic> toJson() => {
+        'placeWatchMax': placeWatchMax,
+        'placeBroadcastMax': placeBroadcastMax,
+      };
 }
 
 class MeSubscription {
@@ -52,6 +65,12 @@ class MeSubscription {
         currentPeriodEnd: json['currentPeriodEnd'] as String?,
         inGracePeriod: json['inGracePeriod'] as bool,
       );
+
+  Map<String, dynamic> toJson() => {
+        'status': status,
+        'currentPeriodEnd': currentPeriodEnd,
+        'inGracePeriod': inGracePeriod,
+      };
 }
 
 class MeResponse {
@@ -79,4 +98,21 @@ class MeResponse {
         subscription:
             MeSubscription.fromJson(json['subscription'] as Map<String, dynamic>),
       );
+
+  Map<String, dynamic> toJson() => {
+        'profile': profile.toJson(),
+        'permissions': permissions,
+        'tier': tier,
+        'limits': limits.toJson(),
+        'subscription': subscription.toJson(),
+      };
+}
+
+/// Result of loading `/me` from the network or from offline cache.
+@immutable
+class MeLoadSnapshot {
+  const MeLoadSnapshot({required this.me, this.fromCache = false});
+
+  final MeResponse me;
+  final bool fromCache;
 }

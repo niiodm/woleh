@@ -201,24 +201,26 @@ Wire the new refresh token flow into the mobile auth layer:
 
 ---
 
-### Step 3.2 — Offline read-only cache (PRD §13.7)
+### Step 3.2 — Offline read-only cache (PRD §13.7) ✅
 
 Cache last-known profile and place lists for display when the device is offline. Mutations remain disabled offline.
 
 **Dependencies:** add `shared_preferences` (or `hive_flutter` if already present) to `pubspec.yaml`.
 
-**`ProfileRepository`**: after a successful `GET /api/v1/me` response, serialize the `UserProfile` to JSON and persist via `SharedPreferences` under key `cache.profile`. On `DioException` where the error type indicates no connectivity (`DioExceptionType.connectionError` / `DioExceptionType.unknown` with no response), return the cached profile if available; throw `OfflineError` (add to `AppError` sealed class) if no cache exists.
+**`MeRepository`** (this codebase’s equivalent of a profile repository — `GET /api/v1/me`): after a successful response, serialize the full [`MeResponse`](../mobile/lib/features/me/data/me_dto.dart) to JSON and persist via `SharedPreferences` under key `cache.profile`. On `DioException` where connectivity is absent (`DioExceptionType.connectionError` / `DioExceptionType.unknown` with no response; see [`isOfflineDioException`](../mobile/lib/core/offline_dio.dart)), return the cached `MeResponse` (same [`me_dto.dart`](../mobile/lib/features/me/data/me_dto.dart) types) wrapped in `MeLoadSnapshot` with `fromCache: true` if available; throw [`OfflineError`](../mobile/lib/core/app_error.dart) if no cache exists.
 
-**`PlaceListRepository`**: same pattern for watch list (`cache.places.watch`) and broadcast list (`cache.places.broadcast`).
+**`PlaceListRepository`**: same pattern for watch list (`cache.places.watch`) and broadcast list (`cache.places.broadcast`); successful GET/PUT updates the corresponding cache; getters return [`PlaceListSnapshot`](../mobile/lib/features/places/data/place_list_repository.dart) (`names` + `fromCache`).
 
 **UI indicators:**
-- Add `OfflineError` to the `AppError` hierarchy in `app_error.dart`.
-- When any screen detects `OfflineError`, show a non-intrusive `"Showing saved data"` chip (e.g. a `Chip` or `Banner` at the top of the list). Disable Save / add / remove actions with a tooltip `"Offline — changes unavailable"`.
-- `HomeScreen`: if profile loaded from cache, show the offline chip in the profile header.
+- [`OfflineError`](../mobile/lib/core/app_error.dart) in the `AppError` hierarchy; home error state shows its message when `/me` fails with no cache.
+- When data was **loaded from cache** (`fromCache` / `readOnlyOffline`), show a non-intrusive **"Showing saved data"** chip ([`ShowingSavedDataChip`](../mobile/lib/shared/offline_read_only_hint.dart)). Disable Save / add / remove / reorder with tooltip **`Offline — changes unavailable`** ([`kOfflineMutationsTooltip`](../mobile/lib/shared/offline_read_only_hint.dart)).
+- **`HomeScreen`**: chip at top of profile list when profile snapshot is from cache.
 
-**Tests:** `ProfileRepositoryCacheTest` + `PlaceListRepositoryCacheTest` (unit — mock `Dio` with connection error → verify cached value returned; no cache + offline → `OfflineError` thrown).
+**Tests:** [`me_repository_cache_test.dart`](../mobile/test/features/me/me_repository_cache_test.dart) + [`place_list_repository_cache_test.dart`](../mobile/test/features/places/place_list_repository_cache_test.dart) (mock `Dio` / adapter — connection error → cached value; no cache + offline → `OfflineError`; optional `unknown` + no response path).
 
-**Done when:** a user who has previously loaded their watch list can open the app with no connectivity and see their last-saved list (read-only); Save button is disabled with a clear message.
+**Done when:** a user who has previously loaded their watch list can open the app with no connectivity and see their last-saved list (read-only); Save button is disabled with a clear message. ✅
+
+**Implementation:** `shared_preferences` in [`pubspec.yaml`](../mobile/pubspec.yaml); [`shared_preferences_provider.dart`](../mobile/lib/core/shared_preferences_provider.dart) overridden in async [`main.dart`](../mobile/lib/main.dart) after `SharedPreferences.getInstance()`; [`offline_dio.dart`](../mobile/lib/core/offline_dio.dart); `MeProfile` / `MeLimits` / `MeSubscription` / `MeResponse` — `toJson()` in [`me_dto.dart`](../mobile/lib/features/me/data/me_dto.dart) + `MeLoadSnapshot`; [`me_repository.dart`](../mobile/lib/features/me/data/me_repository.dart) (`getMe()` → `MeLoadSnapshot`); [`place_list_repository.dart`](../mobile/lib/features/places/data/place_list_repository.dart); [`me_notifier.dart`](../mobile/lib/features/me/presentation/me_notifier.dart) → `AsyncValue<MeLoadSnapshot?>`; [`router.dart`](../mobile/lib/app/router.dart), [`permission_provider.dart`](../mobile/lib/core/permission_provider.dart), [`plans_screen.dart`](../mobile/lib/features/subscription/presentation/plans_screen.dart), [`checkout_notifier.dart`](../mobile/lib/features/subscription/presentation/checkout_notifier.dart), [`profile_edit_screen.dart`](../mobile/lib/features/me/presentation/profile_edit_screen.dart) — consumers use `snapshot.me`; [`home_screen.dart`](../mobile/lib/features/home/presentation/home_screen.dart); [`watch_notifier.dart`](../mobile/lib/features/places/presentation/watch_notifier.dart) / [`broadcast_notifier.dart`](../mobile/lib/features/places/presentation/broadcast_notifier.dart) (`readOnlyOffline`, `OfflineError` on load); [`watch_screen.dart`](../mobile/lib/features/places/presentation/watch_screen.dart) / [`broadcast_screen.dart`](../mobile/lib/features/places/presentation/broadcast_screen.dart). 3 + 4 unit tests in cache test files; [`place_list_repository_test.dart`](../mobile/test/features/places/place_list_repository_test.dart) updated for `PlaceListSnapshot`; router/widget/subscription test stubs updated for `MeLoadSnapshot`. **162** Flutter tests green.
 
 ---
 
@@ -280,7 +282,7 @@ Feature-flagged off by default (`woleh.push.enabled: false` in `application.yml`
 All test files created incrementally in steps 3.1–3.4. This step validates coverage and adds any missing edge cases:
 
 - `test/core/token_refresh_interceptor_test.dart` — step 3.1 ✓
-- `test/features/profile/profile_repository_cache_test.dart` — step 3.2 ✓
+- `test/features/me/me_repository_cache_test.dart` — step 3.2 ✓
 - `test/features/places/place_list_repository_cache_test.dart` — step 3.2 ✓
 - `test/shared/ws_status_banner_test.dart` — step 3.3 ✓
 - `test/core/push_service_test.dart` — step 3.4 ✓ (mock FCM token retrieval)
@@ -335,7 +337,7 @@ Create `docs/runbooks/INCIDENT_RESPONSE.md` covering the most likely failure sce
 - [ ] `POST /api/v1/auth/refresh` issues new access + refresh token pair; old token rejected after rotation. *(Step 2.4)*
 - [ ] `POST /api/v1/auth/logout` revokes the refresh token. *(Step 2.4)*
 - [ ] Mobile: expired access token transparently refreshes in the background; failed refresh signs user out. *(Step 3.1)*
-- [ ] Mobile: last-known profile and place lists displayed when offline; Save/edit actions disabled. *(Step 3.2)*
+- [x] Mobile: last-known profile and place lists displayed when offline; Save/edit actions disabled. *(Step 3.2)*
 - [ ] Mobile: WS degraded state banner appears on disconnect/reconnect; disappears on reconnect. *(Step 3.3)*
 - [ ] Push notification device token registration + deletion endpoints functional; `StubFcmService` logs match/expiry events in tests without sending real pushes. *(Step 3.4)*
 - [ ] CI passes: server + mobile tests green. *(Step 3.5)*
@@ -355,3 +357,4 @@ Create `docs/runbooks/INCIDENT_RESPONSE.md` covering the most likely failure sce
 | 0.5 | 2026-04-10 | Step 2.4 implemented: `V6__refresh_tokens.sql`; `RefreshToken` entity + `RefreshTokenRepository`; `JwtService` — `generateRefreshToken()` + `hashToken()`; `WolehJwtProperties` — `refreshTokenTtl`; `RefreshTokenService` — issue/rotate/revokeByRawToken; `InvalidRefreshTokenException` → 401; `VerifyOtpResponse` + `AuthController` updated; `POST /auth/refresh` + `POST /auth/logout` endpoints; `RefreshTokenIntegrationTest` (6 tests); 215 server tests green |
 | 0.6 | 2026-04-10 | Step 2.5 implemented: `phase3.http` (6 sections: auth, rate-limit demo, Actuator, correlation IDs, refresh token rotation, logout); `http-client.env.json` — `managementBaseUrl` added; 215 server tests green |
 | 0.7 | 2026-04-10 | Step 3.1 implemented: `AuthTokenStorage` + refresh token storage; `AuthState.setTokens()` + `signOut()` clears both tokens; `VerifyOtpResponse.refreshToken` + `RefreshResponse` DTO; `AuthRepository.refresh()` + `logout()`; `TokenRefreshInterceptor` (401 → silent refresh → retry; failed refresh → signOut); `AppErrorInterceptor` changed `reject()` → `next()` for Dio 5 forward error chain; `otp_screen.dart` stores both tokens; `token_refresh_interceptor_test.dart` (4 unit tests); 155 Flutter tests green |
+| 0.8 | 2026-04-10 | Step 3.2 implemented: `shared_preferences` + `shared_preferences_provider` (override in `main.dart`); `offline_dio.dart`; `OfflineError`; `MeResponse`/`MeProfile`/limits/subscription `toJson()` + `MeLoadSnapshot`; `MeRepository` + `PlaceListRepository` offline cache keys (`cache.profile`, `cache.places.watch`, `cache.places.broadcast`) + `PlaceListSnapshot`; `meNotifierProvider` → `MeLoadSnapshot?`; home/watch/broadcast UI (`ShowingSavedDataChip`, read-only offline); `me_repository_cache_test` (3) + `place_list_repository_cache_test` (4); 162 Flutter tests green |

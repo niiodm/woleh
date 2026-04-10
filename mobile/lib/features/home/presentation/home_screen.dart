@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/auth_state.dart';
 import '../../../core/ws_message.dart';
 import '../../../shared/permission_gated_button.dart';
+import '../../../core/app_error.dart';
+import '../../../shared/offline_read_only_hint.dart';
 import '../../me/data/me_dto.dart';
 import '../../me/presentation/me_notifier.dart';
 import '../../places/presentation/match_notifier.dart';
@@ -44,13 +46,14 @@ class HomeScreen extends ConsumerWidget {
       body: meAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => _ErrorView(
-          message: err.toString(),
+          message: err is OfflineError ? err.message : err.toString(),
           onRetry: () => ref.read(meNotifierProvider.notifier).refresh(),
         ),
-        data: (me) {
-          if (me == null) return const SizedBox.shrink();
+        data: (snapshot) {
+          if (snapshot == null) return const SizedBox.shrink();
           return _MeView(
-            me: me,
+            me: snapshot.me,
+            fromCache: snapshot.fromCache,
             matches: matches,
             onDismiss: (i) =>
                 ref.read(matchNotifierProvider.notifier).dismiss(i),
@@ -68,11 +71,13 @@ class HomeScreen extends ConsumerWidget {
 class _MeView extends StatelessWidget {
   const _MeView({
     required this.me,
+    required this.fromCache,
     required this.matches,
     required this.onDismiss,
   });
 
   final MeResponse me;
+  final bool fromCache;
   final List<MatchMessage> matches;
   final void Function(int index) onDismiss;
 
@@ -90,6 +95,11 @@ class _MeView extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
         children: [
+          if (fromCache)
+            const Align(
+              alignment: Alignment.center,
+              child: ShowingSavedDataChip(),
+            ),
           // ── Match banner (shown when recent matches are available) ─────────
           if (matches.isNotEmpty) ...[
             Text('Recent Matches', style: textTheme.titleMedium),

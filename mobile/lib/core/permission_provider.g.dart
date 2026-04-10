@@ -6,7 +6,7 @@ part of 'permission_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$permissionsHash() => r'4a2d8b8b7f3755888d72c2c30eceec0275ebe894';
+String _$permissionsHash() => r'2fe8d1c92cd4871e78e2e58773a117bef4803cd5';
 
 /// Derives the current user's effective permission strings from [meNotifierProvider].
 ///

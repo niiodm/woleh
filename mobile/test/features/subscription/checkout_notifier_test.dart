@@ -32,23 +32,40 @@ class _StubSubscriptionRepository extends SubscriptionRepository {
 
 class _FreeMeNotifier extends MeNotifier {
   @override
-  Future<MeResponse?> build() async => const MeResponse(
-        profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
-        permissions: ['woleh.account.profile', 'woleh.plans.read', 'woleh.place.watch'],
-        tier: 'free',
-        limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
-        subscription: MeSubscription(status: 'none', inGracePeriod: false),
+  Future<MeLoadSnapshot?> build() async => MeLoadSnapshot(
+        me: const MeResponse(
+          profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
+          permissions: [
+            'woleh.account.profile',
+            'woleh.plans.read',
+            'woleh.place.watch',
+          ],
+          tier: 'free',
+          limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
+          subscription: MeSubscription(status: 'none', inGracePeriod: false),
+        ),
       );
 }
 
 class _PaidMeNotifier extends MeNotifier {
   @override
-  Future<MeResponse?> build() async => const MeResponse(
-        profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
-        permissions: ['woleh.account.profile', 'woleh.plans.read', 'woleh.place.watch', 'woleh.place.broadcast'],
-        tier: 'paid',
-        limits: MeLimits(placeWatchMax: 50, placeBroadcastMax: 50),
-        subscription: MeSubscription(status: 'active', currentPeriodEnd: '2026-05-09T00:00:00Z', inGracePeriod: false),
+  Future<MeLoadSnapshot?> build() async => MeLoadSnapshot(
+        me: const MeResponse(
+          profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
+          permissions: [
+            'woleh.account.profile',
+            'woleh.plans.read',
+            'woleh.place.watch',
+            'woleh.place.broadcast',
+          ],
+          tier: 'paid',
+          limits: MeLimits(placeWatchMax: 50, placeBroadcastMax: 50),
+          subscription: MeSubscription(
+            status: 'active',
+            currentPeriodEnd: '2026-05-09T00:00:00Z',
+            inGracePeriod: false,
+          ),
+        ),
       );
 }
 

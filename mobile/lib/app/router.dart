@@ -95,7 +95,7 @@ class _RouterNotifier extends ChangeNotifier {
       notifyListeners();
     });
     // Re-evaluate permission guards whenever GET /me resolves or updates.
-    _ref.listen<AsyncValue<MeResponse?>>(meNotifierProvider, (_, __) {
+    _ref.listen<AsyncValue<MeLoadSnapshot?>>(meNotifierProvider, (_, __) {
       notifyListeners();
     });
   }
@@ -128,7 +128,8 @@ class _RouterNotifier extends ChangeNotifier {
       // Defer while entitlements are still loading to avoid a flash redirect.
       if (meAsync.isLoading) return null;
 
-      final permissions = meAsync.valueOrNull?.permissions ?? const <String>[];
+      final permissions =
+          meAsync.valueOrNull?.me.permissions ?? const <String>[];
       final requiredPermission = _permissionGuards[location];
       if (requiredPermission != null &&
           !permissions.contains(requiredPermission)) {

@@ -95,7 +95,7 @@ class CheckoutNotifier extends _$CheckoutNotifier {
     state = const CheckoutPolling();
     try {
       await ref.read(meNotifierProvider.notifier).refresh();
-      final tier = ref.read(meNotifierProvider).valueOrNull?.tier;
+      final tier = ref.read(meNotifierProvider).valueOrNull?.me.tier;
       if (tier == 'paid') {
         state = const CheckoutSuccess();
       } else {

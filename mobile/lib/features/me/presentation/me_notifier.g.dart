@@ -6,7 +6,7 @@ part of 'me_notifier.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$meNotifierHash() => r'48cfb41d2cbdcc7c36b3a6a9c461f89e04bd6eba';
+String _$meNotifierHash() => r'e67385ad2878aec27882e937721be798247f3aee';
 
 /// Holds the current user's profile and entitlements.
 ///
@@ -21,7 +21,7 @@ String _$meNotifierHash() => r'48cfb41d2cbdcc7c36b3a6a9c461f89e04bd6eba';
 /// Copied from [MeNotifier].
 @ProviderFor(MeNotifier)
 final meNotifierProvider =
-    AutoDisposeAsyncNotifierProvider<MeNotifier, MeResponse?>.internal(
+    AutoDisposeAsyncNotifierProvider<MeNotifier, MeLoadSnapshot?>.internal(
       MeNotifier.new,
       name: r'meNotifierProvider',
       debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -31,6 +31,6 @@ final meNotifierProvider =
       allTransitiveDependencies: null,
     );
 
-typedef _$MeNotifier = AutoDisposeAsyncNotifier<MeResponse?>;
+typedef _$MeNotifier = AutoDisposeAsyncNotifier<MeLoadSnapshot?>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
