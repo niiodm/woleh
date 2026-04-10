@@ -94,4 +94,20 @@ class DeviceTokenIntegrationTest {
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
 	}
+
+	@Test
+	void register_withoutAuth_returns401() throws Exception {
+		mockMvc.perform(post(URL)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"token\":\"x\",\"platform\":\"android\"}"))
+				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void delete_withoutAuth_returns401() throws Exception {
+		mockMvc.perform(delete(URL)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"token\":\"x\"}"))
+				.andExpect(status().isUnauthorized());
+	}
 }
