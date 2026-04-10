@@ -71,3 +71,8 @@ woleh:
   # Payment provider (ADR 0005). Replace base-url and add provider credentials for prod.
   payment:
     base-url: ${PAYMENT_BASE_URL:http://localhost:8080}
+  ratelimit:
+    place-list:
+      # Per-user fixed-window limit for watch/broadcast list PUT operations.
+      # Single-node in-memory only — requires ADR before switching to Redis for multi-instance.
+      requests-per-minute: ${PLACE_LIST_RPM:10}

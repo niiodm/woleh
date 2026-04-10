@@ -73,8 +73,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
 	@ExceptionHandler(RateLimitedException.class)
 	ResponseEntity<ApiEnvelope<Void>> handleRateLimited(RateLimitedException ex) {
-		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-				.body(ApiEnvelope.error(ex.getMessage(), "RATE_LIMITED"));
+		var builder = ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS);
+		if (ex.getRetryAfterSeconds() > 0) {
+			builder.header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()));
+		}
+		return builder.body(ApiEnvelope.error(ex.getMessage(), "RATE_LIMITED"));
 	}
 
 	@ExceptionHandler(PlaceNameValidationException.class)

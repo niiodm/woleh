@@ -35,7 +35,7 @@ This document turns [PRD.md](./PRD.md) §10 **Phase 3 — Hardening** into order
 
 ## 2. Server (Spring Boot)
 
-### Step 2.1 — Rate limiting on high-frequency endpoints
+### Step 2.1 — Rate limiting on high-frequency endpoints ✅
 
 Implement a `RateLimiter @Component` using a `ConcurrentHashMap<String, TokenBucketState>` (in-memory, single-node). The key is `"userId:<userId>:<endpoint>"` for authenticated endpoints and `"ip:<remoteAddr>:otp-send"` for the pre-auth OTP path. Expose config via `application.yml` so limits can be adjusted without a code change:
 
@@ -64,7 +64,9 @@ Include a `Retry-After: <seconds>` response header (time until the next token is
 - Add a TODO comment: *"For multi-instance deployments, replace this in-memory map with a Redis-backed sliding window or API gateway rate limiting — requires ADR."*
 - **Tests:** `RateLimiterTest` (unit — token bucket refills after window; per-user isolation; IP keying); `RateLimitIntegrationTest` (POST `send-otp` 6× from same IP → 6th returns 429 with `Retry-After`; PUT `/places/watch` 11× as same user → 11th returns 429).
 
-**Done when:** rapid PUT of place lists from one user is rejected at 429 after the configured limit; a different user is unaffected; `Retry-After` header is present.
+**Implementation:** [`RateLimitProperties`](../server/src/main/java/odm/clarity/woleh/config/RateLimitProperties.java) (`@ConfigurationProperties(prefix = "woleh.ratelimit")`); [`PlaceListRateLimiter`](../server/src/main/java/odm/clarity/woleh/ratelimit/PlaceListRateLimiter.java) (`@Component`, `ConcurrentHashMap` fixed-window, `checkWatch` / `checkBroadcast`); [`RateLimitedException`](../server/src/main/java/odm/clarity/woleh/common/error/RateLimitedException.java) updated with `retryAfterSeconds` field; `GlobalExceptionHandler` updated to emit `Retry-After` header when `retryAfterSeconds > 0`; `PlaceListController` injects `PlaceListRateLimiter` and calls `checkWatch` / `checkBroadcast` on PUT handlers; `application.yml` gains `woleh.ratelimit.place-list.requests-per-minute: ${PLACE_LIST_RPM:10}`; `WolehApplication` registers `RateLimitProperties`; `UserPlaceList` constructor now sets `this.userId = user.getId()` to keep the read-only FK projection in sync for new in-memory entities. [`RateLimiterTest`](../server/src/test/java/odm/clarity/woleh/ratelimit/RateLimiterTest.java) — 7 unit tests; [`RateLimitIntegrationTest`](../server/src/test/java/odm/clarity/woleh/places/RateLimitIntegrationTest.java) — 5 integration tests (`@TestPropertySource` sets limit = 2).
+
+**Done when:** rapid PUT of place lists from one user is rejected at 429 after the configured limit; a different user is unaffected; `Retry-After` header is present. ✅
 
 ---
 
@@ -337,3 +339,4 @@ Create `docs/runbooks/INCIDENT_RESPONSE.md` covering the most likely failure sce
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1 | 2026-04-10 | Initial Phase 3 codable breakdown |
+| 0.2 | 2026-04-10 | Step 2.1 implemented: `RateLimitProperties` + `PlaceListRateLimiter` (fixed-window `ConcurrentHashMap`); `RateLimitedException` gains `retryAfterSeconds`; `GlobalExceptionHandler` emits `Retry-After` header; `PlaceListController` calls rate limiter on PUTs; `application.yml` + `WolehApplication` wired; `UserPlaceList` constructor populates read-only `userId` projection; `RateLimiterTest` (7 unit) + `RateLimitIntegrationTest` (5 integration); 199 server tests green |

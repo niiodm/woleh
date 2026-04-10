@@ -79,6 +79,7 @@ public class UserPlaceList {
 	public UserPlaceList(User user, PlaceListType listType,
 			List<String> displayNames, List<String> normalizedNames) {
 		this.user = user;
+		this.userId = user.getId(); // keep read-only FK projection in sync from construction
 		this.listType = listType;
 		this.displayNames = displayNames;
 		this.normalizedNames = normalizedNames;

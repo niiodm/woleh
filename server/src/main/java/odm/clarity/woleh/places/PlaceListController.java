@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import odm.clarity.woleh.api.dto.ApiEnvelope;
 import odm.clarity.woleh.places.dto.PlaceNamesRequest;
 import odm.clarity.woleh.places.dto.PlaceNamesResponse;
+import odm.clarity.woleh.ratelimit.PlaceListRateLimiter;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,15 +18,18 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Place-name list endpoints — watch and broadcast (API_CONTRACT.md §6.7–§6.10).
  * Permission and limit enforcement are handled in {@link PlaceListService}.
+ * Rate limiting (writes only) is enforced by {@link PlaceListRateLimiter}.
  */
 @RestController
 @RequestMapping("/api/v1/me/places")
 public class PlaceListController {
 
 	private final PlaceListService placeListService;
+	private final PlaceListRateLimiter rateLimiter;
 
-	public PlaceListController(PlaceListService placeListService) {
+	public PlaceListController(PlaceListService placeListService, PlaceListRateLimiter rateLimiter) {
 		this.placeListService = placeListService;
+		this.rateLimiter = rateLimiter;
 	}
 
 	// ── watch list ────────────────────────────────────────────────────────
@@ -46,6 +50,7 @@ public class PlaceListController {
 	ResponseEntity<ApiEnvelope<PlaceNamesResponse>> putWatch(
 			@AuthenticationPrincipal Long userId,
 			@RequestBody @Valid PlaceNamesRequest request) {
+		rateLimiter.checkWatch(userId);
 		return ResponseEntity.ok(
 				ApiEnvelope.success("Watch list updated",
 						placeListService.putWatchList(userId, request.names())));
@@ -70,6 +75,7 @@ public class PlaceListController {
 	ResponseEntity<ApiEnvelope<PlaceNamesResponse>> putBroadcast(
 			@AuthenticationPrincipal Long userId,
 			@RequestBody @Valid PlaceNamesRequest request) {
+		rateLimiter.checkBroadcast(userId);
 		return ResponseEntity.ok(
 				ApiEnvelope.success("Broadcast list updated",
 						placeListService.putBroadcastList(userId, request.names())));
