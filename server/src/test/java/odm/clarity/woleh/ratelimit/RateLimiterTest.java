@@ -17,7 +17,9 @@ class RateLimiterTest {
 	@BeforeEach
 	void setup() {
 		rateLimiter = new PlaceListRateLimiter(
-				new RateLimitProperties(new RateLimitProperties.PlaceListLimits(3)));
+				new RateLimitProperties(
+						new RateLimitProperties.PlaceListLimits(3),
+						new RateLimitProperties.LocationPublishLimits(1000)));
 	}
 
 	@Test

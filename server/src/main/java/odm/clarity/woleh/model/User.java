@@ -31,6 +31,9 @@ public class User {
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
 
+	@Column(name = "location_sharing_enabled", nullable = false)
+	private boolean locationSharingEnabled = false;
+
 	protected User() {
 	}
 
@@ -76,5 +79,13 @@ public class User {
 
 	public Instant getUpdatedAt() {
 		return updatedAt;
+	}
+
+	public boolean isLocationSharingEnabled() {
+		return locationSharingEnabled;
+	}
+
+	public void setLocationSharingEnabled(boolean locationSharingEnabled) {
+		this.locationSharingEnabled = locationSharingEnabled;
 	}
 }

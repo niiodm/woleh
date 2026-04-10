@@ -1,0 +1,55 @@
+### Phase 4 — match-scoped live location (REST §3.2)
+#
+# Prerequisites: same auth flow as phase3.http — set @token from verify-otp.
+#
+# 1. GET /me — profile includes locationSharingEnabled (default false).
+# 2. POST /me/location without sharing → 403 LOCATION_SHARING_OFF.
+# 3. PUT /me/location-sharing { "enabled": true } → 200.
+# 4. POST /me/location → 200.
+# 5. Rapid second POST → 429 RATE_LIMITED (default min interval 1000 ms).
+
+@baseUrl = {{baseUrl}}
+@token   = PASTE_ACCESS_TOKEN_HERE
+
+### GET me (see profile.locationSharingEnabled)
+GET {{baseUrl}}/api/v1/me
+Authorization: Bearer {{token}}
+
+### POST location — expects403 if sharing off
+POST {{baseUrl}}/api/v1/me/location
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "latitude": 5.6037,
+  "longitude": -0.187
+}
+
+### Enable location sharing
+PUT {{baseUrl}}/api/v1/me/location-sharing
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "enabled": true
+}
+
+### POST location — expects 200
+POST {{baseUrl}}/api/v1/me/location
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "latitude": 5.6037,
+  "longitude": -0.187,
+  "recordedAt": "2026-04-10T12:00:00Z"
+}
+
+### Disable sharing
+PUT {{baseUrl}}/api/v1/me/location-sharing
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "enabled": false
+}

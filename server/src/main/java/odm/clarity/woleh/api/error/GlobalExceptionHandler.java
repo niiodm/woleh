@@ -10,6 +10,7 @@ import odm.clarity.woleh.api.dto.ApiEnvelope;
 import odm.clarity.woleh.common.error.BadRequestException;
 import odm.clarity.woleh.common.error.InvalidOtpException;
 import odm.clarity.woleh.common.error.InvalidRefreshTokenException;
+import odm.clarity.woleh.common.error.LocationSharingDisabledException;
 import odm.clarity.woleh.common.error.PaymentException;
 import odm.clarity.woleh.common.error.PermissionDeniedException;
 import odm.clarity.woleh.common.error.PlaceLimitExceededException;
@@ -140,6 +141,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		counter4xx.increment();
 		return ResponseEntity.status(HttpStatus.FORBIDDEN)
 				.body(ApiEnvelope.error(ex.getMessage(), "PERMISSION_DENIED"));
+	}
+
+	@ExceptionHandler(LocationSharingDisabledException.class)
+	ResponseEntity<ApiEnvelope<Void>> handleLocationSharingDisabled(LocationSharingDisabledException ex) {
+		counter4xx.increment();
+		return ResponseEntity.status(HttpStatus.FORBIDDEN)
+				.body(ApiEnvelope.error(ex.getMessage(), "LOCATION_SHARING_OFF"));
 	}
 
 	@ExceptionHandler(PlaceLimitExceededException.class)

@@ -68,7 +68,9 @@ For location, the server needs a **fast, consistent** answer to: *“Is user A m
 
 ### 3.2 REST: publish location (authenticated)
 
-- **Endpoint (example):** `POST /api/v1/me/location` (or `PUT` a “last fix” resource—choose one; document in [API_CONTRACT.md](./API_CONTRACT.md)).
+**Implementation status:** `POST /api/v1/me/location`, `PUT /api/v1/me/location-sharing`, `LocationPublishService`, `LocationPublishRateLimiter`, Flyway `V8__user_location_sharing.sql`, `GET /me` profile field `locationSharingEnabled` — **done**. WebSocket fan-out is §3.3.
+
+- **Endpoint:** `POST /api/v1/me/location` — documented in [API_CONTRACT.md](./API_CONTRACT.md) §6.4.1.
 - **Body:** `{ "latitude", "longitude", "accuracyMeters?", "heading?", "speed?", "recordedAt" }` (ISO-8601).
 - **Behavior:**  
   - If user has **disabled** sharing (flag in DB or session—see §3.4), return **204** or **403** per ADR.  
@@ -86,8 +88,10 @@ For location, the server needs a **fast, consistent** answer to: *“Is user A m
 
 ### 3.4 Stopping sharing
 
-- **Client:** Toggle “Share my location” off → `DELETE /api/v1/me/location-sharing` or `POST .../disable` (idempotent).  
-- **Server:** Clear sharing flag; **reject** further `POST /me/location` with 403 until re-enabled; do not fan-out.
+**Implementation status:** `PUT /api/v1/me/location-sharing` with `{ "enabled": false }` (same endpoint for on/off). `DELETE` is not used in v1.
+
+- **Client:** Set `enabled` to `false` via `PUT /api/v1/me/location-sharing`.  
+- **Server:** Persist flag; **reject** further `POST /me/location` with **403** `LOCATION_SHARING_OFF` until re-enabled.
 
 ### 3.5 Testing
 

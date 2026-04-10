@@ -7,11 +7,15 @@ class MeProfile {
     required this.userId,
     required this.phoneE164,
     this.displayName,
+    this.locationSharingEnabled = false,
   });
 
   final String userId;
   final String phoneE164;
   final String? displayName;
+
+  /// When true, server accepts {@code POST /api/v1/me/location} (Phase 4).
+  final bool locationSharingEnabled;
 
   /// Returns [displayName] when set, otherwise falls back to [phoneE164].
   String get displayNameOrPhone => displayName?.isNotEmpty == true ? displayName! : phoneE164;
@@ -20,12 +24,14 @@ class MeProfile {
         userId: json['userId'].toString(),
         phoneE164: json['phoneE164'] as String,
         displayName: json['displayName'] as String?,
+        locationSharingEnabled: json['locationSharingEnabled'] as bool? ?? false,
       );
 
   Map<String, dynamic> toJson() => {
         'userId': userId,
         'phoneE164': phoneE164,
         'displayName': displayName,
+        'locationSharingEnabled': locationSharingEnabled,
       };
 }
 

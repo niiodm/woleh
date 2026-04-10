@@ -118,6 +118,8 @@ Returned inside `data` for **`GET /api/v1/me`** and optionally mirrored on subsc
 | GET | `/api/v1/subscription/plans` | No | — | Public catalog |
 | GET | `/api/v1/me` | Yes | Valid session | Always includes entitlements |
 | PATCH | `/api/v1/me/profile` | Yes | `woleh.account.profile` | Partial update |
+| POST | `/api/v1/me/location` | Yes | `woleh.place.watch` **or** `woleh.place.broadcast` | Match-scoped Phase 4; sharing must be on; rate-limited |
+| PUT | `/api/v1/me/location-sharing` | Yes | `woleh.place.watch` **or** `woleh.place.broadcast` | Opt in/out of publishing fixes |
 | GET | `/api/v1/me/places/watch` | Yes | `woleh.place.watch` | |
 | PUT | `/api/v1/me/places/watch` | Yes | `woleh.place.watch` | Replace list; enforce `limits.placeWatchMax` |
 | GET | `/api/v1/me/places/broadcast` | Yes | `woleh.place.broadcast` | 403 if missing permission |
@@ -198,7 +200,8 @@ Signup completion (name, etc.) may be a separate **`PATCH /me/profile`** after f
   "profile": {
     "userId": "1",
     "phoneE164": "+233241234567",
-    "displayName": "Ama"
+    "displayName": "Ama",
+    "locationSharingEnabled": false
   },
   "permissions": ["woleh.account.profile", "woleh.plans.read", "woleh.place.watch"],
   "tier": "free",
@@ -231,6 +234,64 @@ Clients **must** use `permissions` and `limits` for gating and validation; `tier
 ```
 
 Immutable fields (e.g. phone) are not patchable unless product allows.
+
+---
+
+### 6.4.1 `POST /api/v1/me/location`
+
+**Permissions:** at least one of `woleh.place.watch`, `woleh.place.broadcast`.
+
+**Preconditions:** `profile.locationSharingEnabled` must be `true` (set via §6.4.2). Otherwise **403** with `code`: `LOCATION_SHARING_OFF`.
+
+**Body:**
+
+```json
+{
+  "latitude": 5.6037,
+  "longitude": -0.187,
+  "accuracyMeters": 12.5,
+  "heading": 90.0,
+  "speed": 8.2,
+  "recordedAt": "2026-04-10T12:00:00Z"
+}
+```
+
+| Field | Required | Notes |
+|-------|----------|--------|
+| `latitude` | yes | \[-90, 90\] |
+| `longitude` | yes | \[-180, 180\] |
+| `accuracyMeters` | no | \> 0 if present |
+| `heading` | no | \[0, 360\] if present |
+| `speed` | no | ≥ 0 if present |
+| `recordedAt` | no | Device time (ISO-8601); server may use receive time for fan-out |
+
+**Success:** `200`, `data` may be `null`. Coordinates are **not** stored on place names; WebSocket fan-out to **matched** peers is specified in [MAP_LIVE_LOCATION_PLAN.md](./MAP_LIVE_LOCATION_PLAN.md) §3.3.
+
+**Rate limit:** **429** `RATE_LIMITED` with `Retry-After` when posts arrive faster than configured minimum interval per user (default ~1 Hz; `LOCATION_PUBLISH_MIN_INTERVAL_MS`).
+
+---
+
+### 6.4.2 `PUT /api/v1/me/location-sharing`
+
+**Permissions:** at least one of `woleh.place.watch`, `woleh.place.broadcast`.
+
+**Body:**
+
+```json
+{
+  "enabled": true
+}
+```
+
+**Success `data`:**
+
+```json
+{
+  "enabled": true
+}
+```
+
+When `enabled` is `false`, `POST /api/v1/me/location` returns **403** `LOCATION_SHARING_OFF` until turned on again.
 
 ---
 

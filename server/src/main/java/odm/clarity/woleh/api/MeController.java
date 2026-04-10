@@ -73,7 +73,8 @@ public class MeController {
 				new MeResponse.Profile(
 						String.valueOf(user.getId()),
 						user.getPhoneE164(),
-						user.getDisplayName()),
+						user.getDisplayName(),
+						user.isLocationSharingEnabled()),
 				e.permissions(),
 				e.tier(),
 				new MeResponse.Limits(e.placeWatchMax(), e.placeBroadcastMax()),
