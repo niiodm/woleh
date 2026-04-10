@@ -237,7 +237,7 @@ Build the watch-list editor for users with `woleh.place.watch`:
 
 ---
 
-### Step 3.4 — Broadcast screen
+### Step 3.4 — Broadcast screen ✅
 
 Build the broadcast-list editor for users with `woleh.place.broadcast`:
 
@@ -249,9 +249,9 @@ Build the broadcast-list editor for users with `woleh.place.broadcast`:
   - Pull-to-refresh.
 - Route: `/broadcast` — already gated behind `woleh.place.broadcast` from Phase 1 (was a placeholder); replace the placeholder with the real `BroadcastScreen`.
 
-**Implementation:** `broadcast_notifier.dart`; `broadcast_screen.dart` replacing the Phase 1 placeholder; `broadcast_screen_test.dart` (idle layout, add, reorder, save loading, over-limit error).
+**Implementation:** [`broadcast_notifier.dart`](../mobile/lib/features/places/presentation/broadcast_notifier.dart) — sealed `BroadcastState` (`BroadcastLoading` / `BroadcastReady` / `BroadcastLoadError`); `@riverpod` notifier with `add`, `remove`, `reorder` (adjusts index for `ReorderableListView`'s convention), `save`, `refresh`; [`broadcast_screen.dart`](../mobile/lib/features/places/presentation/broadcast_screen.dart) — `ConsumerStatefulWidget`; `ReorderableListView` with explicit `ReorderableDragStartListener` drag-handle icons; `Dismissible` swipe-to-remove per stop; normalized preview field; save-error banner; `_SaveBar`; pull-to-refresh; [`router.dart`](../mobile/lib/app/router.dart) — `/broadcast` now points to `BroadcastScreen` (placeholder removed); [`broadcast_screen_test.dart`](../mobile/test/features/places/broadcast_screen_test.dart) — 5 widget tests (idle layout, add field, drag handle per stop, save loading, over-limit error); [`router_redirect_test.dart`](../mobile/test/app/router_redirect_test.dart) — updated to use `_EmptyPlaceListRepository` stub so broadcast/watch screens settle in `pumpAndSettle`.
 
-**Done when:** the `/broadcast` route now loads and saves a real broadcast list; Phase 1 placeholder is replaced.
+**Done when:** the `/broadcast` route now loads and saves a real broadcast list; Phase 1 placeholder is replaced. ✅
 
 ---
 
@@ -342,5 +342,6 @@ Surface incoming `match` events to the user:
 | 1.0 | 2026-04-09 | Step 3.1 implemented: `unorm_dart 0.3.2` dependency; `normalizePlaceName` + `validatePlaceName` Dart utilities (4-step pipeline matching server); `place_name_normalizer_test.dart` (17 tests — all 3 PLACE_NAMES.md §5 vectors pass including NFC vector 2; 115 mobile tests green) |
 | 1.1 | 2026-04-09 | Step 3.2 implemented: `PlaceValidationError` + `PlaceLimitError` added to `app_error.dart`; `AppErrorInterceptor` (public, maps 400 `VALIDATION_ERROR` → `PlaceValidationError`, 403 `OVER_LIMIT` → `PlaceLimitError`); `PlaceNamesDto`; `PlaceListRepository` (`keepAlive`, 4 methods); `place_list_repository_test.dart` (11 tests — happy path + 5 error-type assertions; 126 mobile tests green) |
 | 1.2 | 2026-04-09 | Step 3.3 implemented: `WatchNotifier` (sealed state machine, `add`/`remove`/`save`/`refresh`); `WatchScreen` (add field with normalized preview, Dismissible list, save-error banner, save bar, pull-to-refresh); `/watch` route + permission guard in router; "My Watch List" home-screen entry; `watch_screen_test.dart` (7 widget tests; 133 mobile tests green) |
+| 1.3 | 2026-04-09 | Step 3.4 implemented: `BroadcastNotifier` (ordered sealed state, `add`/`remove`/`reorder`/`save`/`refresh`); `BroadcastScreen` (`ReorderableListView` with drag handles, Dismissible, save-error banner, `PlaceLimitError` upgrade message); `/broadcast` route wired to real screen (placeholder removed); `broadcast_screen_test.dart` (5 widget tests); `router_redirect_test.dart` updated with `_EmptyPlaceListRepository` stub (138 mobile tests green) |
 
 When Phase 2 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. normalization library chosen for Dart NFC, in-memory vs DB intersection query, final `match` event field names).

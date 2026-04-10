@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:dio/dio.dart';
 import 'package:odm_clarity_woleh_mobile/core/auth_state.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/data/me_dto.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/presentation/me_notifier.dart';
+import 'package:odm_clarity_woleh_mobile/features/places/data/place_list_repository.dart';
 import 'package:odm_clarity_woleh_mobile/main.dart';
 
 // ---------------------------------------------------------------------------
@@ -83,6 +85,30 @@ class _PaidUserMeNotifier extends MeNotifier {
           inGracePeriod: false,
         ),
       );
+}
+
+// ---------------------------------------------------------------------------
+// Stub place-list repository
+//
+// Returns empty lists immediately so that screens that watch place-list
+// notifiers (WatchScreen, BroadcastScreen) can settle during pumpAndSettle
+// without making real network calls.
+// ---------------------------------------------------------------------------
+
+class _EmptyPlaceListRepository extends PlaceListRepository {
+  _EmptyPlaceListRepository() : super(Dio());
+
+  @override
+  Future<List<String>> getWatchList() async => [];
+
+  @override
+  Future<List<String>> getBroadcastList() async => [];
+
+  @override
+  Future<List<String>> putWatchList(List<String> names) async => names;
+
+  @override
+  Future<List<String>> putBroadcastList(List<String> names) async => names;
 }
 
 // ---------------------------------------------------------------------------
@@ -219,6 +245,8 @@ void main() {
             overrides: [
               authStateProvider.overrideWith(_Authenticated.new),
               meNotifierProvider.overrideWith(_FreeUserMeNotifier.new),
+              placeListRepositoryProvider
+                  .overrideWith((_) => _EmptyPlaceListRepository()),
             ],
             child: const WolehApp(),
           ),
@@ -234,7 +262,7 @@ void main() {
 
         // Missing woleh.place.broadcast → redirected to /plans.
         expect(find.text('Plans'), findsOneWidget);
-        expect(find.text('Broadcast coming in Phase 2'), findsNothing);
+        expect(find.text('Broadcast List'), findsNothing);
       });
 
       testWidgets(
@@ -245,6 +273,8 @@ void main() {
             overrides: [
               authStateProvider.overrideWith(_Authenticated.new),
               meNotifierProvider.overrideWith(_PaidUserMeNotifier.new),
+              placeListRepositoryProvider
+                  .overrideWith((_) => _EmptyPlaceListRepository()),
             ],
             child: const WolehApp(),
           ),
@@ -256,8 +286,10 @@ void main() {
         GoRouter.of(context).go('/broadcast');
         await tester.pumpAndSettle();
 
-        // Holds woleh.place.broadcast → BroadcastPlaceholderScreen visible.
-        expect(find.text('Broadcast coming in Phase 2'), findsOneWidget);
+        // Holds woleh.place.broadcast → real BroadcastScreen is shown.
+        // "Broadcast List" is the AppBar title; the stub repository returns
+        // immediately so the screen reaches BroadcastReady.
+        expect(find.text('Broadcast List'), findsOneWidget);
         expect(find.text('Plans'), findsNothing);
       });
     });
