@@ -12,5 +12,6 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 public record WolehJwtProperties(
 		@DefaultValue("woleh") String issuer,
 		@DefaultValue("PT24H") Duration accessTokenTtl,
+		@DefaultValue("PT720H") Duration refreshTokenTtl,
 		String secret) {
 }

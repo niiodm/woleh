@@ -143,7 +143,7 @@ Log updates:
 
 ---
 
-### Step 2.4 — JWT token refresh (FR-A2)
+### Step 2.4 — JWT token refresh (FR-A2) ✅
 
 FR-A2 ("token refresh or re-auth policy documented and implemented") has been deferred since Phase 0. Implement refresh tokens:
 
@@ -165,7 +165,9 @@ FR-A2 ("token refresh or re-auth policy documented and implemented") has been de
 
 **Tests:** `RefreshTokenIntegrationTest` — verify OTP → get refresh token; use refresh token → get new access + refresh token pair; old refresh token rejected after rotation; revoked token rejected; expired token rejected.
 
-**Done when:** a client can exchange an expired access token using a refresh token without re-entering OTP; logout invalidates the refresh token.
+**Implementation:** `V6__refresh_tokens.sql` — `refresh_tokens` table (SHA-256 hash col, `ON DELETE CASCADE`); [`RefreshToken`](../server/src/main/java/odm/clarity/woleh/model/RefreshToken.java) entity + [`RefreshTokenRepository`](../server/src/main/java/odm/clarity/woleh/repository/RefreshTokenRepository.java); `JwtService` — `generateRefreshToken()` (32-byte `SecureRandom` hex) + `hashToken()` (SHA-256); `WolehJwtProperties` — `refreshTokenTtl` (default 30 days); [`RefreshTokenService`](../server/src/main/java/odm/clarity/woleh/auth/service/RefreshTokenService.java) — `issue()`, `rotate()` (marks old revoked, issues new pair), `revokeByRawToken()` (paranoid logout — deletes all tokens for user); `InvalidRefreshTokenException` + `GlobalExceptionHandler` → 401 `INVALID_REFRESH_TOKEN`; `VerifyOtpResponse` — `refreshToken` field added; `AuthController` — `POST /auth/refresh` + `POST /auth/logout` endpoints, `verify-otp` now issues refresh token; `SecurityConfig` permits both new endpoints; `application.yml` + `WolehJwtProperties` wired; `RefreshTokenIntegrationTest` (6 tests); `VerifyOtpIntegrationTest` asserts `refreshToken` present; 215 server tests green.
+
+**Done when:** a client can exchange an expired access token using a refresh token without re-entering OTP; logout invalidates the refresh token. ✅
 
 ---
 
@@ -346,3 +348,4 @@ Create `docs/runbooks/INCIDENT_RESPONSE.md` covering the most likely failure sce
 | 0.2 | 2026-04-10 | Step 2.1 implemented: `RateLimitProperties` + `PlaceListRateLimiter` (fixed-window `ConcurrentHashMap`); `RateLimitedException` gains `retryAfterSeconds`; `GlobalExceptionHandler` emits `Retry-After` header; `PlaceListController` calls rate limiter on PUTs; `application.yml` + `WolehApplication` wired; `UserPlaceList` constructor populates read-only `userId` projection; `RateLimiterTest` (7 unit) + `RateLimitIntegrationTest` (5 integration); 199 server tests green |
 | 0.3 | 2026-04-10 | Step 2.2 implemented: `micrometer-registry-prometheus` + `buildInfo()`; `metrics` + `prometheus` exposure + percentile histogram config; `WsHealthIndicator` (`ws` component, `activeSessions` detail); `WsSessionRegistry` Gauge + `sessionCount()`; `PlaceListService` watch/broadcast PUT counters; `MatchingService` evaluation Timer; `GlobalExceptionHandler` 4xx/5xx error counters; `MatchingServiceTest` updated; `HealthIntegrationTest` + `MetricsIntegrationTest` (6 new tests); 206 server tests green |
 | 0.4 | 2026-04-10 | Step 2.3 implemented: `CorrelationIdFilter` (`HIGHEST_PRECEDENCE + 1`, MDC `requestId`, echo `X-Request-Id`); `JwtAuthenticationFilter` MDC `userId` + `finally` clear; `logback-spring.xml` with correlation-ID pattern + `prod` profile stub; `TransitWebSocketHandler` connect/disconnect to INFO; `GlobalExceptionHandler` logging (5xx ERROR with stack trace, 4xx DEBUG); `CorrelationIdFilterIntegrationTest` (2 tests); 208 server tests green |
+| 0.5 | 2026-04-10 | Step 2.4 implemented: `V6__refresh_tokens.sql`; `RefreshToken` entity + `RefreshTokenRepository`; `JwtService` — `generateRefreshToken()` + `hashToken()`; `WolehJwtProperties` — `refreshTokenTtl`; `RefreshTokenService` — issue/rotate/revokeByRawToken; `InvalidRefreshTokenException` → 401; `VerifyOtpResponse` + `AuthController` updated; `POST /auth/refresh` + `POST /auth/logout` endpoints; `RefreshTokenIntegrationTest` (6 tests); 215 server tests green |

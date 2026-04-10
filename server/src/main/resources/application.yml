@@ -68,6 +68,7 @@ woleh:
   jwt:
     issuer: ${JWT_ISSUER:woleh}
     access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:PT24H}
+    refresh-token-ttl: ${JWT_REFRESH_TTL:PT720H}
     secret: ${JWT_SECRET:dev-only-do-not-use-in-production-0123456789abcdef0123456789abcdef}
   cors:
     allowed-origin-patterns: ${CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*}

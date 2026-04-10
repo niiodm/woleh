@@ -55,7 +55,8 @@ class VerifyOtpIntegrationTest {
 				.andExpect(jsonPath("$.data.tokenType").value("Bearer"))
 				.andExpect(jsonPath("$.data.accessToken").isNotEmpty())
 				.andExpect(jsonPath("$.data.expiresInSeconds").isNumber())
-				.andExpect(jsonPath("$.data.userId").isNotEmpty());
+				.andExpect(jsonPath("$.data.userId").isNotEmpty())
+				.andExpect(jsonPath("$.data.refreshToken").isNotEmpty());
 	}
 
 	@Test

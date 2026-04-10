@@ -51,8 +51,12 @@ public class SecurityConfig {
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 						.requestMatchers("/actuator/health", "/actuator/info").permitAll()
-						.requestMatchers(HttpMethod.POST, "/api/v1/auth/send-otp", "/api/v1/auth/verify-otp")
-						.permitAll()
+					.requestMatchers(HttpMethod.POST,
+							"/api/v1/auth/send-otp",
+							"/api/v1/auth/verify-otp",
+							"/api/v1/auth/refresh",
+							"/api/v1/auth/logout")
+					.permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/subscription/plans").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/webhooks/**").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/dev/**").permitAll()

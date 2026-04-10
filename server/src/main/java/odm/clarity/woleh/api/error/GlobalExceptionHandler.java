@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import odm.clarity.woleh.api.dto.ApiEnvelope;
 import odm.clarity.woleh.common.error.InvalidOtpException;
+import odm.clarity.woleh.common.error.InvalidRefreshTokenException;
 import odm.clarity.woleh.common.error.PaymentException;
 import odm.clarity.woleh.common.error.PermissionDeniedException;
 import odm.clarity.woleh.common.error.PlaceLimitExceededException;
@@ -98,6 +99,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		counter4xx.increment();
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 				.body(ApiEnvelope.error(ex.getMessage(), "INVALID_OTP"));
+	}
+
+	@ExceptionHandler(InvalidRefreshTokenException.class)
+	ResponseEntity<ApiEnvelope<Void>> handleInvalidRefreshToken(InvalidRefreshTokenException ex) {
+		counter4xx.increment();
+		log.debug("Invalid refresh token: {}", ex.getMessage());
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+				.body(ApiEnvelope.error(ex.getMessage(), "INVALID_REFRESH_TOKEN"));
 	}
 
 	@ExceptionHandler(RateLimitedException.class)
