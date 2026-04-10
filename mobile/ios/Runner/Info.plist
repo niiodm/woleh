@@ -45,6 +45,8 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Woleh uses your location to show your position on the map when you choose to share it with matched riders or drivers.</string>
 	<!-- woleh:// custom scheme so the payment provider redirect returns to the app. -->
 	<key>CFBundleURLTypes</key>
 	<array>
