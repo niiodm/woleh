@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'auth_token_storage.dart';
+import 'push_hook.dart';
 
 part 'auth_state.g.dart';
 
@@ -30,6 +31,7 @@ class AuthState extends _$AuthState {
   }
 
   Future<void> signOut() async {
+    await ref.read(pushBeforeSignOutProvider)(ref);
     final storage = ref.read(authTokenStorageProvider);
     await storage.delete();
     await storage.deleteRefreshToken();

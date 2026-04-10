@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/app_error.dart';
 import '../../../core/place_name_normalizer.dart';
 import '../../../shared/offline_read_only_hint.dart';
+import '../../../shared/ws_status_banner.dart';
 import '../../../core/ws_client.dart';
 import '../../../core/ws_message.dart';
 import 'broadcast_notifier.dart';
@@ -70,29 +71,40 @@ class _BroadcastScreenState extends ConsumerState<BroadcastScreen> {
               )
             : null,
       ),
-      body: switch (broadcastState) {
-        BroadcastLoading() =>
-          const Center(child: CircularProgressIndicator()),
-        BroadcastLoadError(:final message) => _ErrorView(
-            message: message,
-            onRetry: () =>
-                ref.read(broadcastNotifierProvider.notifier).refresh(),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const WsStatusBanner(),
+          Expanded(
+            child: switch (broadcastState) {
+              BroadcastLoading() =>
+                const Center(child: CircularProgressIndicator()),
+              BroadcastLoadError(:final message) => _ErrorView(
+                  message: message,
+                  onRetry: () => ref
+                      .read(broadcastNotifierProvider.notifier)
+                      .refresh(),
+                ),
+              BroadcastReady() => _ReadyBody(
+                  state: broadcastState,
+                  nameController: _nameController,
+                  fieldFocus: _fieldFocus,
+                  readOnlyOffline: broadcastState.readOnlyOffline,
+                  onSubmitAdd: _submitAdd,
+                  onRemove: (name) => ref
+                      .read(broadcastNotifierProvider.notifier)
+                      .remove(name),
+                  onReorder: (oldIndex, newIndex) => ref
+                      .read(broadcastNotifierProvider.notifier)
+                      .reorder(oldIndex, newIndex),
+                  onRefresh: () => ref
+                      .read(broadcastNotifierProvider.notifier)
+                      .refresh(),
+                ),
+            },
           ),
-        BroadcastReady() => _ReadyBody(
-            state: broadcastState,
-            nameController: _nameController,
-            fieldFocus: _fieldFocus,
-            readOnlyOffline: broadcastState.readOnlyOffline,
-            onSubmitAdd: _submitAdd,
-            onRemove: (name) =>
-                ref.read(broadcastNotifierProvider.notifier).remove(name),
-            onReorder: (oldIndex, newIndex) => ref
-                .read(broadcastNotifierProvider.notifier)
-                .reorder(oldIndex, newIndex),
-            onRefresh: () =>
-                ref.read(broadcastNotifierProvider.notifier).refresh(),
-          ),
-      },
+        ],
+      ),
       bottomNavigationBar: broadcastState is BroadcastReady
           ? _SaveBar(
               state: broadcastState,

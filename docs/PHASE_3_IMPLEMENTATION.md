@@ -224,7 +224,7 @@ Cache last-known profile and place lists for display when the device is offline.
 
 ---
 
-### Step 3.3 — WebSocket degraded state indicator (NFR-2)
+### Step 3.3 — WebSocket degraded state indicator (NFR-2) ✅
 
 Surface WS connectivity state so users know when live updates are paused.
 
@@ -249,31 +249,33 @@ Insert `WsStatusBanner` at the top of the `HomeScreen`, `WatchScreen`, and `Broa
 
 **Tests:** `WsStatusBannerTest` (widget tests — `reconnecting` state → banner text visible; `connected` state → banner absent; `disconnected` → offline text + retry button visible).
 
-**Done when:** a simulated WS drop causes the banner to appear on the home screen; reconnection hides it.
+**Done when:** a simulated WS drop causes the banner to appear on the home screen; reconnection hides it. ✅
+
+**Implementation:** [`WsConnectionState`](../mobile/lib/core/ws_client.dart) + `ValueNotifier<WsConnectionState> connectionState` on [`WsClient`](../mobile/lib/core/ws_client.dart); `_kMaxReconnectCycles = 10` (after 11 consecutive connection losses without receiving a frame, state → `disconnected`); `retryConnection()` resets backoff and calls `connect()`; [`WsStatusBanner`](../mobile/lib/shared/ws_status_banner.dart) + testable [`WsStatusBannerCore`](../mobile/lib/shared/ws_status_banner.dart); banner wired in [`home_screen.dart`](../mobile/lib/features/home/presentation/home_screen.dart), [`watch_screen.dart`](../mobile/lib/features/places/presentation/watch_screen.dart), [`broadcast_screen.dart`](../mobile/lib/features/places/presentation/broadcast_screen.dart) (`Column` + `Expanded`). Widget tests in [`ws_status_banner_test.dart`](../mobile/test/shared/ws_status_banner_test.dart); connection-state coverage in [`ws_client_test.dart`](../mobile/test/core/ws_client_test.dart). **170** Flutter tests green.
 
 ---
 
-### Step 3.4 — Push notifications for match events and subscription expiry (FR-N1 — P2)
+### Step 3.4 — Push notifications for match events and subscription expiry (FR-N1 — P2) ✅
 
-Feature-flagged off by default (`woleh.push.enabled: false` in `application.yml`; `kPushEnabled` constant in Flutter). Implement end-to-end but don't activate until FCM project credentials are configured.
+Feature-flagged off by default (`woleh.push.enabled: false` in `application.yml`; `kPushEnabled` / `--dart-define=WOLEH_PUSH_ENABLED` in Flutter). End-to-end wiring is in place; production pushes require real FCM credentials.
 
 **Mobile:**
-- Add `firebase_messaging` and `firebase_core` to `pubspec.yaml`; configure `google-services.json` / `GoogleService-Info.plist` placeholders.
-- `PushService` (`mobile/lib/core/push_service.dart`): request notification permission on first authenticated launch (after profile load, with a one-time gate in `SharedPreferences`). On grant, call `FirebaseMessaging.instance.getToken()` and `POST /api/v1/me/device-token` to register.
-- Handle foreground messages: `FirebaseMessaging.onMessage` → show a `SnackBar` using the existing match banner style.
-- Background / terminated: FCM handles notification display natively; no additional handling needed for v1.
-- `PushService.dispose`: call `DELETE /api/v1/me/device-token` on logout.
+- Add `firebase_messaging` and `firebase_core` to `pubspec.yaml`; placeholder [`google-services.json`](../mobile/android/app/google-services.json) and [`GoogleService-Info.plist`](../mobile/ios/Runner/GoogleService-Info.plist) (replace via Firebase console / `flutterfire configure`).
+- [`PushBootstrap`](../mobile/lib/core/push_bootstrap.dart) + [`kPushEnabled`](../mobile/lib/core/push_bootstrap.dart): when enabled, `Firebase.initializeApp()` after first frame; permission prompt once (`SharedPreferences` gate); on grant, `getToken()` + `MeRepository.registerDeviceToken`; `onTokenRefresh` re-posts; foreground `FirebaseMessaging.onMessage` → floating `SnackBar` via [`rootScaffoldMessengerKey`](../mobile/lib/main.dart).
+- Sign-out: [`pushBeforeSignOutProvider`](../mobile/lib/core/push_hook.dart) + [`unregisterPushDevices`](../mobile/lib/core/push_bootstrap.dart) → `DELETE /api/v1/me/device-token` with last stored token (best-effort before tokens are cleared in [`AuthState.signOut`](../mobile/lib/core/auth_state.dart)).
 
 **Server:**
-- **DB:** Flyway migration — `device_tokens` table: `id`, `user_id` (FK → `users`), `token` (text), `platform` (`android` | `ios`), `created_at`, `updated_at`. Unique constraint on `(user_id, token)`.
-- **`DeviceTokenController`** at `/api/v1/me/device-token`: `POST` (upsert — insert or update `updated_at`), `DELETE` (remove by token value). Both require `woleh.account.profile` permission (any authenticated user).
-- **`FcmService`** interface: `sendNotification(userId, title, body, data)`. Implement `StubFcmService` (no-op, logs the call) as the default bean; `RealFcmService` (uses FCM HTTP v1 API via `RestTemplate`) activated by `@ConditionalOnProperty(name = "woleh.push.enabled", havingValue = "true")`.
-- **`MatchingService`**: after dispatching the `match` WS event, if no WS session is open for a user, call `fcmService.sendNotification(userId, "Match found", "A vehicle covers your stops: \${names}", ...)`. No notification if WS session is already open (user is active in app).
-- **Subscription expiry push**: in a `@Scheduled` daily task (`SubscriptionExpiryNotifier`), find subscriptions expiring within 24 hours and call `fcmService.sendNotification(userId, "Subscription expiring soon", "Your plan expires tomorrow — renew to keep access.", ...)`.
+- **DB:** [`V7__device_tokens.sql`](../server/src/main/resources/db/migration/V7__device_tokens.sql); JPA [`DeviceToken`](../server/src/main/java/odm/clarity/woleh/model/DeviceToken.java) + [`DeviceTokenRepository`](../server/src/main/java/odm/clarity/woleh/repository/DeviceTokenRepository.java); [`DeviceTokenService`](../server/src/main/java/odm/clarity/woleh/push/DeviceTokenService.java) upsert/delete.
+- [`DeviceTokenController`](../server/src/main/java/odm/clarity/woleh/api/DeviceTokenController.java) `POST`/`DELETE` `/api/v1/me/device-token`; [`EntitlementService`](../server/src/main/java/odm/clarity/woleh/subscription/EntitlementService.java) enforces `woleh.account.profile`; invalid platform → [`BadRequestException`](../server/src/main/java/odm/clarity/woleh/common/error/BadRequestException.java).
+- [`FcmService`](../server/src/main/java/odm/clarity/woleh/push/FcmService.java): [`StubFcmService`](../server/src/main/java/odm/clarity/woleh/push/StubFcmService.java) (`@ConditionalOnMissingBean(RealFcmService.class)`); [`RealFcmService`](../server/src/main/java/odm/clarity/woleh/push/RealFcmService.java) when `woleh.push.enabled=true` (FCM HTTP v1 via Spring `RestClient` + Google service-account JSON path).
+- [`MatchingService`](../server/src/main/java/odm/clarity/woleh/places/MatchingService.java): after each `sendMatchEvent`, if [`WsSessionRegistry.hasOpenSession`](../server/src/main/java/odm/clarity/woleh/ws/WsSessionRegistry.java) is false → push match copy; avoids duplicate when the user already has a live WS session.
+- [`SubscriptionExpiryNotifier`](../server/src/main/java/odm/clarity/woleh/subscription/SubscriptionExpiryNotifier.java): daily 08:00 UTC; [`SubscriptionRepository.findActiveExpiringBetween`](../server/src/main/java/odm/clarity/woleh/repository/SubscriptionRepository.java) for `ACTIVE` subs with `current_period_end` in `(now, now+24h]`; one notification per user per run.
 
-**Tests (server):** `DeviceTokenIntegrationTest` (register + delete); `FcmServiceTest` (unit — `StubFcmService` logs, does not throw); `MatchingServiceTest` extended — verify `fcmService.sendNotification` called for users with no WS session (mock `WsSessionRegistry.hasSession` to return false).
+- `test/features/me/me_repository_device_token_test.dart` — step 3.4 (device-token API)
 
-**Done when (feature flag off):** token registration + deletion endpoints work; `StubFcmService` logs notifications during integration tests without sending real pushes. **Done when (feature flag on):** a real FCM token receives a notification when a match event fires for an offline user.
+**Done when (feature flag off):** token registration + deletion endpoints work; `StubFcmService` logs notifications during integration tests without sending real pushes. ✅ **Done when (feature flag on):** a real FCM token receives a notification when a match event fires for an offline user.
+
+**Implementation:** `woleh.push` + `spring.task.scheduling.enabled=false` in server test [`application.properties`](../server/src/test/resources/application.properties); [`@EnableScheduling`](../server/src/main/java/odm/clarity/woleh/WolehApplication.java); Android `com.google.gms.google-services`; **175** Flutter tests green; **220** server tests green.
 
 ---
 
@@ -285,7 +287,9 @@ All test files created incrementally in steps 3.1–3.4. This step validates cov
 - `test/features/me/me_repository_cache_test.dart` — step 3.2 ✓
 - `test/features/places/place_list_repository_cache_test.dart` — step 3.2 ✓
 - `test/shared/ws_status_banner_test.dart` — step 3.3 ✓
-- `test/core/push_service_test.dart` — step 3.4 ✓ (mock FCM token retrieval)
+- `test/core/ws_client_test.dart` — step 3.3 ✓ (connection state; includes reconnect backoff tests)
+- `test/core/push_service_test.dart` — step 3.4 ✓ (`kPushEnabled` default)
+- `test/features/me/me_repository_device_token_test.dart` — step 3.4 (device-token API)
 
 Confirm CI is green. Update `server/api-tests/phase3.http` (step 2.5) if any endpoint shapes changed during mobile implementation.
 
@@ -338,8 +342,8 @@ Create `docs/runbooks/INCIDENT_RESPONSE.md` covering the most likely failure sce
 - [ ] `POST /api/v1/auth/logout` revokes the refresh token. *(Step 2.4)*
 - [ ] Mobile: expired access token transparently refreshes in the background; failed refresh signs user out. *(Step 3.1)*
 - [x] Mobile: last-known profile and place lists displayed when offline; Save/edit actions disabled. *(Step 3.2)*
-- [ ] Mobile: WS degraded state banner appears on disconnect/reconnect; disappears on reconnect. *(Step 3.3)*
-- [ ] Push notification device token registration + deletion endpoints functional; `StubFcmService` logs match/expiry events in tests without sending real pushes. *(Step 3.4)*
+- [x] Mobile: WS degraded state banner appears on disconnect/reconnect; disappears on reconnect. *(Step 3.3)*
+- [x] Push notification device token registration + deletion endpoints functional; `StubFcmService` logs match/expiry events in tests without sending real pushes. *(Step 3.4)*
 - [ ] CI passes: server + mobile tests green. *(Step 3.5)*
 - [ ] `docs/runbooks/SLO_BASELINE.md` written with p95 targets and query instructions. *(Step 4.1)*
 - [ ] `docs/runbooks/INCIDENT_RESPONSE.md` written with at least 6 failure scenarios. *(Step 4.2)*
@@ -358,3 +362,5 @@ Create `docs/runbooks/INCIDENT_RESPONSE.md` covering the most likely failure sce
 | 0.6 | 2026-04-10 | Step 2.5 implemented: `phase3.http` (6 sections: auth, rate-limit demo, Actuator, correlation IDs, refresh token rotation, logout); `http-client.env.json` — `managementBaseUrl` added; 215 server tests green |
 | 0.7 | 2026-04-10 | Step 3.1 implemented: `AuthTokenStorage` + refresh token storage; `AuthState.setTokens()` + `signOut()` clears both tokens; `VerifyOtpResponse.refreshToken` + `RefreshResponse` DTO; `AuthRepository.refresh()` + `logout()`; `TokenRefreshInterceptor` (401 → silent refresh → retry; failed refresh → signOut); `AppErrorInterceptor` changed `reject()` → `next()` for Dio 5 forward error chain; `otp_screen.dart` stores both tokens; `token_refresh_interceptor_test.dart` (4 unit tests); 155 Flutter tests green |
 | 0.8 | 2026-04-10 | Step 3.2 implemented: `shared_preferences` + `shared_preferences_provider` (override in `main.dart`); `offline_dio.dart`; `OfflineError`; `MeResponse`/`MeProfile`/limits/subscription `toJson()` + `MeLoadSnapshot`; `MeRepository` + `PlaceListRepository` offline cache keys (`cache.profile`, `cache.places.watch`, `cache.places.broadcast`) + `PlaceListSnapshot`; `meNotifierProvider` → `MeLoadSnapshot?`; home/watch/broadcast UI (`ShowingSavedDataChip`, read-only offline); `me_repository_cache_test` (3) + `place_list_repository_cache_test` (4); 162 Flutter tests green |
+| 0.9 | 2026-04-10 | Step 3.3 implemented: `WsConnectionState` + `WsClient.connectionState` `ValueNotifier`; reconnect cap `_kMaxReconnectCycles`; `retryConnection()`; `WsStatusBanner` / `WsStatusBannerCore`; home/watch/broadcast `Column` layout; `ws_status_banner_test.dart` (4 widget tests) + `ws_client_test` connection-state tests; 170 Flutter tests green |
+- `test/features/me/me_repository_device_token_test.dart` — step 3.4 (device-token API)

@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import odm.clarity.woleh.api.dto.ApiEnvelope;
+import odm.clarity.woleh.common.error.BadRequestException;
 import odm.clarity.woleh.common.error.InvalidOtpException;
 import odm.clarity.woleh.common.error.InvalidRefreshTokenException;
 import odm.clarity.woleh.common.error.PaymentException;
@@ -92,6 +93,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		counter4xx.increment();
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(ApiEnvelope.error(ex.getMessage(), "NOT_FOUND"));
+	}
+
+	@ExceptionHandler(BadRequestException.class)
+	ResponseEntity<ApiEnvelope<Void>> handleBadRequest(BadRequestException ex) {
+		counter4xx.increment();
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(ApiEnvelope.error(ex.getMessage(), "VALIDATION_ERROR"));
 	}
 
 	@ExceptionHandler(InvalidOtpException.class)

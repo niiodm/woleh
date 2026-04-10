@@ -1,11 +1,15 @@
 package odm.clarity.woleh.repository;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import odm.clarity.woleh.model.Subscription;
 import odm.clarity.woleh.model.SubscriptionStatus;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
 
@@ -15,4 +19,16 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 	 */
 	Optional<Subscription> findTopByUser_IdAndStatusOrderByCurrentPeriodEndDesc(
 			Long userId, SubscriptionStatus status);
+
+	@Query("""
+			select s from Subscription s
+			join fetch s.user
+			where s.status = :status
+			and s.currentPeriodEnd > :now
+			and s.currentPeriodEnd <= :cutoff
+			""")
+	List<Subscription> findActiveExpiringBetween(
+			@Param("status") SubscriptionStatus status,
+			@Param("now") Instant now,
+			@Param("cutoff") Instant cutoff);
 }

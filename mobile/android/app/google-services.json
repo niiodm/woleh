@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "839161553395",
+    "project_id": "woleh-8e523",
+    "storage_bucket": "woleh-8e523.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:839161553395:android:7986cb3cebfc70899f7286",
+        "android_client_info": {
+          "package_name": "odm.clarity.woleh_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCskuHA07dRkKBzv7RFYFLjcoCYz7w015Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

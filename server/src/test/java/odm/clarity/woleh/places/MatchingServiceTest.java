@@ -1,7 +1,10 @@
 package odm.clarity.woleh.places;
 
+import java.util.Map;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -15,6 +18,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import odm.clarity.woleh.model.PlaceListType;
 import odm.clarity.woleh.model.UserPlaceList;
+import odm.clarity.woleh.push.FcmService;
 import odm.clarity.woleh.repository.UserPlaceListRepository;
 import odm.clarity.woleh.ws.WsSessionRegistry;
 
@@ -25,13 +29,16 @@ class MatchingServiceTest {
 
 	private UserPlaceListRepository placeListRepository;
 	private WsSessionRegistry wsSessionRegistry;
+	private FcmService fcmService;
 	private MatchingService matchingService;
 
 	@BeforeEach
 	void setUp() {
 		placeListRepository = mock(UserPlaceListRepository.class);
 		wsSessionRegistry = mock(WsSessionRegistry.class);
-		matchingService = new MatchingService(placeListRepository, wsSessionRegistry, new SimpleMeterRegistry());
+		fcmService = mock(FcmService.class);
+		when(wsSessionRegistry.hasOpenSession(anyLong())).thenReturn(true);
+		matchingService = new MatchingService(placeListRepository, wsSessionRegistry, fcmService, new SimpleMeterRegistry());
 	}
 
 	// ── dispatchBroadcastMatches ──────────────────────────────────────────
@@ -63,6 +70,29 @@ class MatchingServiceTest {
 		matchingService.dispatchBroadcastMatches(1L, List.of("circle", "tema"));
 
 		verify(wsSessionRegistry, never()).sendMatchEvent(any(), any(), any(), any());
+		verify(fcmService, never()).sendNotification(anyLong(), any(), any(), any());
+	}
+
+	@Test
+	void dispatchBroadcastMatches_whenNoOpenSession_sendsFcmToOfflineUser() {
+		when(wsSessionRegistry.hasOpenSession(anyLong())).thenReturn(false);
+		UserPlaceList watchList = mockWatchList(10L, List.of("circle", "kaneshie"));
+		when(placeListRepository.findAllByListType(PlaceListType.WATCH))
+				.thenReturn(List.of(watchList));
+
+		matchingService.dispatchBroadcastMatches(1L, List.of("circle", "tema"));
+
+		verify(wsSessionRegistry, times(2)).sendMatchEvent(any(), any(), any(), any());
+		verify(fcmService).sendNotification(
+				eq(10L),
+				eq("Match found"),
+				eq("A vehicle covers your stops: circle"),
+				eq(Map.of("kind", "match", "counterpartyUserId", "1")));
+		verify(fcmService).sendNotification(
+				eq(1L),
+				eq("Match found"),
+				eq("A vehicle covers your stops: circle"),
+				eq(Map.of("kind", "match", "counterpartyUserId", "10")));
 	}
 
 	@Test

@@ -28,6 +28,8 @@
 #
 #   7. Run the logout flow (§6): after logout, the refresh token is invalidated.
 #
+#   8. Register and remove an FCM device token (§7): POST then DELETE with the same token.
+#
 # ── Variables ────────────────────────────────────────────────────────────────
 
 @baseUrl       = {{baseUrl}}
@@ -242,3 +244,27 @@ Content-Type: application/json
 ### POST /auth/logout — no body is fine (expects 200, silent no-op)
 POST {{baseUrl}}/api/v1/auth/logout
 Content-Type: application/json
+
+
+###############################################################################
+# 7. Push — device token (Phase 3.4)
+###############################################################################
+
+### POST /me/device-token — upsert FCM registration (expects 200)
+POST {{baseUrl}}/api/v1/me/device-token
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "token": "manual-test-fcm-token",
+  "platform": "android"
+}
+
+### DELETE /me/device-token — remove by token value (expects 200)
+DELETE {{baseUrl}}/api/v1/me/device-token
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "token": "manual-test-fcm-token"
+}

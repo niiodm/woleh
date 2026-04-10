@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/router.dart';
+import 'core/push_bootstrap.dart';
+import 'core/push_hook.dart';
 import 'core/shared_preferences_provider.dart';
 import 'core/ws_client.dart';
 
@@ -13,8 +15,13 @@ Future<void> main() async {
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
+        pushBeforeSignOutProvider.overrideWith(
+          (ref) => unregisterPushDevices,
+        ),
       ],
-      child: const WolehApp(),
+      child: PushBootstrap(
+        child: const WolehApp(),
+      ),
     ),
   );
 }
@@ -30,6 +37,7 @@ class WolehApp extends ConsumerWidget {
     ref.watch(wsClientProvider);
     return MaterialApp.router(
       title: 'Woleh',
+      scaffoldMessengerKey: rootScaffoldMessengerKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,

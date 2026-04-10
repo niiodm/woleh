@@ -55,6 +55,25 @@ class MeRepository {
     );
   }
 
+  /// Registers or refreshes the FCM device token (Phase 3.4).
+  Future<void> registerDeviceToken({
+    required String token,
+    required String platform,
+  }) async {
+    await _dio.post<void>(
+      '/me/device-token',
+      data: {'token': token, 'platform': platform},
+    );
+  }
+
+  /// Removes the device token on sign-out.
+  Future<void> deleteDeviceToken(String token) async {
+    await _dio.delete<void>(
+      '/me/device-token',
+      data: {'token': token},
+    );
+  }
+
   MeResponse? _readCachedMe() {
     final raw = _prefs.getString(_cacheKey);
     if (raw == null || raw.isEmpty) return null;

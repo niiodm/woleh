@@ -11,6 +11,11 @@ import 'package:odm_clarity_woleh_mobile/core/auth_state.dart';
 import 'package:odm_clarity_woleh_mobile/core/ws_client.dart';
 import 'package:odm_clarity_woleh_mobile/core/ws_message.dart';
 
+Future<void> _pumpAuthConnect(ProviderContainer c) async {
+  c.read(wsClientProvider);
+  await pumpEventQueue();
+}
+
 // ---------------------------------------------------------------------------
 // Fake WebSocket channel
 // ---------------------------------------------------------------------------
@@ -171,6 +176,118 @@ void main() {
 
         fake.elapse(const Duration(seconds: 1));
         expect(channelCount, 3); // Third connect after 4 s.
+      });
+    });
+  });
+
+  // ── Connection state (Phase 3.3) ────────────────────────────────────────────
+
+  group('connection state', () {
+    test('connecting until first frame from server; heartbeat → connected',
+        () async {
+      _FakeChannel? ch;
+      final container = _makeContainer(
+        authFactory: _AuthWithToken.new,
+        channelFactory: (_) => ch = _FakeChannel(),
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(wsClientProvider.notifier);
+      await _pumpAuthConnect(container);
+
+      expect(notifier.connectionState.value, WsConnectionState.connecting);
+
+      ch!.serverSend(jsonEncode({'type': 'heartbeat', 'data': 'ping'}));
+      await pumpEventQueue();
+
+      expect(notifier.connectionState.value, WsConnectionState.connected);
+    });
+
+    test('server close → reconnecting', () {
+      fakeAsync((fake) {
+        _FakeChannel? lastChannel;
+        final container = _makeContainer(
+          authFactory: _AuthWithToken.new,
+          channelFactory: (_) => lastChannel = _FakeChannel(),
+        );
+        addTearDown(container.dispose);
+
+        final notifier = container.read(wsClientProvider.notifier);
+        container.read(wsClientProvider);
+        fake.flushMicrotasks();
+
+        lastChannel!.serverSend(
+          jsonEncode({'type': 'heartbeat', 'data': 'ping'}),
+        );
+        fake.flushMicrotasks();
+        expect(notifier.connectionState.value, WsConnectionState.connected);
+
+        lastChannel!.serverClose();
+        fake.flushMicrotasks();
+        expect(notifier.connectionState.value, WsConnectionState.reconnecting);
+      });
+    });
+
+    test('after max reconnect cycles without data → disconnected', () {
+      fakeAsync((fake) {
+        int channelCount = 0;
+        _FakeChannel? lastChannel;
+
+        final container = _makeContainer(
+          authFactory: _AuthWithToken.new,
+          channelFactory: (uri) {
+            channelCount++;
+            return lastChannel = _FakeChannel();
+          },
+        );
+        addTearDown(container.dispose);
+
+        final notifier = container.read(wsClientProvider.notifier);
+        container.read(wsClientProvider);
+        fake.flushMicrotasks();
+        expect(channelCount, 1);
+
+        // Eleventh channel close leaves _attempt at 10 → next _scheduleReconnect
+        // gives up (see WsClient._kMaxReconnectCycles).
+        for (var i = 0; i < 11; i++) {
+          lastChannel!.serverClose();
+          fake.flushMicrotasks();
+          if (i < 10) {
+            fake.elapse(WsClient.reconnectDelay(i));
+            fake.flushMicrotasks();
+          }
+        }
+
+        expect(notifier.connectionState.value, WsConnectionState.disconnected);
+      });
+    });
+
+    test('retryConnection resets backoff and sets connecting', () {
+      fakeAsync((fake) {
+        _FakeChannel? lastChannel;
+        final container = _makeContainer(
+          authFactory: _AuthWithToken.new,
+          channelFactory: (_) => lastChannel = _FakeChannel(),
+        );
+        addTearDown(container.dispose);
+
+        final notifier = container.read(wsClientProvider.notifier);
+        container.read(wsClientProvider);
+        fake.flushMicrotasks();
+
+        for (var i = 0; i < 11; i++) {
+          lastChannel!.serverClose();
+          fake.flushMicrotasks();
+          if (i < 10) {
+            fake.elapse(WsClient.reconnectDelay(i));
+            fake.flushMicrotasks();
+          }
+        }
+        expect(notifier.connectionState.value, WsConnectionState.disconnected);
+
+        notifier.retryConnection();
+        fake.flushMicrotasks();
+        expect(notifier.connectionState.value, WsConnectionState.connecting);
       });
     });
   });

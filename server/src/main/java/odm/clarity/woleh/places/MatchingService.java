@@ -2,6 +2,7 @@ package odm.clarity.woleh.places;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -9,6 +10,7 @@ import io.micrometer.core.instrument.Timer;
 
 import odm.clarity.woleh.model.PlaceListType;
 import odm.clarity.woleh.model.UserPlaceList;
+import odm.clarity.woleh.push.FcmService;
 import odm.clarity.woleh.repository.UserPlaceListRepository;
 import odm.clarity.woleh.ws.WsSessionRegistry;
 
@@ -39,13 +41,16 @@ public class MatchingService {
 
 	private final UserPlaceListRepository placeListRepository;
 	private final WsSessionRegistry wsSessionRegistry;
+	private final FcmService fcmService;
 	private final Timer matchEvaluationTimer;
 
 	public MatchingService(UserPlaceListRepository placeListRepository,
 			WsSessionRegistry wsSessionRegistry,
+			FcmService fcmService,
 			MeterRegistry meterRegistry) {
 		this.placeListRepository = placeListRepository;
 		this.wsSessionRegistry = wsSessionRegistry;
+		this.fcmService = fcmService;
 		this.matchEvaluationTimer = Timer.builder("woleh.match.evaluation")
 				.description("Time to evaluate name intersections and dispatch match events")
 				.register(meterRegistry);
@@ -74,10 +79,8 @@ public class MatchingService {
 				log.debug("broadcast match: broadcaster={} watcher={} names={}",
 						broadcastUserId, watcherUserId, intersection);
 
-				// Notify the watcher that a matching broadcast is active.
-				wsSessionRegistry.sendMatchEvent(watcherUserId, intersection, broadcastUserId, KIND);
-				// Notify the broadcaster that a rider is watching their route.
-				wsSessionRegistry.sendMatchEvent(broadcastUserId, intersection, watcherUserId, KIND);
+				sendMatchToUser(watcherUserId, intersection, broadcastUserId);
+				sendMatchToUser(broadcastUserId, intersection, watcherUserId);
 			}
 		});
 	}
@@ -105,15 +108,25 @@ public class MatchingService {
 				log.debug("watch match: watcher={} broadcaster={} names={}",
 						watchUserId, broadcasterUserId, intersection);
 
-				// Notify the watcher that a matching broadcast exists.
-				wsSessionRegistry.sendMatchEvent(watchUserId, intersection, broadcasterUserId, KIND);
-				// Notify the broadcaster that a new rider is watching their route.
-				wsSessionRegistry.sendMatchEvent(broadcasterUserId, intersection, watchUserId, KIND);
+				sendMatchToUser(watchUserId, intersection, broadcasterUserId);
+				sendMatchToUser(broadcasterUserId, intersection, watchUserId);
 			}
 		});
 	}
 
 	// ── helpers ───────────────────────────────────────────────────────────
+
+	private void sendMatchToUser(Long recipientUserId, List<String> intersection, Long counterpartyUserId) {
+		wsSessionRegistry.sendMatchEvent(recipientUserId, intersection, counterpartyUserId, KIND);
+		if (!wsSessionRegistry.hasOpenSession(recipientUserId)) {
+			String names = String.join(", ", intersection);
+			fcmService.sendNotification(
+					recipientUserId,
+					"Match found",
+					"A vehicle covers your stops: " + names,
+					Map.of("kind", "match", "counterpartyUserId", String.valueOf(counterpartyUserId)));
+		}
+	}
 
 	/** Returns the normalized names from {@code candidates} that are also in {@code against}. */
 	private static List<String> intersect(List<String> candidates, Set<String> against) {

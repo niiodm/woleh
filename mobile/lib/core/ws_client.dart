@@ -10,6 +10,14 @@ import 'ws_message.dart';
 
 part 'ws_client.g.dart';
 
+/// Exposed UI state for the transit WebSocket (Phase 3.3 / NFR-2).
+enum WsConnectionState {
+  connecting,
+  connected,
+  reconnecting,
+  disconnected,
+}
+
 // WS base URL is derived from the API base URL by substituting the scheme.
 // Matches the --dart-define=API_BASE_URL=... convention used by api_client.dart.
 const _kApiBaseUrl = String.fromEnvironment(
@@ -19,6 +27,10 @@ const _kApiBaseUrl = String.fromEnvironment(
 
 const _kBaseReconnectDelay = Duration(seconds: 2);
 const _kMaxReconnectDelay = Duration(seconds: 60);
+
+/// After this many reconnect scheduling cycles without a successful message,
+/// [WsConnectionState] becomes [WsConnectionState.disconnected].
+const _kMaxReconnectCycles = 10;
 
 // ---------------------------------------------------------------------------
 // Notifier
@@ -43,9 +55,15 @@ class WsClient extends _$WsClient {
   Timer? _reconnectTimer;
   int _attempt = 0;
   String? _currentToken;
+  late final ValueNotifier<WsConnectionState> _connectionState;
+
+  /// Current WS connectivity for UI (banner, etc.).
+  ValueNotifier<WsConnectionState> get connectionState => _connectionState;
 
   @override
   void build() {
+    _connectionState =
+        ValueNotifier<WsConnectionState>(WsConnectionState.disconnected);
     _msgController = StreamController<WsMessage>.broadcast();
 
     ref.listen<AsyncValue<String?>>(
@@ -76,6 +94,7 @@ class WsClient extends _$WsClient {
       _channel = null;
       _msgController?.close();
       _msgController = null;
+      _connectionState.dispose();
     });
   }
 
@@ -96,6 +115,8 @@ class WsClient extends _$WsClient {
 
     final token = _currentToken ?? ref.read(authStateProvider).valueOrNull;
     if (token == null) return;
+
+    _setConnectionState(WsConnectionState.connecting);
 
     final wsBase = _kApiBaseUrl
         .replaceFirst('https://', 'wss://')
@@ -118,6 +139,15 @@ class WsClient extends _$WsClient {
     _channel?.sink.close();
     _channel = null;
     _attempt = 0;
+    _setConnectionState(WsConnectionState.disconnected);
+  }
+
+  /// Resets backoff and opens a new connection (e.g. user tapped **Retry**
+  /// after [WsConnectionState.disconnected]).
+  void retryConnection() {
+    if (ref.read(authStateProvider).valueOrNull == null) return;
+    _attempt = 0;
+    connect();
   }
 
   // ── Overridable for testing ─────────────────────────────────────────────
@@ -145,8 +175,9 @@ class WsClient extends _$WsClient {
   // ── Internal ───────────────────────────────────────────────────────────────
 
   void _onData(dynamic rawData) {
-    // Reset backoff on any successfully received message.
+    // Reset backoff on any successfully received message (including heartbeat).
     _attempt = 0;
+    _setConnectionState(WsConnectionState.connected);
 
     try {
       final envelope =
@@ -187,8 +218,19 @@ class WsClient extends _$WsClient {
   void _scheduleReconnect() {
     if (_currentToken == null) return; // Don't reconnect after sign-out.
     _channel = null; // Channel is already closed; clear reference.
+    if (_attempt >= _kMaxReconnectCycles) {
+      _setConnectionState(WsConnectionState.disconnected);
+      return;
+    }
     final delay = reconnectDelay(_attempt);
     _attempt++;
+    _setConnectionState(WsConnectionState.reconnecting);
     _reconnectTimer = Timer(delay, connect);
+  }
+
+  void _setConnectionState(WsConnectionState state) {
+    if (_connectionState.value != state) {
+      _connectionState.value = state;
+    }
   }
 }

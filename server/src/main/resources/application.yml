@@ -86,3 +86,9 @@ woleh:
       # Per-user fixed-window limit for watch/broadcast list PUT operations.
       # Single-node in-memory only — requires ADR before switching to Redis for multi-instance.
       requests-per-minute: ${PLACE_LIST_RPM:10}
+  # Push (FCM). Default off — enable only after Firebase credentials are configured.
+  push:
+    enabled: ${WOLEH_PUSH_ENABLED:false}
+    fcm:
+      project-id: ${FCM_PROJECT_ID:}
+      service-account-json-path: ${FCM_SERVICE_ACCOUNT_JSON:}

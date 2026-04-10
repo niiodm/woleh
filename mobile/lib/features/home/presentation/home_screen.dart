@@ -7,6 +7,7 @@ import '../../../core/ws_message.dart';
 import '../../../shared/permission_gated_button.dart';
 import '../../../core/app_error.dart';
 import '../../../shared/offline_read_only_hint.dart';
+import '../../../shared/ws_status_banner.dart';
 import '../../me/data/me_dto.dart';
 import '../../me/presentation/me_notifier.dart';
 import '../../places/presentation/match_notifier.dart';
@@ -43,22 +44,31 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: meAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => _ErrorView(
-          message: err is OfflineError ? err.message : err.toString(),
-          onRetry: () => ref.read(meNotifierProvider.notifier).refresh(),
-        ),
-        data: (snapshot) {
-          if (snapshot == null) return const SizedBox.shrink();
-          return _MeView(
-            me: snapshot.me,
-            fromCache: snapshot.fromCache,
-            matches: matches,
-            onDismiss: (i) =>
-                ref.read(matchNotifierProvider.notifier).dismiss(i),
-          );
-        },
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const WsStatusBanner(),
+          Expanded(
+            child: meAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => _ErrorView(
+                message: err is OfflineError ? err.message : err.toString(),
+                onRetry: () =>
+                    ref.read(meNotifierProvider.notifier).refresh(),
+              ),
+              data: (snapshot) {
+                if (snapshot == null) return const SizedBox.shrink();
+                return _MeView(
+                  me: snapshot.me,
+                  fromCache: snapshot.fromCache,
+                  matches: matches,
+                  onDismiss: (i) =>
+                      ref.read(matchNotifierProvider.notifier).dismiss(i),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

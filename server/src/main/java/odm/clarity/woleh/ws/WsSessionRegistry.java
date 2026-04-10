@@ -52,6 +52,19 @@ public class WsSessionRegistry {
 		sessions.remove(userId);
 	}
 
+	/** Whether {@code userId} has a registered WebSocket session that is still open. */
+	public boolean hasOpenSession(Long userId) {
+		WebSocketSession session = sessions.get(userId);
+		if (session == null) {
+			return false;
+		}
+		if (!session.isOpen()) {
+			sessions.remove(userId, session);
+			return false;
+		}
+		return true;
+	}
+
 	/**
 	 * Sends {@code messageJson} to every open session; automatically deregisters sessions
 	 * whose underlying connection has closed or errors on send.

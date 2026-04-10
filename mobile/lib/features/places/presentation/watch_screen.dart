@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/app_error.dart';
 import '../../../core/place_name_normalizer.dart';
 import '../../../shared/offline_read_only_hint.dart';
+import '../../../shared/ws_status_banner.dart';
 import '../../../core/ws_client.dart';
 import '../../../core/ws_message.dart';
 import 'watch_notifier.dart';
@@ -70,25 +71,34 @@ class _WatchScreenState extends ConsumerState<WatchScreen> {
               )
             : null,
       ),
-      body: switch (watchState) {
-        WatchLoading() => const Center(child: CircularProgressIndicator()),
-        WatchLoadError(:final message) => _ErrorView(
-            message: message,
-            onRetry: () =>
-                ref.read(watchNotifierProvider.notifier).refresh(),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const WsStatusBanner(),
+          Expanded(
+            child: switch (watchState) {
+              WatchLoading() =>
+                const Center(child: CircularProgressIndicator()),
+              WatchLoadError(:final message) => _ErrorView(
+                  message: message,
+                  onRetry: () =>
+                      ref.read(watchNotifierProvider.notifier).refresh(),
+                ),
+              WatchReady() => _ReadyBody(
+                  state: watchState,
+                  nameController: _nameController,
+                  fieldFocus: _fieldFocus,
+                  readOnlyOffline: watchState.readOnlyOffline,
+                  onSubmitAdd: _submitAdd,
+                  onRemove: (name) =>
+                      ref.read(watchNotifierProvider.notifier).remove(name),
+                  onRefresh: () =>
+                      ref.read(watchNotifierProvider.notifier).refresh(),
+                ),
+            },
           ),
-        WatchReady() => _ReadyBody(
-            state: watchState,
-            nameController: _nameController,
-            fieldFocus: _fieldFocus,
-            readOnlyOffline: watchState.readOnlyOffline,
-            onSubmitAdd: _submitAdd,
-            onRemove: (name) =>
-                ref.read(watchNotifierProvider.notifier).remove(name),
-            onRefresh: () =>
-                ref.read(watchNotifierProvider.notifier).refresh(),
-          ),
-      },
+        ],
+      ),
       bottomNavigationBar: watchState is WatchReady
           ? _SaveBar(
               state: watchState,
