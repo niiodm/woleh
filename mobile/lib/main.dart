@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/router.dart';
+import 'core/ws_client.dart';
 
 void main() {
   runApp(const ProviderScope(child: WolehApp()));
@@ -13,6 +14,9 @@ class WolehApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    // Eagerly initialise the WS client so it connects as soon as a valid
+    // token is available.  keepAlive: true ensures it is never auto-disposed.
+    ref.watch(wsClientProvider);
     return MaterialApp.router(
       title: 'Woleh',
       theme: ThemeData(

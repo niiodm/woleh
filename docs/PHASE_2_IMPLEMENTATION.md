@@ -255,7 +255,7 @@ Build the broadcast-list editor for users with `woleh.place.broadcast`:
 
 ---
 
-### Step 3.5 — WebSocket client
+### Step 3.5 — WebSocket client ✅
 
 Connect to `/ws/v1/transit` and handle the message envelope:
 
@@ -264,15 +264,24 @@ Connect to `/ws/v1/transit` and handle the message envelope:
   - `disconnect()`: close channel; clear reconnect timer.
   - **Reconnect with backoff:** on `onDone` / `onError`, schedule reconnect after `min(baseDelay * 2^attempt, maxDelay)` (e.g. base 2 s, max 60 s). Reset attempt counter on successful message receipt.
   - **Heartbeat handling:** `{ "type": "heartbeat" }` messages are silently discarded (no reply needed for server-push heartbeat model).
-  - **Unknown type:** parse `type` field; if unknown, log at `DEBUG` and ignore — forward compatibility.
+  - **Unknown type:** parse `type` field; emit `UnknownMessage` for forward-compat, log at `DEBUG`.
   - Expose a `Stream<WsMessage>` of decoded messages (excluding heartbeats) to interested widgets.
-- **`WsMessage`** sealed class: `MatchMessage({ List<String> matchedNames, String counterpartyUserId, String kind })` plus `UnknownMessage(String type)` for forward-compat.
-- **Auth integration:** `WsClient` reads `accessToken` from `authStateProvider`; re-connects automatically when the token changes (e.g. after new login).
-- **`WsClientProvider`**: starts connection when the user is authenticated (watch `authStateProvider`; connect when token is non-null; disconnect on sign-out).
+  - `createChannel(Uri)` is `@visibleForTesting` overridable so tests can inject a `_FakeChannel`.
+  - `onDispose` nulls `_currentToken` before closing the channel so `_scheduleReconnect` short-circuits in teardown (prevents stray timer creation inside `fakeAsync`).
+- **`WsMessage`** (`mobile/lib/core/ws_message.dart`): sealed class `MatchMessage({ List<String> matchedNames, String counterpartyUserId, String kind })` plus `UnknownMessage(String type)` for forward-compat.
+- **Auth integration:** `WsClient` uses `ref.listen(authStateProvider, fireImmediately: true)` — auto-connects when token is non-null, auto-disconnects on sign-out.
+- **Eager init:** `WolehApp.build()` watches `wsClientProvider` (state is `void`, no rebuilds triggered) to ensure the provider is created as soon as the app renders.
+- **`ws_client.dart`** also exposes `static Duration reconnectDelay(int attempt)` for white-box backoff testing.
 
-**Implementation:** `ws_client.dart`; `ws_message.dart` (sealed); `main.dart` / `ProviderScope` ensures `WsClientProvider` is eagerly initialized after auth; `ws_client_test.dart` (unit: mock channel; verify backoff schedule; verify heartbeat filtered; verify unknown type ignored; verify `MatchMessage` parsed correctly).
+**Implementation:**
+- `mobile/lib/core/ws_message.dart` — sealed `WsMessage` hierarchy.
+- `mobile/lib/core/ws_client.dart` — `@Riverpod(keepAlive: true)` notifier with connect/disconnect, backoff, heartbeat filter, message dispatch.
+- `mobile/lib/core/ws_client.g.dart` — generated.
+- `mobile/lib/main.dart` — `ref.watch(wsClientProvider)` added to `WolehApp.build()`.
+- `mobile/pubspec.yaml` — added `web_socket_channel`.
+- `mobile/test/core/ws_client_test.dart` — 6 unit tests (backoff delay table; reconnect timing via `fakeAsync`; heartbeat filtered; `UnknownMessage` emitted; `MatchMessage` fields; backoff reset on receipt).
 
-**Done when:** the WS client connects on login, receives heartbeats without surfacing them to UI, and reconnects after a simulated disconnect.
+**Done when:** the WS client connects on login, receives heartbeats without surfacing them to UI, and reconnects after a simulated disconnect. ✓ (144 mobile tests green)
 
 ---
 
@@ -343,5 +352,6 @@ Surface incoming `match` events to the user:
 | 1.1 | 2026-04-09 | Step 3.2 implemented: `PlaceValidationError` + `PlaceLimitError` added to `app_error.dart`; `AppErrorInterceptor` (public, maps 400 `VALIDATION_ERROR` → `PlaceValidationError`, 403 `OVER_LIMIT` → `PlaceLimitError`); `PlaceNamesDto`; `PlaceListRepository` (`keepAlive`, 4 methods); `place_list_repository_test.dart` (11 tests — happy path + 5 error-type assertions; 126 mobile tests green) |
 | 1.2 | 2026-04-09 | Step 3.3 implemented: `WatchNotifier` (sealed state machine, `add`/`remove`/`save`/`refresh`); `WatchScreen` (add field with normalized preview, Dismissible list, save-error banner, save bar, pull-to-refresh); `/watch` route + permission guard in router; "My Watch List" home-screen entry; `watch_screen_test.dart` (7 widget tests; 133 mobile tests green) |
 | 1.3 | 2026-04-09 | Step 3.4 implemented: `BroadcastNotifier` (ordered sealed state, `add`/`remove`/`reorder`/`save`/`refresh`); `BroadcastScreen` (`ReorderableListView` with drag handles, Dismissible, save-error banner, `PlaceLimitError` upgrade message); `/broadcast` route wired to real screen (placeholder removed); `broadcast_screen_test.dart` (5 widget tests); `router_redirect_test.dart` updated with `_EmptyPlaceListRepository` stub (138 mobile tests green) |
+| 1.4 | 2026-04-09 | Step 3.5 implemented: `ws_message.dart` (sealed `WsMessage`: `MatchMessage`, `UnknownMessage`); `ws_client.dart` (`@Riverpod(keepAlive: true)` notifier — `connect`/`disconnect`, backoff `min(2s×2^attempt, 60s)`, heartbeat filter, `UnknownMessage` forward-compat, `createChannel` overridable for tests, dispose guard prevents stray timer in `fakeAsync`); `WolehApp.build()` watches `wsClientProvider` for eager init; `web_socket_channel` added; `ws_client_test.dart` (6 unit tests — backoff table, reconnect timing via `fakeAsync`, heartbeat filtered, unknown type emitted, `MatchMessage` fields, backoff reset on receipt; 144 mobile tests green) |
 
 When Phase 2 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. normalization library chosen for Dart NFC, in-memory vs DB intersection query, final `match` event field names).
