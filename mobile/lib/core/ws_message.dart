@@ -25,6 +25,35 @@ final class MatchMessage extends WsMessage {
   final String kind;
 }
 
+/// Match-scoped live location from a peer ([`API_CONTRACT.md`](../../../docs/API_CONTRACT.md) §8.2).
+final class PeerLocationMessage extends WsMessage {
+  const PeerLocationMessage({
+    required this.userId,
+    required this.latitude,
+    required this.longitude,
+    this.accuracyMeters,
+    this.heading,
+    this.speed,
+    this.receivedAt,
+  });
+
+  /// Publisher user id (stringified Long on the server).
+  final String userId;
+  final double latitude;
+  final double longitude;
+  final double? accuracyMeters;
+  final double? heading;
+  final double? speed;
+  final DateTime? receivedAt;
+}
+
+/// Publisher turned off location sharing — drop their marker ([`API_CONTRACT.md`](../../../docs/API_CONTRACT.md) §8.3).
+final class PeerLocationRevokedMessage extends WsMessage {
+  const PeerLocationRevokedMessage({required this.userId});
+
+  final String userId;
+}
+
 /// A message type the client does not recognise — surfaced for
 /// forward-compatibility so callers can choose to ignore it gracefully.
 final class UnknownMessage extends WsMessage {

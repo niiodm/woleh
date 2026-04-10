@@ -7,6 +7,7 @@ import 'core/push_bootstrap.dart';
 import 'core/push_hook.dart';
 import 'core/shared_preferences_provider.dart';
 import 'core/ws_client.dart';
+import 'features/location/presentation/peer_locations_notifier.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +36,8 @@ class WolehApp extends ConsumerWidget {
     // Eagerly initialise the WS client so it connects as soon as a valid
     // token is available.  keepAlive: true ensures it is never auto-disposed.
     ref.watch(wsClientProvider);
+    // Phase 4: subscribe to peer_location / peer_location_revoked for the map.
+    ref.watch(peerLocationsNotifierProvider);
     return MaterialApp.router(
       title: 'Woleh',
       scaffoldMessengerKey: rootScaffoldMessengerKey,

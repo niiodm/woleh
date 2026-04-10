@@ -428,4 +428,110 @@ void main() {
       });
     });
   });
+
+  // ── Peer location parsing ─────────────────────────────────────────────────
+
+  group('PeerLocation message parsing', () {
+    test('parses peer_location with all optional fields', () async {
+      final messages = <WsMessage>[];
+      _FakeChannel? ch;
+
+      final container = _makeContainer(
+        authFactory: _AuthWithToken.new,
+        channelFactory: (_) => ch = _FakeChannel(),
+      );
+      addTearDown(container.dispose);
+
+      container.read(wsClientProvider.notifier).messages.listen(messages.add);
+      container.read(wsClientProvider);
+      await pumpEventQueue();
+
+      ch!.serverSend(
+        jsonEncode({
+          'type': 'peer_location',
+          'data': {
+            'userId': '42',
+            'latitude': 5.6037,
+            'longitude': -0.187,
+            'accuracyMeters': 12.5,
+            'heading': 90.0,
+            'speed': 8.2,
+            'receivedAt': '2026-04-10T12:00:00.000Z',
+          },
+        }),
+      );
+      await pumpEventQueue();
+
+      expect(messages, hasLength(1));
+      final msg = messages[0] as PeerLocationMessage;
+      expect(msg.userId, '42');
+      expect(msg.latitude, 5.6037);
+      expect(msg.longitude, -0.187);
+      expect(msg.accuracyMeters, 12.5);
+      expect(msg.heading, 90.0);
+      expect(msg.speed, 8.2);
+      expect(msg.receivedAt, DateTime.parse('2026-04-10T12:00:00.000Z'));
+    });
+
+    test('parses peer_location with only required fields', () async {
+      final messages = <WsMessage>[];
+      _FakeChannel? ch;
+
+      final container = _makeContainer(
+        authFactory: _AuthWithToken.new,
+        channelFactory: (_) => ch = _FakeChannel(),
+      );
+      addTearDown(container.dispose);
+
+      container.read(wsClientProvider.notifier).messages.listen(messages.add);
+      container.read(wsClientProvider);
+      await pumpEventQueue();
+
+      ch!.serverSend(
+        jsonEncode({
+          'type': 'peer_location',
+          'data': {
+            'userId': '7',
+            'latitude': 5.0,
+            'longitude': -0.1,
+          },
+        }),
+      );
+      await pumpEventQueue();
+
+      expect(messages, hasLength(1));
+      final msg = messages[0] as PeerLocationMessage;
+      expect(msg.accuracyMeters, isNull);
+      expect(msg.heading, isNull);
+      expect(msg.speed, isNull);
+      expect(msg.receivedAt, isNull);
+    });
+
+    test('parses peer_location_revoked', () async {
+      final messages = <WsMessage>[];
+      _FakeChannel? ch;
+
+      final container = _makeContainer(
+        authFactory: _AuthWithToken.new,
+        channelFactory: (_) => ch = _FakeChannel(),
+      );
+      addTearDown(container.dispose);
+
+      container.read(wsClientProvider.notifier).messages.listen(messages.add);
+      container.read(wsClientProvider);
+      await pumpEventQueue();
+
+      ch!.serverSend(
+        jsonEncode({
+          'type': 'peer_location_revoked',
+          'data': {'userId': '99'},
+        }),
+      );
+      await pumpEventQueue();
+
+      expect(messages, hasLength(1));
+      final msg = messages[0] as PeerLocationRevokedMessage;
+      expect(msg.userId, '99');
+    });
+  });
 }

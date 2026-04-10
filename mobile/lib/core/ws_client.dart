@@ -197,6 +197,33 @@ class WsClient extends _$WsClient {
         return;
       }
 
+      if (type == 'peer_location') {
+        final data = envelope['data'] as Map<String, dynamic>;
+        DateTime? receivedAt;
+        final rawAt = data['receivedAt'];
+        if (rawAt is String) {
+          receivedAt = DateTime.tryParse(rawAt);
+        }
+        _msgController?.add(PeerLocationMessage(
+          userId: data['userId'] as String,
+          latitude: (data['latitude'] as num).toDouble(),
+          longitude: (data['longitude'] as num).toDouble(),
+          accuracyMeters: _optionalDouble(data['accuracyMeters']),
+          heading: _optionalDouble(data['heading']),
+          speed: _optionalDouble(data['speed']),
+          receivedAt: receivedAt,
+        ));
+        return;
+      }
+
+      if (type == 'peer_location_revoked') {
+        final data = envelope['data'] as Map<String, dynamic>;
+        _msgController?.add(PeerLocationRevokedMessage(
+          userId: data['userId'] as String,
+        ));
+        return;
+      }
+
       // Unknown type: log and forward for forward-compatibility.
       debugPrint('[WsClient] Unknown message type: $type');
       if (type != null) _msgController?.add(UnknownMessage(type));
@@ -232,5 +259,11 @@ class WsClient extends _$WsClient {
     if (_connectionState.value != state) {
       _connectionState.value = state;
     }
+  }
+
+  static double? _optionalDouble(Object? value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return null;
   }
 }
