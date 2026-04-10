@@ -275,11 +275,11 @@ Feature-flagged off by default (`woleh.push.enabled: false` in `application.yml`
 
 **Done when (feature flag off):** token registration + deletion endpoints work; `StubFcmService` logs notifications during integration tests without sending real pushes. ✅ **Done when (feature flag on):** a real FCM token receives a notification when a match event fires for an offline user.
 
-**Implementation:** `woleh.push` + `spring.task.scheduling.enabled=false` in server test [`application.properties`](../server/src/test/resources/application.properties); [`@EnableScheduling`](../server/src/main/java/odm/clarity/woleh/WolehApplication.java); Android `com.google.gms.google-services`; **175** Flutter tests green; **220** server tests green.
+**Implementation:** `woleh.push` + `spring.task.scheduling.enabled=false` in server test [`application.properties`](../server/src/test/resources/application.properties); [`@EnableScheduling`](../server/src/main/java/odm/clarity/woleh/WolehApplication.java); Android `com.google.gms.google-services`; **173** Flutter tests green; **220** server tests green.
 
 ---
 
-### Step 3.5 — Tests and Phase 3 QA artifacts
+### Step 3.5 — Tests and Phase 3 QA artifacts ✅
 
 All test files created incrementally in steps 3.1–3.4. This step validates coverage and adds any missing edge cases:
 
@@ -291,36 +291,34 @@ All test files created incrementally in steps 3.1–3.4. This step validates cov
 - `test/core/push_service_test.dart` — step 3.4 ✓ (`kPushEnabled` default)
 - `test/features/me/me_repository_device_token_test.dart` — step 3.4 (device-token API)
 
-Confirm CI is green. Update `server/api-tests/phase3.http` (step 2.5) if any endpoint shapes changed during mobile implementation.
+**Local / CI parity:** In `server/`, `./gradlew build --no-daemon` (tests + checks). In `mobile/`, `flutter pub get`, `dart run build_runner build --delete-conflicting-outputs`, `flutter analyze`, `flutter test`. GitHub Actions [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs the same on `main` and pull requests. Manual API checks: [`server/api-tests/phase3.http`](../server/api-tests/phase3.http) (includes §7 device-token).
 
-**Done when:** CI is green; all Phase 3 screens and new core utilities have test coverage.
+**Extra coverage (3.5):** `DeviceTokenIntegrationTest` — unauthenticated `POST`/`DELETE` `/me/device-token` expect **401**.
+
+**Done when:** CI is green; all Phase 3 screens and new core utilities have test coverage. ✅
 
 ---
 
 ## 4. Docs and ops
 
-### Step 4.1 — SLO baseline (NFR-1 exit criterion)
+### Step 4.1 — SLO baseline (NFR-1 exit criterion) ✅
 
-Create `docs/runbooks/SLO_BASELINE.md`:
+[`docs/runbooks/SLO_BASELINE.md`](../runbooks/SLO_BASELINE.md) — p95 targets, Actuator/Prometheus examples, alerting, production notes for management port isolation.
 
-- Define p95 latency targets per endpoint group:
+Summary table:
 
 | Endpoint group | p95 target | Measurement source |
 |----------------|------------|-------------------|
-| Auth (send-otp, verify-otp) | < 500 ms | `woleh.match.evaluation` timer + Spring Boot default HTTP timer |
+| Auth (send-otp, verify-otp) | < 500 ms | Spring Boot `http.server.requests` (per-uri); not the match timer |
 | Place list reads (`GET /me/places/*`) | < 200 ms | Spring Boot HTTP server request metrics |
 | Place list writes (`PUT /me/places/*`) + match dispatch | < 500 ms | Spring Boot HTTP server request metrics |
 | WebSocket handshake | < 300 ms | Actuator + WS handler logs |
 
-- Document how to query baselines: `GET /actuator/metrics/http.server.requests?tag=uri:/api/v1/me/places/watch` + percentile histogram config in `application.yml`.
-- Document alert thresholds: if p95 breaches target for 5 consecutive minutes → page on-call.
-- Note: percentile histograms require `management.metrics.distribution.percentiles-histogram.http.server.requests=true` in `application.yml`.
-
 ---
 
-### Step 4.2 — Incident runbooks
+### Step 4.2 — Incident runbooks ✅
 
-Create `docs/runbooks/INCIDENT_RESPONSE.md` covering the most likely failure scenarios:
+[`docs/runbooks/INCIDENT_RESPONSE.md`](../runbooks/INCIDENT_RESPONSE.md) covers the most likely failure scenarios:
 
 1. **WS session leak** — symptoms: `woleh.ws.sessions.active` gauge grows without bound; mitigation: restart heartbeat scheduler clears dead sessions; check `TransitWebSocketHandler` logs for disconnect events not firing.
 2. **Match dispatch latency spike** — symptoms: `woleh.match.evaluation` timer p95 rises; likely cause: growing number of active place lists (O(n) in-memory scan); mitigation: restrict broadcast/watch lists; longer-term: indexed PostgreSQL `jsonb` query (ADR needed).
@@ -333,20 +331,20 @@ Create `docs/runbooks/INCIDENT_RESPONSE.md` covering the most likely failure sce
 
 ## 5. Definition of done (Phase 3)
 
-- [ ] `PUT /api/v1/me/places/watch` and `PUT /api/v1/me/places/broadcast` return 429 after exceeding per-user rate limit; `Retry-After` header present. *(Step 2.1)*
-- [ ] `POST /api/v1/auth/send-otp` returns 429 after exceeding per-IP OTP limit. *(Step 2.1)*
-- [ ] `GET /actuator/health` returns `{ "status": "UP" }` with DB component; accessible on management port only. *(Step 2.2)*
-- [ ] Four custom Micrometer meters registered: WS sessions gauge, place list put counter, match evaluation timer, API error counter. *(Step 2.2)*
-- [ ] Every request log line carries `requestId`; authenticated requests carry `userId`; every response echoes `X-Request-Id`. *(Step 2.3)*
-- [ ] `POST /api/v1/auth/refresh` issues new access + refresh token pair; old token rejected after rotation. *(Step 2.4)*
-- [ ] `POST /api/v1/auth/logout` revokes the refresh token. *(Step 2.4)*
-- [ ] Mobile: expired access token transparently refreshes in the background; failed refresh signs user out. *(Step 3.1)*
+- [x] `PUT /api/v1/me/places/watch` and `PUT /api/v1/me/places/broadcast` return 429 after exceeding per-user rate limit; `Retry-After` header present. *(Step 2.1)*
+- [x] `POST /api/v1/auth/send-otp` returns 429 after exceeding per-IP OTP limit. *(Step 2.1)*
+- [x] `GET /actuator/health` returns `{ "status": "UP" }` with DB component; accessible on management port only. *(Step 2.2)* (In production, set `management.server.port` or use a gateway; see `application.yml` TODO.)
+- [x] Four custom Micrometer meters registered: WS sessions gauge, place list put counter, match evaluation timer, API error counter. *(Step 2.2)*
+- [x] Every request log line carries `requestId`; authenticated requests carry `userId`; every response echoes `X-Request-Id`. *(Step 2.3)*
+- [x] `POST /api/v1/auth/refresh` issues new access + refresh token pair; old token rejected after rotation. *(Step 2.4)*
+- [x] `POST /api/v1/auth/logout` revokes the refresh token. *(Step 2.4)*
+- [x] Mobile: expired access token transparently refreshes in the background; failed refresh signs user out. *(Step 3.1)*
 - [x] Mobile: last-known profile and place lists displayed when offline; Save/edit actions disabled. *(Step 3.2)*
 - [x] Mobile: WS degraded state banner appears on disconnect/reconnect; disappears on reconnect. *(Step 3.3)*
 - [x] Push notification device token registration + deletion endpoints functional; `StubFcmService` logs match/expiry events in tests without sending real pushes. *(Step 3.4)*
-- [ ] CI passes: server + mobile tests green. *(Step 3.5)*
-- [ ] `docs/runbooks/SLO_BASELINE.md` written with p95 targets and query instructions. *(Step 4.1)*
-- [ ] `docs/runbooks/INCIDENT_RESPONSE.md` written with at least 6 failure scenarios. *(Step 4.2)*
+- [x] CI passes: server + mobile tests green. *(Step 3.5)*
+- [x] `docs/runbooks/SLO_BASELINE.md` written with p95 targets and query instructions. *(Step 4.1)*
+- [x] `docs/runbooks/INCIDENT_RESPONSE.md` written with at least 6 failure scenarios. *(Step 4.2)*
 
 ---
 
@@ -363,4 +361,7 @@ Create `docs/runbooks/INCIDENT_RESPONSE.md` covering the most likely failure sce
 | 0.7 | 2026-04-10 | Step 3.1 implemented: `AuthTokenStorage` + refresh token storage; `AuthState.setTokens()` + `signOut()` clears both tokens; `VerifyOtpResponse.refreshToken` + `RefreshResponse` DTO; `AuthRepository.refresh()` + `logout()`; `TokenRefreshInterceptor` (401 → silent refresh → retry; failed refresh → signOut); `AppErrorInterceptor` changed `reject()` → `next()` for Dio 5 forward error chain; `otp_screen.dart` stores both tokens; `token_refresh_interceptor_test.dart` (4 unit tests); 155 Flutter tests green |
 | 0.8 | 2026-04-10 | Step 3.2 implemented: `shared_preferences` + `shared_preferences_provider` (override in `main.dart`); `offline_dio.dart`; `OfflineError`; `MeResponse`/`MeProfile`/limits/subscription `toJson()` + `MeLoadSnapshot`; `MeRepository` + `PlaceListRepository` offline cache keys (`cache.profile`, `cache.places.watch`, `cache.places.broadcast`) + `PlaceListSnapshot`; `meNotifierProvider` → `MeLoadSnapshot?`; home/watch/broadcast UI (`ShowingSavedDataChip`, read-only offline); `me_repository_cache_test` (3) + `place_list_repository_cache_test` (4); 162 Flutter tests green |
 | 0.9 | 2026-04-10 | Step 3.3 implemented: `WsConnectionState` + `WsClient.connectionState` `ValueNotifier`; reconnect cap `_kMaxReconnectCycles`; `retryConnection()`; `WsStatusBanner` / `WsStatusBannerCore`; home/watch/broadcast `Column` layout; `ws_status_banner_test.dart` (4 widget tests) + `ws_client_test` connection-state tests; 170 Flutter tests green |
-- `test/features/me/me_repository_device_token_test.dart` — step 3.4 (device-token API)
+| 1.0 | 2026-04-10 | Step 3.4 implemented: `V7__device_tokens`; device-token API + FCM stub/real + matching/offline push + subscription expiry notifier; mobile `PushBootstrap` / `kPushEnabled`; 220 server tests, 173 Flutter tests green |
+| 1.1 | 2026-04-10 | Step 3.5: QA checklist in doc; `DeviceTokenIntegrationTest` unauthenticated POST/DELETE → 401; `push_bootstrap` — remove redundant import (`flutter analyze` clean); 222 server / 173 Flutter tests; Phase 3 DoD “CI passes” checked |
+| 1.2 | 2026-04-10 | Phase 3 §5 definition of done: checked off steps 2.1–2.4 and 3.1 (verified against integration tests); steps 4.1–4.2 remain open until `docs/runbooks/` files exist |
+| 1.3 | 2026-04-10 | Step 4.1–4.2: added `docs/runbooks/SLO_BASELINE.md` (p95 table, Actuator/Prometheus queries, alerting); `docs/runbooks/INCIDENT_RESPONSE.md` (6 scenarios); Phase 3 DoD runbook items checked |
