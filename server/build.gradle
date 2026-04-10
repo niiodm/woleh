@@ -20,6 +20,7 @@ repositories {
 dependencies {
 	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'io.micrometer:micrometer-registry-prometheus'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
@@ -41,6 +42,12 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+// Embeds build-info.properties (name, version, time) into the jar so the
+// /actuator/info endpoint can expose it without extra config.
+springBoot {
+	buildInfo()
 }
 
 // Forward DEV_HOST to the Spring Boot process so the stub checkout URL

@@ -4,6 +4,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+
 import odm.clarity.woleh.model.PlaceListType;
 import odm.clarity.woleh.model.UserPlaceList;
 import odm.clarity.woleh.repository.UserPlaceListRepository;
@@ -36,11 +39,16 @@ public class MatchingService {
 
 	private final UserPlaceListRepository placeListRepository;
 	private final WsSessionRegistry wsSessionRegistry;
+	private final Timer matchEvaluationTimer;
 
 	public MatchingService(UserPlaceListRepository placeListRepository,
-			WsSessionRegistry wsSessionRegistry) {
+			WsSessionRegistry wsSessionRegistry,
+			MeterRegistry meterRegistry) {
 		this.placeListRepository = placeListRepository;
 		this.wsSessionRegistry = wsSessionRegistry;
+		this.matchEvaluationTimer = Timer.builder("woleh.match.evaluation")
+				.description("Time to evaluate name intersections and dispatch match events")
+				.register(meterRegistry);
 	}
 
 	/**
@@ -53,23 +61,25 @@ public class MatchingService {
 			return;
 		}
 
-		Set<String> broadcastSet = new HashSet<>(normalizedBroadcastNames);
+		matchEvaluationTimer.record(() -> {
+			Set<String> broadcastSet = new HashSet<>(normalizedBroadcastNames);
 
-		for (UserPlaceList watchList : placeListRepository.findAllByListType(PlaceListType.WATCH)) {
-			List<String> intersection = intersect(watchList.getNormalizedNames(), broadcastSet);
-			if (intersection.isEmpty()) {
-				continue;
+			for (UserPlaceList watchList : placeListRepository.findAllByListType(PlaceListType.WATCH)) {
+				List<String> intersection = intersect(watchList.getNormalizedNames(), broadcastSet);
+				if (intersection.isEmpty()) {
+					continue;
+				}
+
+				Long watcherUserId = watchList.getUserId();
+				log.debug("broadcast match: broadcaster={} watcher={} names={}",
+						broadcastUserId, watcherUserId, intersection);
+
+				// Notify the watcher that a matching broadcast is active.
+				wsSessionRegistry.sendMatchEvent(watcherUserId, intersection, broadcastUserId, KIND);
+				// Notify the broadcaster that a rider is watching their route.
+				wsSessionRegistry.sendMatchEvent(broadcastUserId, intersection, watcherUserId, KIND);
 			}
-
-			Long watcherUserId = watchList.getUserId();
-			log.debug("broadcast match: broadcaster={} watcher={} names={}",
-					broadcastUserId, watcherUserId, intersection);
-
-			// Notify the watcher that a matching broadcast is active.
-			wsSessionRegistry.sendMatchEvent(watcherUserId, intersection, broadcastUserId, KIND);
-			// Notify the broadcaster that a rider is watching their route.
-			wsSessionRegistry.sendMatchEvent(broadcastUserId, intersection, watcherUserId, KIND);
-		}
+		});
 	}
 
 	/**
@@ -82,23 +92,25 @@ public class MatchingService {
 			return;
 		}
 
-		Set<String> watchSet = new HashSet<>(normalizedWatchNames);
+		matchEvaluationTimer.record(() -> {
+			Set<String> watchSet = new HashSet<>(normalizedWatchNames);
 
-		for (UserPlaceList broadcastList : placeListRepository.findAllByListType(PlaceListType.BROADCAST)) {
-			List<String> intersection = intersect(broadcastList.getNormalizedNames(), watchSet);
-			if (intersection.isEmpty()) {
-				continue;
+			for (UserPlaceList broadcastList : placeListRepository.findAllByListType(PlaceListType.BROADCAST)) {
+				List<String> intersection = intersect(broadcastList.getNormalizedNames(), watchSet);
+				if (intersection.isEmpty()) {
+					continue;
+				}
+
+				Long broadcasterUserId = broadcastList.getUserId();
+				log.debug("watch match: watcher={} broadcaster={} names={}",
+						watchUserId, broadcasterUserId, intersection);
+
+				// Notify the watcher that a matching broadcast exists.
+				wsSessionRegistry.sendMatchEvent(watchUserId, intersection, broadcasterUserId, KIND);
+				// Notify the broadcaster that a new rider is watching their route.
+				wsSessionRegistry.sendMatchEvent(broadcasterUserId, intersection, watchUserId, KIND);
 			}
-
-			Long broadcasterUserId = broadcastList.getUserId();
-			log.debug("watch match: watcher={} broadcaster={} names={}",
-					watchUserId, broadcasterUserId, intersection);
-
-			// Notify the watcher that a matching broadcast exists.
-			wsSessionRegistry.sendMatchEvent(watchUserId, intersection, broadcasterUserId, KIND);
-			// Notify the broadcaster that a new rider is watching their route.
-			wsSessionRegistry.sendMatchEvent(broadcasterUserId, intersection, watchUserId, KIND);
-		}
+		});
 	}
 
 	// ── helpers ───────────────────────────────────────────────────────────

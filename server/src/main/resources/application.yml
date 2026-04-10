@@ -40,10 +40,13 @@ server:
     context-path: /
 
 management:
+  # TODO (production): set management.server.port=8081 (or use an API gateway) so that
+  # /actuator/metrics and /actuator/prometheus are not reachable from the public internet.
+  # The ops firewall must block external traffic to the management port.
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       # Always show component details (db, diskSpace, etc.) so orchestrators and curl can confirm DB liveness.
@@ -53,6 +56,12 @@ management:
       probes:
         # /actuator/health/liveness and /actuator/health/readiness — useful for Kubernetes / Docker health-checks.
         enabled: ${HEALTH_PROBES_ENABLED:true}
+  metrics:
+    distribution:
+      # Enable histogram buckets for HTTP server requests so Prometheus can compute p50/p95/p99.
+      # Used for SLO tracking — see docs/runbooks/SLO_BASELINE.md.
+      percentiles-histogram:
+        "[http.server.requests]": true
 
 # JWT access tokens (HS256). Override JWT_SECRET in every non-local environment.
 woleh:

@@ -70,7 +70,7 @@ Include a `Retry-After: <seconds>` response header (time until the next token is
 
 ---
 
-### Step 2.2 — Spring Boot Actuator + Micrometer metrics (FR-O1)
+### Step 2.2 — Spring Boot Actuator + Micrometer metrics (FR-O1) ✅
 
 Add `spring-boot-starter-actuator` if not present. Configure in `application.yml`:
 
@@ -106,7 +106,9 @@ Secure `/actuator/**` by restricting to the management port in `SecurityConfig` 
 
 - **Tests:** `ActuatorHealthIntegrationTest` (`GET /actuator/health` with `webEnvironment = DEFINED_PORT, managementPort = ...` → 200 `{ "status": "UP" }`); metric registration smoke test (inject `MeterRegistry` bean, assert `woleh.ws.sessions.active` meter exists).
 
-**Done when:** `GET /actuator/health` returns `UP`; the four custom meters are registered and can be queried via `GET /actuator/metrics/woleh.ws.sessions.active`.
+**Implementation:** `build.gradle` — `micrometer-registry-prometheus` dependency + `springBoot { buildInfo() }` (info endpoint); `application.yml` — `metrics,prometheus` added to exposure list, percentile histogram config for `http.server.requests`; [`WsHealthIndicator`](../server/src/main/java/odm/clarity/woleh/ws/WsHealthIndicator.java) (`@Component("ws")` — always UP, exposes `activeSessions` detail); `WsSessionRegistry` — `MeterRegistry` injected, `Gauge` for `woleh.ws.sessions.active`, `sessionCount()` added; `PlaceListService` — `MeterRegistry` injected, watch/broadcast `woleh.place.list.put` counters, incremented after successful save; `MatchingService` — `MeterRegistry` injected, `woleh.match.evaluation` Timer wraps intersection + dispatch blocks; `GlobalExceptionHandler` — `MeterRegistry` injected via constructor, `woleh.api.errors` 4xx/5xx counters pre-registered and incremented in each handler; `MatchingServiceTest` updated to pass `SimpleMeterRegistry`; `HealthIntegrationTest` gains `ws` component test; [`MetricsIntegrationTest`](../server/src/test/java/odm/clarity/woleh/api/MetricsIntegrationTest.java) — 6 smoke tests.
+
+**Done when:** `GET /actuator/health` returns `UP` with `ws` component; the four custom meters are registered and can be queried via `GET /actuator/metrics/woleh.ws.sessions.active`. ✅
 
 ---
 
@@ -340,3 +342,4 @@ Create `docs/runbooks/INCIDENT_RESPONSE.md` covering the most likely failure sce
 |---------|------|---------|
 | 0.1 | 2026-04-10 | Initial Phase 3 codable breakdown |
 | 0.2 | 2026-04-10 | Step 2.1 implemented: `RateLimitProperties` + `PlaceListRateLimiter` (fixed-window `ConcurrentHashMap`); `RateLimitedException` gains `retryAfterSeconds`; `GlobalExceptionHandler` emits `Retry-After` header; `PlaceListController` calls rate limiter on PUTs; `application.yml` + `WolehApplication` wired; `UserPlaceList` constructor populates read-only `userId` projection; `RateLimiterTest` (7 unit) + `RateLimitIntegrationTest` (5 integration); 199 server tests green |
+| 0.3 | 2026-04-10 | Step 2.2 implemented: `micrometer-registry-prometheus` + `buildInfo()`; `metrics` + `prometheus` exposure + percentile histogram config; `WsHealthIndicator` (`ws` component, `activeSessions` detail); `WsSessionRegistry` Gauge + `sessionCount()`; `PlaceListService` watch/broadcast PUT counters; `MatchingService` evaluation Timer; `GlobalExceptionHandler` 4xx/5xx error counters; `MatchingServiceTest` updated; `HealthIntegrationTest` + `MetricsIntegrationTest` (6 new tests); 206 server tests green |

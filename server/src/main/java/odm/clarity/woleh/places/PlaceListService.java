@@ -5,6 +5,9 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+
 import odm.clarity.woleh.common.error.PermissionDeniedException;
 import odm.clarity.woleh.common.error.PlaceLimitExceededException;
 import odm.clarity.woleh.common.error.PlaceNameValidationException;
@@ -42,18 +45,29 @@ public class PlaceListService {
 	private final EntitlementService entitlementService;
 	private final PlaceNameNormalizer normalizer;
 	private final MatchingService matchingService;
+	private final Counter watchPutCounter;
+	private final Counter broadcastPutCounter;
 
 	public PlaceListService(
 			UserPlaceListRepository placeListRepository,
 			UserRepository userRepository,
 			EntitlementService entitlementService,
 			PlaceNameNormalizer normalizer,
-			MatchingService matchingService) {
+			MatchingService matchingService,
+			MeterRegistry meterRegistry) {
 		this.placeListRepository = placeListRepository;
 		this.userRepository = userRepository;
 		this.entitlementService = entitlementService;
 		this.normalizer = normalizer;
 		this.matchingService = matchingService;
+		this.watchPutCounter = Counter.builder("woleh.place.list.put")
+				.tag("list_type", "watch")
+				.description("Successful PUT operations on the watch place-name list")
+				.register(meterRegistry);
+		this.broadcastPutCounter = Counter.builder("woleh.place.list.put")
+				.tag("list_type", "broadcast")
+				.description("Successful PUT operations on the broadcast place-name list")
+				.register(meterRegistry);
 	}
 
 	// ── watch list ────────────────────────────────────────────────────────
@@ -87,6 +101,7 @@ public class PlaceListService {
 		}
 
 		upsert(userId, PlaceListType.WATCH, deduped);
+		watchPutCounter.increment();
 		matchingService.dispatchWatchMatches(userId, deduped.normalizedNames());
 
 		return new PlaceNamesResponse(deduped.displayNames());
@@ -124,6 +139,7 @@ public class PlaceListService {
 		}
 
 		upsert(userId, PlaceListType.BROADCAST, deduped);
+		broadcastPutCounter.increment();
 		matchingService.dispatchBroadcastMatches(userId, deduped.normalizedNames());
 
 		return new PlaceNamesResponse(deduped.displayNames());

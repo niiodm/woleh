@@ -11,6 +11,8 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 import odm.clarity.woleh.model.PlaceListType;
 import odm.clarity.woleh.model.UserPlaceList;
 import odm.clarity.woleh.repository.UserPlaceListRepository;
@@ -29,7 +31,7 @@ class MatchingServiceTest {
 	void setUp() {
 		placeListRepository = mock(UserPlaceListRepository.class);
 		wsSessionRegistry = mock(WsSessionRegistry.class);
-		matchingService = new MatchingService(placeListRepository, wsSessionRegistry);
+		matchingService = new MatchingService(placeListRepository, wsSessionRegistry, new SimpleMeterRegistry());
 	}
 
 	// ── dispatchBroadcastMatches ──────────────────────────────────────────

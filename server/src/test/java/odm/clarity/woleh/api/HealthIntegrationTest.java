@@ -48,4 +48,11 @@ class HealthIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.status").value("UP"));
 	}
+
+	@Test
+	void health_includesWsComponent() throws Exception {
+		mockMvc.perform(get("/actuator/health"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.components.ws.status").value("UP"));
+	}
 }

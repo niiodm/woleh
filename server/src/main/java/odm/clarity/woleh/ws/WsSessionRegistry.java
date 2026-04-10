@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -17,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * Thread-safe map of authenticated WebSocket sessions keyed by userId.
  *
  * <p>Manages session lifecycle (register / deregister) and outbound message dispatch.
+ * Exposes a {@code woleh.ws.sessions.active} gauge so operations can track live connections.
  */
 @Component
 public class WsSessionRegistry {
@@ -26,8 +30,16 @@ public class WsSessionRegistry {
 	private final ConcurrentHashMap<Long, WebSocketSession> sessions = new ConcurrentHashMap<>();
 	private final ObjectMapper objectMapper;
 
-	public WsSessionRegistry(ObjectMapper objectMapper) {
+	public WsSessionRegistry(ObjectMapper objectMapper, MeterRegistry meterRegistry) {
 		this.objectMapper = objectMapper;
+		Gauge.builder("woleh.ws.sessions.active", sessions, ConcurrentHashMap::size)
+				.description("Number of currently active WebSocket sessions")
+				.register(meterRegistry);
+	}
+
+	/** Returns the number of currently registered sessions. */
+	public int sessionCount() {
+		return sessions.size();
 	}
 
 	/** Registers a newly-established session. Replaces any stale session for the same user. */

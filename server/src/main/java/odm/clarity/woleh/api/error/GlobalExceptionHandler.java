@@ -1,5 +1,8 @@
 package odm.clarity.woleh.api.error;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+
 import odm.clarity.woleh.api.dto.ApiEnvelope;
 import odm.clarity.woleh.common.error.InvalidOtpException;
 import odm.clarity.woleh.common.error.PaymentException;
@@ -25,12 +28,28 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
+	private final Counter counter4xx;
+	private final Counter counter5xx;
+
+	public GlobalExceptionHandler(MeterRegistry meterRegistry) {
+		super();
+		this.counter4xx = Counter.builder("woleh.api.errors")
+				.tag("status_class", "4xx")
+				.description("API responses in the 4xx client-error range")
+				.register(meterRegistry);
+		this.counter5xx = Counter.builder("woleh.api.errors")
+				.tag("status_class", "5xx")
+				.description("API responses in the 5xx server-error range")
+				.register(meterRegistry);
+	}
+
 	@Override
 	protected ResponseEntity<Object> handleHttpMessageNotReadable(
 			HttpMessageNotReadableException ex,
 			@NonNull HttpHeaders headers,
 			@NonNull HttpStatusCode status,
 			@NonNull WebRequest request) {
+		counter4xx.increment();
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 				.body(ApiEnvelope.error("Malformed JSON body", "BAD_REQUEST"));
 	}
@@ -41,6 +60,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 			@NonNull HttpHeaders headers,
 			@NonNull HttpStatusCode status,
 			@NonNull WebRequest request) {
+		counter4xx.increment();
 		String msg = ex.getBindingResult().getFieldErrors().stream()
 				.findFirst()
 				.map(e -> e.getField() + ": " + e.getDefaultMessage())
@@ -55,24 +75,28 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 			@NonNull HttpHeaders headers,
 			@NonNull HttpStatusCode status,
 			@NonNull WebRequest request) {
+		counter4xx.increment();
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(ApiEnvelope.error("Not found", "NOT_FOUND"));
 	}
 
 	@ExceptionHandler(UserNotFoundException.class)
 	ResponseEntity<ApiEnvelope<Void>> handleUserNotFound(UserNotFoundException ex) {
+		counter4xx.increment();
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(ApiEnvelope.error(ex.getMessage(), "NOT_FOUND"));
 	}
 
 	@ExceptionHandler(InvalidOtpException.class)
 	ResponseEntity<ApiEnvelope<Void>> handleInvalidOtp(InvalidOtpException ex) {
+		counter4xx.increment();
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 				.body(ApiEnvelope.error(ex.getMessage(), "INVALID_OTP"));
 	}
 
 	@ExceptionHandler(RateLimitedException.class)
 	ResponseEntity<ApiEnvelope<Void>> handleRateLimited(RateLimitedException ex) {
+		counter4xx.increment();
 		var builder = ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS);
 		if (ex.getRetryAfterSeconds() > 0) {
 			builder.header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()));
@@ -82,30 +106,39 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
 	@ExceptionHandler(PlaceNameValidationException.class)
 	ResponseEntity<ApiEnvelope<Void>> handlePlaceNameValidation(PlaceNameValidationException ex) {
+		counter4xx.increment();
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 				.body(ApiEnvelope.error(ex.getMessage(), "VALIDATION_ERROR"));
 	}
 
 	@ExceptionHandler(PermissionDeniedException.class)
 	ResponseEntity<ApiEnvelope<Void>> handlePermissionDenied(PermissionDeniedException ex) {
+		counter4xx.increment();
 		return ResponseEntity.status(HttpStatus.FORBIDDEN)
 				.body(ApiEnvelope.error(ex.getMessage(), "PERMISSION_DENIED"));
 	}
 
 	@ExceptionHandler(PlaceLimitExceededException.class)
 	ResponseEntity<ApiEnvelope<Void>> handlePlaceLimitExceeded(PlaceLimitExceededException ex) {
+		counter4xx.increment();
 		return ResponseEntity.status(HttpStatus.FORBIDDEN)
 				.body(ApiEnvelope.error(ex.getMessage(), "OVER_LIMIT"));
 	}
 
 	@ExceptionHandler(PaymentException.class)
 	ResponseEntity<ApiEnvelope<Void>> handlePayment(PaymentException ex) {
+		if (ex.getStatusCode() >= 500) {
+			counter5xx.increment();
+		} else {
+			counter4xx.increment();
+		}
 		return ResponseEntity.status(ex.getStatusCode())
 				.body(ApiEnvelope.error(ex.getMessage(), "PAYMENT_ERROR"));
 	}
 
 	@ExceptionHandler(Exception.class)
 	ResponseEntity<ApiEnvelope<Void>> fallback(Exception ex) {
+		counter5xx.increment();
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 				.body(ApiEnvelope.error("Unexpected error", "INTERNAL_ERROR"));
 	}
