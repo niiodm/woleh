@@ -181,7 +181,7 @@ Wire `MatchingService` → `WsSessionRegistry` so match events flow to connected
 
 ## 3. Mobile (Flutter)
 
-### Step 3.1 — `normalizePlaceName` Dart utility + shared test vectors
+### Step 3.1 — `normalizePlaceName` Dart utility + shared test vectors ✅
 
 Implement the same four-step pipeline ([PLACE_NAMES.md](./PLACE_NAMES.md) §1) in Dart:
 
@@ -194,9 +194,9 @@ Implement the same four-step pipeline ([PLACE_NAMES.md](./PLACE_NAMES.md) §1) i
 - Add `validatePlaceName(String raw): String?` returning an error string (or null if valid); used by form fields.
 - Add `test/core/place_name_normalizer_test.dart` with the three canonical test vectors from [PLACE_NAMES.md](./PLACE_NAMES.md) §5 plus the same edge cases as the server unit test — ensures client and server produce identical normalized forms.
 
-**Implementation:** `mobile/lib/core/place_name_normalizer.dart`; `test/core/place_name_normalizer_test.dart`.
+**Implementation:** `unorm_dart 0.3.2` added to `pubspec.yaml` (pure-Dart NFC via Unicode 17.0 data); [`mobile/lib/core/place_name_normalizer.dart`](../mobile/lib/core/place_name_normalizer.dart) — `normalizePlaceName(String) → String` (4-step pipeline: trim → `unorm.nfc` → `toLowerCase` → collapse whitespace), `validatePlaceName(String?) → String?` (empty/null check, 200-code-point cap; mirrors server constants); [`test/core/place_name_normalizer_test.dart`](../mobile/test/core/place_name_normalizer_test.dart) — 17 tests (3 spec vectors + 14 edge cases: empty, blank, tab, case, exact output, mixed whitespace, idempotency, Ghana-English names, validate null/empty/blank/over-limit/valid/max).
 
-**Done when:** all test vectors pass; `normalizePlaceName` is idempotent.
+**Done when:** all test vectors pass; `normalizePlaceName` is idempotent. ✅
 
 ---
 
@@ -339,5 +339,6 @@ Surface incoming `match` events to the user:
 | 0.7 | 2026-04-09 | Step 2.6 implemented: `WsEnvelope<T>` record, `JwtHandshakeInterceptor` (query-param JWT → `JwtService` → `EntitlementService` → 403 on reject), `TransitWebSocketHandler` (register/deregister sessions, ignore inbound), `WsSessionRegistry` updated (`ConcurrentHashMap`, `register`/`deregister`, `sendToAllOpen`), `WsHeartbeatScheduler` (`@Scheduled` 15 s), `WsConfig` (`@EnableWebSocket @EnableScheduling`), `SecurityConfig` updated with `/ws/**` permitAll, `WsAuthIntegrationTest` (5 tests — valid token, missing token, invalid token, expired token, no place permission; all 185 tests green) |
 | 0.8 | 2026-04-09 | Step 2.7 implemented: `MatchEvent` moved to `ws/` package, `WsSessionRegistry.sendMatchEvent` real implementation (`ObjectMapper`, `WsEnvelope<MatchEvent>`, skip-on-no-session, evict-on-IOException), `MatchDispatchIntegrationTest` (2 end-to-end tests — broadcast PUT → watcher notified, watch PUT → broadcaster notified; 187 tests total green) |
 | 0.9 | 2026-04-09 | Step 2.8 complete: all 187 server tests green; `phase2.http` (auth ×2, watch list, broadcast list, WebSocket connection, 5-step match flow); `http-client.env.json` updated (`wsBaseUrl`, `watchPhone`, `broadcastPhone`) |
+| 1.0 | 2026-04-09 | Step 3.1 implemented: `unorm_dart 0.3.2` dependency; `normalizePlaceName` + `validatePlaceName` Dart utilities (4-step pipeline matching server); `place_name_normalizer_test.dart` (17 tests — all 3 PLACE_NAMES.md §5 vectors pass including NFC vector 2; 115 mobile tests green) |
 
 When Phase 2 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. normalization library chosen for Dart NFC, in-memory vs DB intersection query, final `match` event field names).
