@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth_state.dart';
+import '../../../core/ws_message.dart';
 import '../../../shared/permission_gated_button.dart';
 import '../../me/data/me_dto.dart';
 import '../../me/presentation/me_notifier.dart';
+import '../../places/presentation/match_notifier.dart';
 import '../../subscription/presentation/subscription_status_card.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -14,6 +16,9 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final meAsync = ref.watch(meNotifierProvider);
+    // Always watch so the notifier is alive and captures events while the
+    // user is on this screen.
+    final matches = ref.watch(matchNotifierProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -44,7 +49,12 @@ class HomeScreen extends ConsumerWidget {
         ),
         data: (me) {
           if (me == null) return const SizedBox.shrink();
-          return _MeView(me: me);
+          return _MeView(
+            me: me,
+            matches: matches,
+            onDismiss: (i) =>
+                ref.read(matchNotifierProvider.notifier).dismiss(i),
+          );
         },
       ),
     );
@@ -56,9 +66,15 @@ class HomeScreen extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _MeView extends StatelessWidget {
-  const _MeView({required this.me});
+  const _MeView({
+    required this.me,
+    required this.matches,
+    required this.onDismiss,
+  });
 
   final MeResponse me;
+  final List<MatchMessage> matches;
+  final void Function(int index) onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +90,26 @@ class _MeView extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
         children: [
+          // ── Match banner (shown when recent matches are available) ─────────
+          if (matches.isNotEmpty) ...[
+            Text('Recent Matches', style: textTheme.titleMedium),
+            const SizedBox(height: 8),
+            ...List.generate(matches.length, (i) {
+              final match = matches[i];
+              return _MatchCard(
+                match: match,
+                onDismiss: () => onDismiss(i),
+                onTap: () {
+                  onDismiss(i);
+                  context.push('/watch');
+                },
+              );
+            }),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 16),
+          ],
+
           // Avatar + name + phone
           Center(
             child: Column(
@@ -157,6 +193,65 @@ class _MeView extends StatelessWidget {
             onLockedTap: () => context.push('/plans'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Match card (dismissible notification tile)
+// ---------------------------------------------------------------------------
+
+class _MatchCard extends StatelessWidget {
+  const _MatchCard({
+    required this.match,
+    required this.onDismiss,
+    required this.onTap,
+  });
+
+  final MatchMessage match;
+  final VoidCallback onDismiss;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final names = match.matchedNames.join(', ');
+    final isWatcher = match.kind == 'watcher';
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: colors.tertiaryContainer,
+          child: Icon(
+            isWatcher
+                ? Icons.directions_bus_outlined
+                : Icons.person_search_outlined,
+            color: colors.onTertiaryContainer,
+          ),
+        ),
+        title: Text(
+          isWatcher
+              ? 'A bus is heading through: $names'
+              : 'A watcher needs: $names',
+          style: Theme.of(context)
+              .textTheme
+              .bodyMedium
+              ?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(
+          'Tap to view your watch list',
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: colors.onSurfaceVariant),
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.close, size: 18),
+          onPressed: onDismiss,
+          tooltip: 'Dismiss',
+        ),
+        onTap: onTap,
       ),
     );
   }

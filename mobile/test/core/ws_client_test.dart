@@ -21,7 +21,9 @@ class _FakeChannel extends StreamChannelMixin<dynamic>
 
   // Test helpers — simulate the server pushing data to the client.
   void serverSend(String msg) => _sc.add(msg);
+
   void serverClose() => _sc.close();
+
   void serverError(Object err) => _sc.addError(err);
 
   @override
@@ -76,12 +78,6 @@ class _AuthWithToken extends AuthState {
   Future<String?> build() async => 'test-jwt';
 }
 
-/// Auth stub that resolves immediately with no token (signed-out).
-class _AuthSignedOut extends AuthState {
-  @override
-  Future<String?> build() async => null;
-}
-
 // ---------------------------------------------------------------------------
 // Test WsClient subclass
 // ---------------------------------------------------------------------------
@@ -106,8 +102,7 @@ ProviderContainer _makeContainer({
   return ProviderContainer(
     overrides: [
       authStateProvider.overrideWith(authFactory),
-      wsClientProvider
-          .overrideWith(() => _TestWsClient(channelFactory)),
+      wsClientProvider.overrideWith(() => _TestWsClient(channelFactory)),
     ],
   );
 }
@@ -235,37 +230,41 @@ void main() {
   // ── MatchMessage parsing ───────────────────────────────────────────────────
 
   group('MatchMessage parsing', () {
-    test('parses match envelope into MatchMessage with correct fields',
-        () async {
-      final messages = <WsMessage>[];
-      _FakeChannel? ch;
+    test(
+      'parses match envelope into MatchMessage with correct fields',
+      () async {
+        final messages = <WsMessage>[];
+        _FakeChannel? ch;
 
-      final container = _makeContainer(
-        authFactory: _AuthWithToken.new,
-        channelFactory: (_) => ch = _FakeChannel(),
-      );
-      addTearDown(container.dispose);
+        final container = _makeContainer(
+          authFactory: _AuthWithToken.new,
+          channelFactory: (_) => ch = _FakeChannel(),
+        );
+        addTearDown(container.dispose);
 
-      container.read(wsClientProvider.notifier).messages.listen(messages.add);
-      container.read(wsClientProvider);
-      await pumpEventQueue();
+        container.read(wsClientProvider.notifier).messages.listen(messages.add);
+        container.read(wsClientProvider);
+        await pumpEventQueue();
 
-      ch!.serverSend(jsonEncode({
-        'type': 'match',
-        'data': {
-          'matchedNames': ['madina', 'lapaz'],
-          'counterpartyUserId': '42',
-          'kind': 'watcher',
-        },
-      }));
-      await pumpEventQueue();
+        ch!.serverSend(
+          jsonEncode({
+            'type': 'match',
+            'data': {
+              'matchedNames': ['madina', 'lapaz'],
+              'counterpartyUserId': '42',
+              'kind': 'watcher',
+            },
+          }),
+        );
+        await pumpEventQueue();
 
-      expect(messages, hasLength(1));
-      final msg = messages[0] as MatchMessage;
-      expect(msg.matchedNames, ['madina', 'lapaz']);
-      expect(msg.counterpartyUserId, '42');
-      expect(msg.kind, 'watcher');
-    });
+        expect(messages, hasLength(1));
+        final msg = messages[0] as MatchMessage;
+        expect(msg.matchedNames, ['madina', 'lapaz']);
+        expect(msg.counterpartyUserId, '42');
+        expect(msg.kind, 'watcher');
+      },
+    );
 
     test('receiving a match message resets the backoff attempt counter', () {
       fakeAsync((fake) {
@@ -292,14 +291,16 @@ void main() {
         expect(channelCount, 2);
 
         // Receive a message → resets _attempt to 0.
-        lastChannel!.serverSend(jsonEncode({
-          'type': 'match',
-          'data': {
-            'matchedNames': ['madina'],
-            'counterpartyUserId': '7',
-            'kind': 'broadcaster',
-          },
-        }));
+        lastChannel!.serverSend(
+          jsonEncode({
+            'type': 'match',
+            'data': {
+              'matchedNames': ['madina'],
+              'counterpartyUserId': '7',
+              'kind': 'broadcaster',
+            },
+          }),
+        );
         fake.flushMicrotasks();
 
         // Second disconnect → attempt still 0 (reset by receipt) → 2 s delay.

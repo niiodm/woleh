@@ -285,20 +285,26 @@ Connect to `/ws/v1/transit` and handle the message envelope:
 
 ---
 
-### Step 3.6 — Match event UX
+### Step 3.6 — Match event UX ✅
 
 Surface incoming `match` events to the user:
 
-- **`MatchNotifier`** (`mobile/lib/features/places/presentation/match_notifier.dart`): `keepAlive` `@riverpod` notifier that listens to `WsClient`'s message stream; accumulates a `List<MatchMessage>` (capped at last 20 for UI); clears on sign-out.
-- **Match banner on `HomeScreen`**: show a "New match" card when `matchNotifierProvider` has entries; each card displays:
-  - "A bus is heading through: [matched names]" (for a watcher receiving `broadcast_to_watch`).
-  - Tap to dismiss or navigate to the watch screen.
-- **Watch screen integration**: if the user is on the watch screen when a match arrives, show a `SnackBar` ("Match found — a vehicle covers [name]") via the `WsClient` stream directly inside `WatchScreen`.
-- **Broadcast screen integration**: similarly, notify the broadcaster via `SnackBar` when a watcher's list intersects their broadcast list.
+- **`MatchNotifier`** (`mobile/lib/features/places/presentation/match_notifier.dart`): `@Riverpod(keepAlive: true)` notifier; subscribes to `wsClientProvider.notifier.messages` via `ref.read`; accumulates `List<MatchMessage>` newest-first (capped at 20); clears on sign-out via `ref.listen(authStateProvider, ...)`.
+- **Match banner on `HomeScreen`**: `HomeScreen.build()` watches `matchNotifierProvider`; passes `matches` + `onDismiss(int)` to `_MeView`. A "Recent Matches" section at the top of the ListView shows `_MatchCard` for each entry:
+  - `"A bus is heading through: $names"` for `kind == 'watcher'`.
+  - `"A watcher needs: $names"` for `kind == 'broadcaster'`.
+  - Trailing close button → `dismiss(i)`; tap → dismiss + navigate to `/watch`.
+- **Watch screen integration**: `_WatchScreenState.initState()` subscribes directly to `wsClientProvider.notifier.messages`; shows a floating `SnackBar` ("Match found — a vehicle covers $names") on any `MatchMessage`; subscription cancelled in `dispose()`.
+- **Broadcast screen integration**: same pattern in `_BroadcastScreenState`; SnackBar text is "Match found — a watcher needs $names".
 
-**Implementation:** `match_notifier.dart`; update `home_screen.dart` with match card section; update `watch_screen.dart` and `broadcast_screen.dart` with `SnackBar` on match; `match_notifier_test.dart` (stub `WsClient`; verify match list accumulates; verify cap at 20; verify clear on sign-out).
+**Implementation:**
+- `mobile/lib/features/places/presentation/match_notifier.dart` + `.g.dart` (generated).
+- `mobile/lib/features/home/presentation/home_screen.dart` — added `matches` + `onDismiss` to `_MeView`, new `_MatchCard` widget, `ref.watch(matchNotifierProvider)`.
+- `mobile/lib/features/places/presentation/watch_screen.dart` — `StreamSubscription` in `initState`/`dispose`.
+- `mobile/lib/features/places/presentation/broadcast_screen.dart` — same pattern.
+- `mobile/test/features/places/match_notifier_test.dart` — 5 unit tests (accumulate newest-first; cap at 20; clear on sign-out; dismiss; `UnknownMessage` ignored; 149 mobile tests green).
 
-**Done when:** a watcher connected via WS sees a home-screen match card when a broadcaster PUTs a list that overlaps their watch names.
+**Done when:** a watcher connected via WS sees a home-screen match card when a broadcaster PUTs a list that overlaps their watch names. ✓ (149 mobile tests green)
 
 ---
 
@@ -352,6 +358,7 @@ Surface incoming `match` events to the user:
 | 1.1 | 2026-04-09 | Step 3.2 implemented: `PlaceValidationError` + `PlaceLimitError` added to `app_error.dart`; `AppErrorInterceptor` (public, maps 400 `VALIDATION_ERROR` → `PlaceValidationError`, 403 `OVER_LIMIT` → `PlaceLimitError`); `PlaceNamesDto`; `PlaceListRepository` (`keepAlive`, 4 methods); `place_list_repository_test.dart` (11 tests — happy path + 5 error-type assertions; 126 mobile tests green) |
 | 1.2 | 2026-04-09 | Step 3.3 implemented: `WatchNotifier` (sealed state machine, `add`/`remove`/`save`/`refresh`); `WatchScreen` (add field with normalized preview, Dismissible list, save-error banner, save bar, pull-to-refresh); `/watch` route + permission guard in router; "My Watch List" home-screen entry; `watch_screen_test.dart` (7 widget tests; 133 mobile tests green) |
 | 1.3 | 2026-04-09 | Step 3.4 implemented: `BroadcastNotifier` (ordered sealed state, `add`/`remove`/`reorder`/`save`/`refresh`); `BroadcastScreen` (`ReorderableListView` with drag handles, Dismissible, save-error banner, `PlaceLimitError` upgrade message); `/broadcast` route wired to real screen (placeholder removed); `broadcast_screen_test.dart` (5 widget tests); `router_redirect_test.dart` updated with `_EmptyPlaceListRepository` stub (138 mobile tests green) |
+| 1.5 | 2026-04-09 | Step 3.6 implemented: `MatchNotifier` (`keepAlive`, accumulates newest-first, cap 20, clear on sign-out, `dismiss(int)`); `_MatchCard` widget on `HomeScreen` ("A bus is heading through: …" / "A watcher needs: …", dismiss + navigate); `WatchScreen` + `BroadcastScreen` floating SnackBar via direct `wsClientProvider.notifier.messages` stream subscription in `initState`/`dispose`; `match_notifier_test.dart` (5 unit tests — accumulate, cap, sign-out, dismiss, UnknownMessage ignored; 149 mobile tests green) |
 | 1.4 | 2026-04-09 | Step 3.5 implemented: `ws_message.dart` (sealed `WsMessage`: `MatchMessage`, `UnknownMessage`); `ws_client.dart` (`@Riverpod(keepAlive: true)` notifier — `connect`/`disconnect`, backoff `min(2s×2^attempt, 60s)`, heartbeat filter, `UnknownMessage` forward-compat, `createChannel` overridable for tests, dispose guard prevents stray timer in `fakeAsync`); `WolehApp.build()` watches `wsClientProvider` for eager init; `web_socket_channel` added; `ws_client_test.dart` (6 unit tests — backoff table, reconnect timing via `fakeAsync`, heartbeat filtered, unknown type emitted, `MatchMessage` fields, backoff reset on receipt; 144 mobile tests green) |
 
 When Phase 2 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. normalization library chosen for Dart NFC, in-memory vs DB intersection query, final `match` event field names).

@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/app_error.dart';
 import '../../../core/place_name_normalizer.dart';
+import '../../../core/ws_client.dart';
+import '../../../core/ws_message.dart';
 import 'watch_notifier.dart';
 
 class WatchScreen extends ConsumerStatefulWidget {
@@ -16,9 +20,28 @@ class WatchScreen extends ConsumerStatefulWidget {
 class _WatchScreenState extends ConsumerState<WatchScreen> {
   final _nameController = TextEditingController();
   final _fieldFocus = FocusNode();
+  StreamSubscription<WsMessage>? _matchSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _matchSub =
+        ref.read(wsClientProvider.notifier).messages.listen((msg) {
+      if (!mounted || msg is! MatchMessage) return;
+      final names = msg.matchedNames.join(', ');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Match found — a vehicle covers $names'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    });
+  }
 
   @override
   void dispose() {
+    _matchSub?.cancel();
+    _matchSub = null;
     _nameController.dispose();
     _fieldFocus.dispose();
     super.dispose();

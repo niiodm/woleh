@@ -6,7 +6,7 @@ part of 'ws_client.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$wsClientHash() => r'8525de3bc54c39225ae5b4e587c6d874ebfcc0dd';
+String _$wsClientHash() => r'a09098bb912d2e372c9bd06f903da4eb40e205c0';
 
 /// Manages the lifecycle of the `/ws/v1/transit` WebSocket connection.
 ///
