@@ -4,15 +4,15 @@
 |-------|--------|
 | **Product** | Woleh |
 | **Document type** | PRD (living document) |
-| **Status** | Active — Phase 2 complete; Phase 3 in progress |
-| **Last updated** | 2026-04-10 (v0.16 Phase 3 breakdown added) |
-| **Related** | [Architecture](./ARCHITECTURE.md), [API contract](./API_CONTRACT.md), [Phase 0 implementation](./PHASE_0_IMPLEMENTATION.md), [Phase 1 implementation](./PHASE_1_IMPLEMENTATION.md), [Phase 2 implementation](./PHASE_2_IMPLEMENTATION.md), [Phase 3 implementation](./PHASE_3_IMPLEMENTATION.md), [ADRs](./adr/README.md), [bus_finder learnings](./bus_finder-architecture-learnings.md) |
+| **Status** | Active — Phase 3 complete; Phase 4 (map + match-scoped location) planned |
+| **Last updated** | 2026-04-10 (v0.18 Phase 4 plan linked; §7.5 + §10 + architecture alignment) |
+| **Related** | [Architecture](./ARCHITECTURE.md), [API contract](./API_CONTRACT.md), [Map & live location plan](./MAP_LIVE_LOCATION_PLAN.md), [Phase 0 implementation](./PHASE_0_IMPLEMENTATION.md), [Phase 1 implementation](./PHASE_1_IMPLEMENTATION.md), [Phase 2 implementation](./PHASE_2_IMPLEMENTATION.md), [Phase 3 implementation](./PHASE_3_IMPLEMENTATION.md), [SLO baseline](./runbooks/SLO_BASELINE.md), [Incident response](./runbooks/INCIDENT_RESPONSE.md), [ADRs](./adr/README.md), [bus_finder learnings](./bus_finder-architecture-learnings.md) |
 
 ---
 
 ## 1. Executive summary
 
-**Woleh** is a **transit** mobile app: it helps **riders** and **people operating vehicles** coordinate using **place names** (stops, landmarks, terminals—whatever people type) and **near real time** updates. Users sign in, optionally subscribe to plans that grant a **list of permissions** (capabilities), and express intent using **lists of place names** (not stored routes with map geometry): one flow lists places along the path the vehicle will **drive through**, another lists places where a rider wants to **see buses / service**. Matching uses **those names only**—**no latitude/longitude** on names; equivalence is by **string matching** (see [PLACE_NAMES.md](./PLACE_NAMES.md)). Users receive **live updates** via the app where the product provides streams.
+**Woleh** is a **transit** mobile app: it helps **riders** and **people operating vehicles** coordinate using **place names** (stops, landmarks, terminals—whatever people type) and **near real time** updates. Users sign in, optionally subscribe to plans that grant a **list of permissions** (capabilities), and express intent using **lists of place names** (not stored routes with map geometry): one flow lists places along the path the vehicle will **drive through**, another lists places where a rider wants to **see buses / service**. Matching uses **those names only**—**no latitude/longitude** on names; equivalence is by **string matching** (see [PLACE_NAMES.md](./PLACE_NAMES.md)). Users receive **live updates** via the app where the product provides streams. **Optional** map view and **device position** sharing may be added so matched peers can see each other’s last-known location; that telemetry is **strictly match-scoped** (same name-intersection rule as core matching) and is specified in [MAP_LIVE_LOCATION_PLAN.md](./MAP_LIVE_LOCATION_PLAN.md)—it does **not** change how place names are stored or matched.
 
 **Copy, onboarding, and store listings** should consistently **sound like transit** (buses, stops, riders, drivers-as-operators). The **backend** in this repo is architected as a **general-purpose** foundation (permissions, place lists, realtime) suitable for **hyperlocal discovery** or other apps later; **Woleh** is the transit-branded client on top of that platform. See [ARCHITECTURE.md](./ARCHITECTURE.md) §1.1.
 
@@ -152,13 +152,14 @@ Priorities: **P0** = MVP blocker, **P1** = soon after MVP, **P2** = later.
 
 ### 7.5 Location and privacy *(optional / future)*
 
-Core MVP matching does **not** depend on GPS. If the product later adds maps or device location, treat it as additive and document in an ADR.
+Core MVP matching does **not** depend on GPS. **Map view and live position updates** are **additive**: they require an ADR, implementation per [MAP_LIVE_LOCATION_PLAN.md](./MAP_LIVE_LOCATION_PLAN.md), and updates to [API_CONTRACT.md](./API_CONTRACT.md). **Sharing rule:** a user’s coordinates are **only** accepted for delivery to peers who are **currently matched**—defined as having **non-empty intersection** of normalized **watch** and **broadcast** place names ([§13.2](#132-place-name-rules-v1)), the same rule as today’s matching engine. If lists change and the intersection becomes empty, **location sharing ends** for that pair (server-side).
 
 | ID | Requirement | Priority |
 |----|-------------|----------|
 | FR-L1 | If device location is used: request permission with clear purpose strings; no background tracking beyond product-defined use cases. | P2 |
 | FR-L2 | User can stop any flow that uses device location; server stops associated processing. | P2 |
 | FR-L3 | Rate limiting on high-frequency endpoints (server-side). | P1 |
+| FR-L4 | **Match-scoped sharing:** the server **must not** ingest user location for broadcast to other users except where publisher and recipient are **currently matched** by the place-name rule above; recipients **must not** receive another user’s position without that relationship. | P2 |
 
 ### 7.6 Notifications *(optional phase)*
 
@@ -209,7 +210,8 @@ Metrics should be **instrumented** after baseline; initial candidates:
 | **0 — Foundation** | Repo layout, CI, auth, profile, health | User can sign in and see protected content ([codable steps](./PHASE_0_IMPLEMENTATION.md)) | ✅ Complete (2026-04-07) |
 | **1 — Plans** | Plans API, gating, payment integration | Paid plan unlocks gated features end-to-end ([codable steps](./PHASE_1_IMPLEMENTATION.md)) | ✅ Complete (2026-04-09) |
 | **2 — Core transit journey** | Domain models, REST + WS streams, **transit** mobile UX | Rider/operator place-name flow works in staging ([codable steps](./PHASE_2_IMPLEMENTATION.md)) | ✅ Complete (2026-04-09) |
-| **3 — Hardening** | Rate limits, observability, push (if needed) | SLOs met; runbooks for incidents ([codable steps](./PHASE_3_IMPLEMENTATION.md)) | In progress |
+| **3 — Hardening** | Rate limits, observability, push (feature-flagged), offline cache, WS degraded UI, refresh tokens, SLO + incident runbooks | [§5 Definition of done](./PHASE_3_IMPLEMENTATION.md#5-definition-of-done-phase-3) satisfied; baselines in [SLO_BASELINE.md](./runbooks/SLO_BASELINE.md); playbooks in [INCIDENT_RESPONSE.md](./runbooks/INCIDENT_RESPONSE.md) | ✅ Complete (2026-04-10) |
+| **4 — Map & match-scoped live location** | Map UI (`flutter_map`), optional GPS publish, WebSocket peer position events, server **match adjacency** + rate limits; FR-L1–L4 | [MAP_LIVE_LOCATION_PLAN.md](./MAP_LIVE_LOCATION_PLAN.md) delivered; [API_CONTRACT.md](./API_CONTRACT.md) + ADR updated; staging E2E with two matched users | Planned |
 
 Phases are adjustable; **G1–G3** should not slip far past Phase 0–1.
 
@@ -233,7 +235,7 @@ Phases are adjustable; **G1–G3** should not slip far past Phase 0–1.
 | Realtime complexity (reconnects, ordering) | Standard envelope, heartbeats, backoff; integration tests |
 | Subscription or permission logic drift between client and server | Server is source of truth for enforcement; client uses API permission list only for UX |
 | Typos / inconsistent spellings for the same place | [PLACE_NAMES.md](./PLACE_NAMES.md) baseline; optional alias list or “did you mean?” (ADR) if needed later |
-| Location privacy concerns *(if GPS added later)* | Clear UX, minimal retention, documented policy |
+| Location privacy concerns *(if GPS added later)* | **Match-scoped** delivery only ([§7.5](#75-location-and-privacy-optional--future), [MAP_LIVE_LOCATION_PLAN.md](./MAP_LIVE_LOCATION_PLAN.md)); clear UX, minimal retention, user stop-sharing, documented policy |
 | Scope creep beyond **transit** in the Woleh app | Phase gates; non-transit products use separate clients or ADR |
 
 ---
@@ -312,10 +314,12 @@ Exact pricing and plan names are product/marketing; **limits** are the defaults 
 | 0.9 | 2026-04-06 | Ghana jurisdiction; WebView + local provider payments; linked [adr](./adr/README.md) |
 | 0.10 | 2026-04-07 | Linked [Phase 0 implementation](./PHASE_0_IMPLEMENTATION.md) codable breakdown |
 | 0.11 | 2026-04-07 | Phase 0 complete — status updated; phased rollout table gains Status column |
-|| 0.12 | 2026-04-07 | Linked [Phase 1 implementation](./PHASE_1_IMPLEMENTATION.md) codable breakdown; Phase 1 row updated |
+| 0.12 | 2026-04-07 | Linked [Phase 1 implementation](./PHASE_1_IMPLEMENTATION.md) codable breakdown; Phase 1 row updated |
 | 0.13 | 2026-04-09 | Phase 1 complete — phased rollout table updated; deviations noted: `webview_flutter 4.13.1` used (not `flutter_inappwebview`); stub payment provider only (no real Ghana provider yet); paid plan price placeholder GHS 9.99 (999 pesewas) to be confirmed before production; `PermissionGatedButton` reusable widget added to `mobile/lib/shared/` as Phase 2-ready UI pattern |
 | 0.14 | 2026-04-09 | Phase 2 codable breakdown added ([PHASE_2_IMPLEMENTATION.md](./PHASE_2_IMPLEMENTATION.md)); Phase 2 row updated to "In progress" |
 | 0.15 | 2026-04-09 | Phase 2 complete — phased rollout table updated to ✅ Complete (2026-04-09); deviations noted in [PHASE_2_IMPLEMENTATION.md](./PHASE_2_IMPLEMENTATION.md) v2.0: `unorm_dart` for Dart NFC normalization, in-memory set intersection in `MatchingService`, `match` event fields `matchedNames`/`counterpartyUserId`/`kind`, `UnknownMessage` surfaced on stream for forward-compat; 187 server + 151 mobile tests green (338 total) |
 | 0.16 | 2026-04-10 | Phase 3 codable breakdown added ([PHASE_3_IMPLEMENTATION.md](./PHASE_3_IMPLEMENTATION.md)); Phase 3 row updated to "In progress" |
+| 0.17 | 2026-04-10 | Phase 3 **complete**: [PHASE_3_IMPLEMENTATION.md](./PHASE_3_IMPLEMENTATION.md) §5 DoD verified (all items checked); runbooks [SLO_BASELINE.md](./runbooks/SLO_BASELINE.md), [INCIDENT_RESPONSE.md](./runbooks/INCIDENT_RESPONSE.md); PRD status + §10 phased rollout Phase 3 row set to ✅ Complete (2026-04-10); Related table links runbooks. *NFR-1:* SLO targets and measurement documented; production p95 proof remains deployment/ops follow-up per runbook checklists. |
+| 0.18 | 2026-04-10 | [MAP_LIVE_LOCATION_PLAN.md](./MAP_LIVE_LOCATION_PLAN.md) linked; **Phase 4** row in phased rollout (map + match-scoped live location); §7.5 expanded with sharing rule and **FR-L4**; executive summary + risk row aligned; [ARCHITECTURE.md](./ARCHITECTURE.md) §5.8 + related links updated |
 
 When requirements change materially, bump version and summarize in this table.

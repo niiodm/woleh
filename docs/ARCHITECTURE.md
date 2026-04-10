@@ -76,7 +76,7 @@ Keep **design notes and phase logs** in `docs/` when they help onboarding; cross
 - **Models**: `freezed` / `json_serializable` (or equivalent immutable DTOs).
 - **Secrets**: `flutter_secure_storage` for tokens; `shared_preferences` for non-sensitive prefs.
 - **Realtime**: `web_socket_channel` (or equivalent) consuming a **standard envelope** (see §6).
-- **Maps / live GPS** (optional, not required for core place-name lists): if added later, isolate behind `core/location` abstractions. Core matching does **not** rely on coordinates attached to place names.
+- **Maps / live GPS** (optional **Phase 4**, [PRD.md](./PRD.md) §7.5, [MAP_LIVE_LOCATION_PLAN.md](./MAP_LIVE_LOCATION_PLAN.md)): use **`flutter_map`** + **`latlong2`** (or equivalent) for the map; **`geolocator`** (or equivalent) behind **`lib/core/location/`** abstractions. **Peer positions** arrive over the existing WebSocket with new `type` values (e.g. `peer_location`) parsed into typed models. Core matching still does **not** use coordinates attached to place names.
 
 ### 4.2 Directory conventions
 
@@ -168,6 +168,17 @@ Keep **design notes and phase logs** in `docs/` when they help onboarding; cross
 - Structured logs with **correlation IDs** (user id, request id) where possible.
 - Actuator health for orchestration.
 
+### 5.8 Match-scoped live location (optional / Phase 4)
+
+When the product adds a **map** and **live position** updates ([MAP_LIVE_LOCATION_PLAN.md](./MAP_LIVE_LOCATION_PLAN.md), [PRD.md](./PRD.md) FR-L1–L4):
+
+- **Not part of matching.** Coordinates are **telemetry only**; relevance remains **string intersection** of watch vs broadcast names (§5.6).
+- **Match adjacency.** The server maintains a **current** set of counterparty user IDs per user, derived from the **same** intersection rule as the existing matching service, and **refreshes** it when either side’s place lists change. Location must **not** be forwarded to users outside that set.
+- **Ingest.** Authenticated **REST** publish (e.g. `POST /api/v1/me/location`) with **per-user rate limits** (§5.4). Reject or no-op when the user has disabled sharing (contract TBD).
+- **Fan-out.** On each accepted fix, push a **WebSocket** message (shared `{ type, data }` envelope) **only** to **open sessions** of users in the publisher’s **matched** counterparty set. Do not echo the publisher’s own fix as a peer event on the wire.
+- **Revocation.** When lists no longer intersect, **remove** the adjacency edge and **stop** forwarding; optionally emit a small revoke event so clients clear markers (plan + ADR).
+- **Scaling.** In-memory adjacency is acceptable for single-node v1; **Redis** or equivalent is required before **multi-instance** fan-out without sticky sessions—record in an ADR before production scale-out.
+
 ## 6. API and realtime contracts
 
 The **v1 contract** (paths, envelopes, permission matrix, WebSocket outline) lives in [API_CONTRACT.md](./API_CONTRACT.md). Summaries below stay aligned with that file.
@@ -188,7 +199,7 @@ Standardize on:
 { "type": "<domain_event>", "data": { } }
 ```
 
-Event types and handshake auth: [API_CONTRACT.md](./API_CONTRACT.md) §8.
+Event types and handshake auth: [API_CONTRACT.md](./API_CONTRACT.md) §8. **Phase 4** may add domain events such as `peer_location` (and optional revoke) for match-scoped map updates—document each new `type` in the contract when implemented.
 
 ## 7. Testing strategy
 
@@ -212,6 +223,7 @@ Recorded decisions live under [docs/adr/README.md](./adr/README.md) (WebSocket a
 
 - [Product Requirements (PRD)](./PRD.md) — what Woleh builds and why.
 - [API & permission contract](./API_CONTRACT.md) — REST v1, permission matrix, WebSockets.
+- [Map & live location plan](./MAP_LIVE_LOCATION_PLAN.md) — Phase 4: map UI, match-scoped position sharing, server adjacency.
 - [Architecture Decision Records (ADRs)](./adr/README.md) — recorded choices (e.g. payment WebView, Ghana, OTP).
 - [Place name normalization](./PLACE_NAMES.md) — canonical matching rules for place strings.
 - [bus_finder architecture learnings](./bus_finder-architecture-learnings.md) — rationale and anti-patterns from the reference project.
@@ -219,4 +231,4 @@ Recorded decisions live under [docs/adr/README.md](./adr/README.md) (WebSocket a
 ---
 
 **Document owner**: maintainers of the Woleh repo.  
-**Last updated**: 2026-04-06 ([ADRs](./adr/README.md); [API_CONTRACT.md](./API_CONTRACT.md) v1.2)
+**Last updated**: 2026-04-10 (§5.8 match-scoped live location; §4.1 map stack; related link to [MAP_LIVE_LOCATION_PLAN.md](./MAP_LIVE_LOCATION_PLAN.md))

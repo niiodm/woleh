@@ -2,6 +2,8 @@
 
 This document turns [PRD.md](./PRD.md) §10 **Phase 3 — Hardening** into ordered, implementable work. **Exit criterion:** SLOs met (p95 < 500 ms for core paths under nominal load); rate limits active on high-frequency endpoints; structured logs with correlation IDs deployed; Actuator health + Micrometer metrics exportable; runbooks for incidents written.
 
+**Status:** **Phase 3 complete** (2026-04-10). All items in [§5 Definition of done](#5-definition-of-done-phase-3) are satisfied; SLO and incident guidance live in [`docs/runbooks/SLO_BASELINE.md`](./runbooks/SLO_BASELINE.md) and [`docs/runbooks/INCIDENT_RESPONSE.md`](./runbooks/INCIDENT_RESPONSE.md). *NFR-1 (“once baselined”):* targets and query patterns are baselined in the SLO runbook; proving p95 under **production** nominal load requires deployment-scoped dashboards and alert wiring (see runbook checklists).
+
 **References:** [ARCHITECTURE.md](./ARCHITECTURE.md) §5.4, §5.7, [API_CONTRACT.md](./API_CONTRACT.md), [PRD.md](./PRD.md) §7.3 (FR-R2), §7.5 (FR-L3), §7.6 (FR-N1), §7.7 (FR-O1), §8 (NFR-1–NFR-3), §13.7 (offline), [Phase 2 implementation](./PHASE_2_IMPLEMENTATION.md).
 
 ### Locked identifiers (carry-over from Phase 0–2)
@@ -365,3 +367,4 @@ Summary table:
 | 1.1 | 2026-04-10 | Step 3.5: QA checklist in doc; `DeviceTokenIntegrationTest` unauthenticated POST/DELETE → 401; `push_bootstrap` — remove redundant import (`flutter analyze` clean); 222 server / 173 Flutter tests; Phase 3 DoD “CI passes” checked |
 | 1.2 | 2026-04-10 | Phase 3 §5 definition of done: checked off steps 2.1–2.4 and 3.1 (verified against integration tests); steps 4.1–4.2 remain open until `docs/runbooks/` files exist |
 | 1.3 | 2026-04-10 | Step 4.1–4.2: added `docs/runbooks/SLO_BASELINE.md` (p95 table, Actuator/Prometheus queries, alerting); `docs/runbooks/INCIDENT_RESPONSE.md` (6 scenarios); Phase 3 DoD runbook items checked |
+| 1.4 | 2026-04-10 | Phase 3 marked complete in doc intro; §5 DoD verified; [PRD.md](./PRD.md) §10 Phase 3 row set to complete |
