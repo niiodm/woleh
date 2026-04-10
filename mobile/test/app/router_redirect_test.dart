@@ -236,6 +236,62 @@ void main() {
     // Permission-gate tests (Step 3.1)
     // -----------------------------------------------------------------------
 
+    // -----------------------------------------------------------------------
+    // /watch permission gate (Step 3.3 + 3.7)
+    // -----------------------------------------------------------------------
+
+    group('watch permission gate', () {
+      testWidgets(
+          'user without woleh.place.watch is redirected to /plans',
+          (tester) async {
+        // _StubMeNotifier has permissions: [] — no place.watch.
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authStateProvider.overrideWith(_Authenticated.new),
+              meNotifierProvider.overrideWith(_StubMeNotifier.new),
+            ],
+            child: const WolehApp(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final context = tester.element(find.byType(Scaffold).first);
+        GoRouter.of(context).go('/watch');
+        await tester.pumpAndSettle();
+
+        // No woleh.place.watch → redirected to /plans.
+        expect(find.text('Plans'), findsOneWidget);
+        expect(find.text('Watch List'), findsNothing);
+      });
+
+      testWidgets(
+          'user with woleh.place.watch is allowed through to WatchScreen',
+          (tester) async {
+        // _FreeUserMeNotifier has woleh.place.watch but not broadcast.
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authStateProvider.overrideWith(_Authenticated.new),
+              meNotifierProvider.overrideWith(_FreeUserMeNotifier.new),
+              placeListRepositoryProvider
+                  .overrideWith((_) => _EmptyPlaceListRepository()),
+            ],
+            child: const WolehApp(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final context = tester.element(find.byType(Scaffold).first);
+        GoRouter.of(context).go('/watch');
+        await tester.pumpAndSettle();
+
+        // Has woleh.place.watch → WatchScreen shown.
+        expect(find.text('Watch List'), findsOneWidget);
+        expect(find.text('Plans'), findsNothing);
+      });
+    });
+
     group('broadcast permission gate', () {
       testWidgets(
           'free user navigating to /broadcast is redirected to /plans',

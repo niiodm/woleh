@@ -308,16 +308,23 @@ Surface incoming `match` events to the user:
 
 ---
 
-### Step 3.7 — Tests
+### Step 3.7 — Tests ✅
 
-- `test/core/place_name_normalizer_test.dart` — normalization test vectors (step 3.1).
-- `test/features/places/watch_screen_test.dart` — watch screen widget tests (step 3.3).
-- `test/features/places/broadcast_screen_test.dart` — broadcast screen widget tests (step 3.4).
-- `test/core/ws_client_test.dart` — WS client unit tests: backoff, heartbeat filter, unknown type, match parse (step 3.5).
-- `test/features/places/match_notifier_test.dart` — match accumulation and clear-on-signout (step 3.6).
-- Router tests extended: `/watch` inaccessible to user without `woleh.place.watch`; `/broadcast` now routes to real screen not placeholder.
+All test files were already created incrementally during steps 3.1–3.6. This step adds the missing router gate coverage:
 
-**Done when:** CI is green; all new screens and the WS client have test coverage.
+- `test/core/place_name_normalizer_test.dart` — 17 tests (step 3.1) ✓
+- `test/features/places/watch_screen_test.dart` — 7 widget tests (step 3.3) ✓
+- `test/features/places/broadcast_screen_test.dart` — 5 widget tests (step 3.4) ✓
+- `test/core/ws_client_test.dart` — 6 unit tests (step 3.5) ✓
+- `test/features/places/match_notifier_test.dart` — 5 unit tests (step 3.6) ✓
+- `test/app/router_redirect_test.dart` — added **`watch permission gate`** group (2 new tests):
+  - User without `woleh.place.watch` navigating to `/watch` → redirected to `/plans`.
+  - User with `woleh.place.watch` navigating to `/watch` → allowed through, "Watch List" AppBar shown.
+  - (Broadcast gate already covered in prior steps: free user → `/plans`; paid user → "Broadcast List".)
+
+**Implementation:** `test/app/router_redirect_test.dart` — 2 new `testWidgets` cases added under `watch permission gate` group.
+
+**Done when:** CI is green; all new screens and the WS client have test coverage. ✓ (151 mobile tests green)
 
 ---
 
@@ -358,6 +365,7 @@ Surface incoming `match` events to the user:
 | 1.1 | 2026-04-09 | Step 3.2 implemented: `PlaceValidationError` + `PlaceLimitError` added to `app_error.dart`; `AppErrorInterceptor` (public, maps 400 `VALIDATION_ERROR` → `PlaceValidationError`, 403 `OVER_LIMIT` → `PlaceLimitError`); `PlaceNamesDto`; `PlaceListRepository` (`keepAlive`, 4 methods); `place_list_repository_test.dart` (11 tests — happy path + 5 error-type assertions; 126 mobile tests green) |
 | 1.2 | 2026-04-09 | Step 3.3 implemented: `WatchNotifier` (sealed state machine, `add`/`remove`/`save`/`refresh`); `WatchScreen` (add field with normalized preview, Dismissible list, save-error banner, save bar, pull-to-refresh); `/watch` route + permission guard in router; "My Watch List" home-screen entry; `watch_screen_test.dart` (7 widget tests; 133 mobile tests green) |
 | 1.3 | 2026-04-09 | Step 3.4 implemented: `BroadcastNotifier` (ordered sealed state, `add`/`remove`/`reorder`/`save`/`refresh`); `BroadcastScreen` (`ReorderableListView` with drag handles, Dismissible, save-error banner, `PlaceLimitError` upgrade message); `/broadcast` route wired to real screen (placeholder removed); `broadcast_screen_test.dart` (5 widget tests); `router_redirect_test.dart` updated with `_EmptyPlaceListRepository` stub (138 mobile tests green) |
+| 1.6 | 2026-04-09 | Step 3.7 complete: `watch permission gate` group added to `router_redirect_test.dart` (2 tests — no `woleh.place.watch` → redirected to /plans; with permission → "Watch List" shown); all other test files confirmed in place from steps 3.1–3.6; 151 mobile tests green |
 | 1.5 | 2026-04-09 | Step 3.6 implemented: `MatchNotifier` (`keepAlive`, accumulates newest-first, cap 20, clear on sign-out, `dismiss(int)`); `_MatchCard` widget on `HomeScreen` ("A bus is heading through: …" / "A watcher needs: …", dismiss + navigate); `WatchScreen` + `BroadcastScreen` floating SnackBar via direct `wsClientProvider.notifier.messages` stream subscription in `initState`/`dispose`; `match_notifier_test.dart` (5 unit tests — accumulate, cap, sign-out, dismiss, UnknownMessage ignored; 149 mobile tests green) |
 | 1.4 | 2026-04-09 | Step 3.5 implemented: `ws_message.dart` (sealed `WsMessage`: `MatchMessage`, `UnknownMessage`); `ws_client.dart` (`@Riverpod(keepAlive: true)` notifier — `connect`/`disconnect`, backoff `min(2s×2^attempt, 60s)`, heartbeat filter, `UnknownMessage` forward-compat, `createChannel` overridable for tests, dispose guard prevents stray timer in `fakeAsync`); `WolehApp.build()` watches `wsClientProvider` for eager init; `web_socket_channel` added; `ws_client_test.dart` (6 unit tests — backoff table, reconnect timing via `fakeAsync`, heartbeat filtered, unknown type emitted, `MatchMessage` fields, backoff reset on receipt; 144 mobile tests green) |
 
