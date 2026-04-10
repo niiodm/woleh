@@ -168,7 +168,7 @@ Wire `MatchingService` → `WsSessionRegistry` so match events flow to connected
 
 ---
 
-### Step 2.8 — Tests and API artifacts
+### Step 2.8 — Tests and API artifacts ✅
 
 - **Unit tests** (if not already in earlier steps): `PlaceNameNormalizerTest`, `MatchingServiceTest`, `WsAuthIntegrationTest`, `MatchDispatchIntegrationTest`.
 - **Integration tests**: `WatchListIntegrationTest`, `BroadcastListIntegrationTest`, `SubscriptionStatusIntegrationTest` extended if place limits changed.
@@ -338,5 +338,6 @@ Surface incoming `match` events to the user:
 | 0.6 | 2026-04-09 | Step 2.5 implemented: `MatchEvent` record, `WsSessionRegistry` stub in `ws/`, `userId` read-only FK on `UserPlaceList`, `MatchingService` real intersection logic (`@Transactional(readOnly=true)`, in-memory set intersection, notify both watcher and broadcaster), `MatchingServiceTest` (11 unit tests — empty list short-circuit, disjoint, single match, multiple names, two watchers partial overlap, symmetric watch dispatch) |
 | 0.7 | 2026-04-09 | Step 2.6 implemented: `WsEnvelope<T>` record, `JwtHandshakeInterceptor` (query-param JWT → `JwtService` → `EntitlementService` → 403 on reject), `TransitWebSocketHandler` (register/deregister sessions, ignore inbound), `WsSessionRegistry` updated (`ConcurrentHashMap`, `register`/`deregister`, `sendToAllOpen`), `WsHeartbeatScheduler` (`@Scheduled` 15 s), `WsConfig` (`@EnableWebSocket @EnableScheduling`), `SecurityConfig` updated with `/ws/**` permitAll, `WsAuthIntegrationTest` (5 tests — valid token, missing token, invalid token, expired token, no place permission; all 185 tests green) |
 | 0.8 | 2026-04-09 | Step 2.7 implemented: `MatchEvent` moved to `ws/` package, `WsSessionRegistry.sendMatchEvent` real implementation (`ObjectMapper`, `WsEnvelope<MatchEvent>`, skip-on-no-session, evict-on-IOException), `MatchDispatchIntegrationTest` (2 end-to-end tests — broadcast PUT → watcher notified, watch PUT → broadcaster notified; 187 tests total green) |
+| 0.9 | 2026-04-09 | Step 2.8 complete: all 187 server tests green; `phase2.http` (auth ×2, watch list, broadcast list, WebSocket connection, 5-step match flow); `http-client.env.json` updated (`wsBaseUrl`, `watchPhone`, `broadcastPhone`) |
 
 When Phase 2 is complete, update [PRD.md](./PRD.md) phase table to "✅ Complete" and note any deviations (e.g. normalization library chosen for Dart NFC, in-memory vs DB intersection query, final `match` event field names).

@@ -1,0 +1,299 @@
+### Phase 2 — manual QA collection
+# Covers the full Phase 2 happy path:
+#   auth two users → PUT watch list → PUT broadcast list → WebSocket match event.
+#
+# IntelliJ HTTP Client: select the "dev" environment from http-client.env.json.
+# VS Code REST Client: fill in @watchToken / @broadcastToken / @wsBaseUrl manually.
+#
+# ── End-to-end walkthrough ──────────────────────────────────────────────────
+#   1. Start the server:
+#        cd server && ./gradlew bootRun
+#
+#   2. Authenticate the watcher (free user):
+#        a. Run "Send OTP — watcher" below.
+#        b. Copy the OTP from the [DEV] console log.
+#        c. Run "Verify OTP — watcher"; paste accessToken into @watchToken below.
+#
+#   3. Authenticate the broadcaster (paid user):
+#        a. Run "Send OTP — broadcaster" using a different phone number.
+#        b. Run "Verify OTP — broadcaster"; paste accessToken into @broadcastToken.
+#        c. Run the checkout flow from phase1.http with @broadcastToken so the
+#           broadcaster has woleh.place.broadcast.  Verify with
+#           "GET /subscription/status — broadcaster".
+#
+#   4. Run "PUT watch list — happy path" to set the watcher's places.
+#
+#   5. Open the WebSocket connection for the watcher (§5 below) in IntelliJ's
+#      WS client (or wscat / websocat).  Observe the first heartbeat frame:
+#        {"type":"heartbeat","data":"ping"}
+#
+#   6. Run "PUT broadcast list — happy path" with a list that shares a stop.
+#      The watcher's WS session should immediately receive:
+#        {"type":"match","data":{"matchedNames":["madina"],"counterpartyUserId":"<broadcasterId>","kind":"broadcast_to_watch"}}
+#
+# ── Variables ───────────────────────────────────────────────────────────────
+
+@baseUrl        = {{baseUrl}}
+@wsBaseUrl      = {{wsBaseUrl}}
+@watchPhone     = {{watchPhone}}
+@broadcastPhone = {{broadcastPhone}}
+@watchToken     = PASTE_WATCHER_ACCESS_TOKEN_HERE
+@broadcastToken = PASTE_BROADCASTER_ACCESS_TOKEN_HERE
+
+###############################################################################
+# 1. Authentication — watcher (free user, woleh.place.watch only)
+###############################################################################
+
+### Send OTP — watcher
+POST {{baseUrl}}/api/v1/auth/send-otp
+Content-Type: application/json
+
+{
+  "phoneE164": "{{watchPhone}}"
+}
+
+### Verify OTP — watcher  →  paste accessToken into @watchToken above
+# Replace 123456 with the OTP from the [DEV] console log.
+POST {{baseUrl}}/api/v1/auth/verify-otp
+Content-Type: application/json
+
+{
+  "phoneE164": "{{watchPhone}}",
+  "otp": "123456"
+}
+
+###############################################################################
+# 2. Authentication — broadcaster (must subscribe to paid plan for broadcast access)
+###############################################################################
+
+### Send OTP — broadcaster
+POST {{baseUrl}}/api/v1/auth/send-otp
+Content-Type: application/json
+
+{
+  "phoneE164": "{{broadcastPhone}}"
+}
+
+### Verify OTP — broadcaster  →  paste accessToken into @broadcastToken above
+POST {{baseUrl}}/api/v1/auth/verify-otp
+Content-Type: application/json
+
+{
+  "phoneE164": "{{broadcastPhone}}",
+  "otp": "123456"
+}
+
+### GET /subscription/status — broadcaster (confirms tier=paid and woleh.place.broadcast is present)
+GET {{baseUrl}}/api/v1/subscription/status
+Authorization: Bearer {{broadcastToken}}
+
+###############################################################################
+# 3. Watch list  (GET + PUT /api/v1/me/places/watch)
+###############################################################################
+
+### GET watch list — empty on first visit
+GET {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{watchToken}}
+
+### PUT watch list — happy path (expects 200, normalized + deduped list returned)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{watchToken}}
+Content-Type: application/json
+
+{
+  "names": ["Madina", "Lapaz", "Legon"]
+}
+
+### GET watch list — confirm saved (expects names in insertion order)
+GET {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{watchToken}}
+
+### PUT watch list — case-variant duplicate deduped silently
+# "MADINA" and "Madina" normalize to "madina"; only "Madina" (first) is kept.
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{watchToken}}
+Content-Type: application/json
+
+{
+  "names": ["Madina", "MADINA", "Lapaz"]
+}
+
+### PUT watch list — exceeds free-tier limit of 5 names (expects 403 OVER_LIMIT)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{watchToken}}
+Content-Type: application/json
+
+{
+  "names": ["A", "B", "C", "D", "E", "F"]
+}
+
+### PUT watch list — empty name (expects 400 VALIDATION_ERROR)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{watchToken}}
+Content-Type: application/json
+
+{
+  "names": ["Madina", "   "]
+}
+
+### PUT watch list — clear list (expects 200, empty names array)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{watchToken}}
+Content-Type: application/json
+
+{
+  "names": []
+}
+
+### PUT watch list — no auth (expects 401 UNAUTHORIZED)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Content-Type: application/json
+
+{
+  "names": ["Madina"]
+}
+
+###############################################################################
+# 4. Broadcast list  (GET + PUT /api/v1/me/places/broadcast)
+###############################################################################
+
+### GET broadcast list — empty on first visit
+GET {{baseUrl}}/api/v1/me/places/broadcast
+Authorization: Bearer {{broadcastToken}}
+
+### PUT broadcast list — happy path (expects 200, ordered list returned)
+# Run step 3's "PUT watch list — happy path" first so there is an overlapping stop.
+# After this request the watcher's WS session should receive a match event for "madina".
+PUT {{baseUrl}}/api/v1/me/places/broadcast
+Authorization: Bearer {{broadcastToken}}
+Content-Type: application/json
+
+{
+  "names": ["MADINA", "Kaneshie", "Circle"]
+}
+
+### GET broadcast list — confirm saved in order
+GET {{baseUrl}}/api/v1/me/places/broadcast
+Authorization: Bearer {{broadcastToken}}
+
+### PUT broadcast list — duplicate normalized name (expects 400 VALIDATION_ERROR)
+# "Madina" and "madina " normalize to the same form — broadcast list rejects duplicates.
+PUT {{baseUrl}}/api/v1/me/places/broadcast
+Authorization: Bearer {{broadcastToken}}
+Content-Type: application/json
+
+{
+  "names": ["Madina", "Kaneshie", "madina "]
+}
+
+### PUT broadcast list — free user lacks permission (expects 403 PERMISSION_DENIED)
+PUT {{baseUrl}}/api/v1/me/places/broadcast
+Authorization: Bearer {{watchToken}}
+Content-Type: application/json
+
+{
+  "names": ["Madina"]
+}
+
+### PUT broadcast list — empty name (expects 400 VALIDATION_ERROR)
+PUT {{baseUrl}}/api/v1/me/places/broadcast
+Authorization: Bearer {{broadcastToken}}
+Content-Type: application/json
+
+{
+  "names": ["Madina", ""]
+}
+
+### PUT broadcast list — clear list
+PUT {{baseUrl}}/api/v1/me/places/broadcast
+Authorization: Bearer {{broadcastToken}}
+Content-Type: application/json
+
+{
+  "names": []
+}
+
+###############################################################################
+# 5. WebSocket — /ws/v1/transit
+#
+# IntelliJ HTTP Client supports WebSocket natively (WEBSOCKET keyword).
+# Alternative tools: wscat, websocat, or the browser DevTools WS console.
+#
+# Connect watcher:
+#   wscat -c "ws://localhost:8080/ws/v1/transit?access_token=<watchToken>"
+#
+# Expected first frame (within 15 s):
+#   {"type":"heartbeat","data":"ping"}
+#
+# After "PUT broadcast list — happy path" (§4) you should see a match frame:
+#   {"type":"match","data":{"matchedNames":["madina"],"counterpartyUserId":"<broadcasterId>","kind":"broadcast_to_watch"}}
+###############################################################################
+
+### Connect watcher to /ws/v1/transit (IntelliJ WS client)
+# Select this request in IntelliJ and click "Open WebSocket connection".
+WEBSOCKET {{wsBaseUrl}}/ws/v1/transit?access_token={{watchToken}}
+
+### Connect broadcaster to /ws/v1/transit (receive match on watch PUT, see §6)
+WEBSOCKET {{wsBaseUrl}}/ws/v1/transit?access_token={{broadcastToken}}
+
+### WS — missing token (expects HTTP 403; connection upgrade is rejected)
+WEBSOCKET {{wsBaseUrl}}/ws/v1/transit
+
+### WS — invalid token (expects HTTP 403)
+WEBSOCKET {{wsBaseUrl}}/ws/v1/transit?access_token=not.a.valid.jwt
+
+###############################################################################
+# 6. Match event flow — the full end-to-end sequence
+#
+# Run these requests in order with BOTH watcher and broadcaster WS sessions open.
+# Each step references the request defined in §3 and §4 above.
+###############################################################################
+
+### Step A: Restore watcher's watch list (contains "Madina" → normalizes to "madina")
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{watchToken}}
+Content-Type: application/json
+
+{
+  "names": ["Madina", "Lapaz", "Legon"]
+}
+
+### Step B: PUT broadcaster's broadcast list (overlaps "Madina" → match fires)
+# With the watcher's WS open, the watcher receives:
+#   {"type":"match","data":{"matchedNames":["madina"],"counterpartyUserId":"<broadcasterId>","kind":"broadcast_to_watch"}}
+# The broadcaster also receives (if their WS is open):
+#   {"type":"match","data":{"matchedNames":["madina"],"counterpartyUserId":"<watcherId>","kind":"broadcast_to_watch"}}
+PUT {{baseUrl}}/api/v1/me/places/broadcast
+Authorization: Bearer {{broadcastToken}}
+Content-Type: application/json
+
+{
+  "names": ["MADINA", "Kaneshie", "Circle"]
+}
+
+### Step C: PUT broadcaster's broadcast list with NO overlap (no match event expected)
+PUT {{baseUrl}}/api/v1/me/places/broadcast
+Authorization: Bearer {{broadcastToken}}
+Content-Type: application/json
+
+{
+  "names": ["Kaneshie", "Circle"]
+}
+
+### Step D: Clear watcher's watch list (no match events fired for empty list)
+PUT {{baseUrl}}/api/v1/me/places/watch
+Authorization: Bearer {{watchToken}}
+Content-Type: application/json
+
+{
+  "names": []
+}
+
+### Step E: PUT broadcaster's list again — watcher has empty list, no match expected
+PUT {{baseUrl}}/api/v1/me/places/broadcast
+Authorization: Bearer {{broadcastToken}}
+Content-Type: application/json
+
+{
+  "names": ["MADINA", "Kaneshie"]
+}
