@@ -89,11 +89,22 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     );
   }
 
+  void _popAfterSuccess() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/profile');
+      }
+    });
+  }
+
   Future<void> _save() async {
     final ok = await ref
         .read(profileEditNotifierProvider.notifier)
         .save(_controller.text);
-    if (ok && mounted) context.pop();
+    if (ok && mounted) _popAfterSuccess();
   }
 
   @override

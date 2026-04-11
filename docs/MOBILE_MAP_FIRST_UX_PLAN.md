@@ -13,7 +13,7 @@ This document describes a **navigation and UX restructuring** for the Flutter ap
 - [x] **Profile screen** — `/profile` → [`ProfileScreen`](../mobile/lib/features/me/presentation/profile_screen.dart); AppBar: plans, edit, sign out; body: avatar, subscription, permissions, limits, place-list + map actions; no duplicate `WsStatusBanner` / match list (map-first). *(Removed `features/home/presentation/home_screen.dart`.)*
 - [x] **Places search** — `/places/search`, draft list, autosave with watch-XOR-broadcast clears, permissions, invalidate notifiers, pop back to map. *(Done: [`places_search_screen.dart`](../mobile/lib/features/places/presentation/places_search_screen.dart); save paths await [`meNotifierProvider.future`](../mobile/lib/features/me/presentation/me_notifier.dart) so a cold open of search still resolves `me` before PUT; tests: [`places_search_screen_test.dart`](../mobile/test/features/places/places_search_screen_test.dart).)*
 - [ ] **Mode exclusivity** — Same XOR rule on optional `/watch` and `/broadcast` editors (or shared save helper); legacy dual-list migration if needed.
-- [ ] **Profile edit pop** — Post-frame `pop` + fallback `go`, widget test.
+- [x] **Profile edit pop** — Post-frame `pop` + fallback `go`, widget test. *(Done: [`profile_edit_screen.dart`](../mobile/lib/features/me/presentation/profile_edit_screen.dart), [`profile_edit_screen_test.dart`](../mobile/test/features/me/profile_edit_screen_test.dart).)*
 
 ---
 
