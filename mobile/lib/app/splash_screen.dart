@@ -9,16 +9,25 @@ import '../shared/osm_attribution.dart';
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
+  static const _splashBackground = Color(0xFFF8F8F6);
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: _splashBackground,
       body: Stack(
         children: [
           Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Image.asset(
+                  'assets/branding/app_icon.png',
+                  width: 120,
+                  height: 120,
+                ),
+                const SizedBox(height: 16),
                 Text(
                   'Woleh',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
