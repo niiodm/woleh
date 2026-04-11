@@ -2,7 +2,9 @@ package odm.clarity.woleh.sms;
 
 /**
  * Port for sending SMS messages.
- * Swap the {@link StubSmsAdapter} for a real implementation (Twilio, AWS SNS, etc.) in production.
+ *
+ * <p>Default: {@link StubSmsAdapter} ({@code sms.provider=mock}). Production (bus_finder parity):
+ * {@link NaloSmsAdapter} with {@code sms.provider=nalo}.
  */
 public interface SmsAdapter {
 
