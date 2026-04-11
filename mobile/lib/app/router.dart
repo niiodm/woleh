@@ -10,7 +10,7 @@ import '../features/auth/presentation/phone_screen.dart';
 import '../features/auth/presentation/setup_name_screen.dart';
 import '../features/home/presentation/map_home_screen.dart';
 import '../features/me/presentation/profile_screen.dart';
-import '../features/places/presentation/places_search_placeholder_screen.dart';
+import '../features/places/presentation/places_search_screen.dart';
 import '../features/me/data/me_dto.dart';
 import '../features/me/presentation/me_notifier.dart';
 import '../features/me/presentation/profile_edit_screen.dart';
@@ -67,7 +67,7 @@ GoRouter router(Ref ref) {
       GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
       GoRoute(
         path: '/places/search',
-        builder: (_, __) => const PlacesSearchPlaceholderScreen(),
+        builder: (_, __) => const PlacesSearchScreen(),
       ),
       GoRoute(path: '/map', redirect: (_, __) => '/home'),
       GoRoute(path: '/me/edit', builder: (_, __) => const ProfileEditScreen()),
