@@ -7,7 +7,9 @@ import 'map_location_pin.dart';
 
 /// OpenStreetMap + markers for **self** (blue) and **peers** (orange).
 ///
-/// Keeps the camera centered on [self] when it updates ([`MapController.move`]).
+/// While **following** the user, the camera moves with [self]. After the user
+/// pans or zooms the map ([MapOptions.onPositionChanged] with `hasGesture`),
+/// following stops until they tap **Recenter on my location**.
 ///
 /// Phase 4 live map ([`MAP_LIVE_LOCATION_PLAN.md`](../../../docs/MAP_LIVE_LOCATION_PLAN.md) §4.4).
 class LocationMap extends StatefulWidget {
@@ -33,27 +35,47 @@ class LocationMap extends StatefulWidget {
 class _LocationMapState extends State<LocationMap> {
   late final MapController _mapController;
 
+  /// When true, [self] updates move the camera. Cleared after a user gesture.
+  bool _followUser = true;
+
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _moveToUserIfNeeded());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _moveToUserIfFollowing());
   }
 
   @override
   void didUpdateWidget(covariant LocationMap oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.self != null && oldWidget.self == null) {
+      setState(() => _followUser = true);
+    }
     if (widget.self != null &&
+        _followUser &&
         (oldWidget.self == null ||
             oldWidget.self!.latitude != widget.self!.latitude ||
             oldWidget.self!.longitude != widget.self!.longitude)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _moveToUserIfNeeded());
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _moveToUserIfFollowing());
     }
   }
 
-  void _moveToUserIfNeeded() {
-    if (!mounted || widget.self == null) return;
+  void _moveToUserIfFollowing() {
+    if (!mounted || widget.self == null || !_followUser) return;
     _mapController.move(widget.self!.toLatLng(), widget.userFollowZoom);
+  }
+
+  void _recenterOnUser() {
+    if (widget.self == null) return;
+    setState(() => _followUser = true);
+    _mapController.move(widget.self!.toLatLng(), widget.userFollowZoom);
+  }
+
+  void _onPositionChanged(MapCamera camera, bool hasGesture) {
+    if (!hasGesture || !mounted || widget.self == null) return;
+    if (!_followUser) return;
+    setState(() => _followUser = false);
   }
 
   LatLng _initialCenter() {
@@ -63,58 +85,85 @@ class _LocationMapState extends State<LocationMap> {
   }
 
   double _initialZoom() {
-    if (widget.self != null || widget.peers.isNotEmpty) return widget.userFollowZoom;
+    if (widget.self != null || widget.peers.isNotEmpty) {
+      return widget.userFollowZoom;
+    }
     return 12;
   }
 
   @override
   Widget build(BuildContext context) {
-    return FlutterMap(
-      mapController: _mapController,
-      options: MapOptions(
-        initialCenter: _initialCenter(),
-        initialZoom: _initialZoom(),
-        interactionOptions: const InteractionOptions(
-          flags: InteractiveFlag.all,
-        ),
-      ),
+    return Stack(
+      fit: StackFit.expand,
       children: [
-        TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'odm.clarity.woleh_mobile',
-        ),
-        MarkerLayer(
-          markers: [
-            for (final p in widget.peers)
-              Marker(
-                point: p.toLatLng(),
-                width: 36,
-                height: 36,
-                child: Tooltip(
-                  message: p.label ?? 'Peer ${p.id}',
-                  child: Icon(
-                    Icons.place,
-                    color: Colors.deepOrange.shade700,
-                    size: 36,
+        FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCenter: _initialCenter(),
+            initialZoom: _initialZoom(),
+            onPositionChanged: _onPositionChanged,
+            interactionOptions: const InteractionOptions(
+              flags: InteractiveFlag.all,
+            ),
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'odm.clarity.woleh_mobile',
+            ),
+            MarkerLayer(
+              markers: [
+                for (final p in widget.peers)
+                  Marker(
+                    point: p.toLatLng(),
+                    width: 36,
+                    height: 36,
+                    child: Tooltip(
+                      message: p.label ?? 'Peer ${p.id}',
+                      child: Icon(
+                        Icons.place,
+                        color: Colors.deepOrange.shade700,
+                        size: 36,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            if (widget.self != null)
-              Marker(
-                point: widget.self!.toLatLng(),
-                width: 40,
-                height: 40,
-                child: Tooltip(
-                  message: 'You',
-                  child: Icon(
-                    Icons.navigation,
-                    color: Colors.blue.shade700,
-                    size: 40,
+                if (widget.self != null)
+                  Marker(
+                    point: widget.self!.toLatLng(),
+                    width: 40,
+                    height: 40,
+                    child: Tooltip(
+                      message: 'You',
+                      child: Icon(
+                        Icons.navigation,
+                        color: Colors.blue.shade700,
+                        size: 40,
+                      ),
+                    ),
                   ),
-                ),
-              ),
+              ],
+            ),
           ],
         ),
+        if (widget.self != null && !_followUser)
+          Positioned(
+            right: 12,
+            bottom: 12,
+            child: Material(
+              elevation: 3,
+              shadowColor: Colors.black26,
+              shape: const CircleBorder(),
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+              child: IconButton(
+                onPressed: _recenterOnUser,
+                icon: Icon(
+                  Icons.my_location,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                tooltip: 'Recenter on my location',
+              ),
+            ),
+          ),
       ],
     );
   }
