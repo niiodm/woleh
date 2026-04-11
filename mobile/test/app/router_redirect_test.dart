@@ -13,6 +13,8 @@ import 'package:odm_clarity_woleh_mobile/features/places/data/place_list_reposit
 import 'package:odm_clarity_woleh_mobile/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../support/pump_map_home.dart';
+
 // ---------------------------------------------------------------------------
 // Stub auth states
 // ---------------------------------------------------------------------------
@@ -43,55 +45,73 @@ class _AuthLoading extends AuthState {
 class _StubMeNotifier extends MeNotifier {
   @override
   Future<MeLoadSnapshot?> build() async => MeLoadSnapshot(
-        me: const MeResponse(
-          profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
-          permissions: [],
-          tier: 'free',
-          limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
-          subscription: MeSubscription(status: 'none', inGracePeriod: false),
-        ),
-      );
+    me: const MeResponse(
+      profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
+      permissions: [
+        'woleh.account.profile',
+        'woleh.plans.read',
+        'woleh.place.watch',
+      ],
+      tier: 'free',
+      limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
+      subscription: MeSubscription(status: 'none', inGracePeriod: false),
+    ),
+  );
+}
+
+/// Signed-in user with no watch/broadcast — cannot use map home.
+class _NoPlaceMeNotifier extends MeNotifier {
+  @override
+  Future<MeLoadSnapshot?> build() async => MeLoadSnapshot(
+    me: const MeResponse(
+      profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
+      permissions: ['woleh.account.profile', 'woleh.plans.read'],
+      tier: 'free',
+      limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
+      subscription: MeSubscription(status: 'none', inGracePeriod: false),
+    ),
+  );
 }
 
 /// Free-tier user — has base permissions but NOT woleh.place.broadcast.
 class _FreeUserMeNotifier extends MeNotifier {
   @override
   Future<MeLoadSnapshot?> build() async => MeLoadSnapshot(
-        me: const MeResponse(
-          profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
-          permissions: [
-            'woleh.account.profile',
-            'woleh.plans.read',
-            'woleh.place.watch',
-          ],
-          tier: 'free',
-          limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
-          subscription: MeSubscription(status: 'none', inGracePeriod: false),
-        ),
-      );
+    me: const MeResponse(
+      profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
+      permissions: [
+        'woleh.account.profile',
+        'woleh.plans.read',
+        'woleh.place.watch',
+      ],
+      tier: 'free',
+      limits: MeLimits(placeWatchMax: 5, placeBroadcastMax: 0),
+      subscription: MeSubscription(status: 'none', inGracePeriod: false),
+    ),
+  );
 }
 
 /// Paid-tier user — holds all permissions including woleh.place.broadcast.
 class _PaidUserMeNotifier extends MeNotifier {
   @override
   Future<MeLoadSnapshot?> build() async => MeLoadSnapshot(
-        me: const MeResponse(
-          profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
-          permissions: [
-            'woleh.account.profile',
-            'woleh.plans.read',
-            'woleh.place.watch',
-            'woleh.place.broadcast',
-          ],
-          tier: 'paid',
-          limits: MeLimits(placeWatchMax: 50, placeBroadcastMax: 50),
-          subscription: MeSubscription(
-            status: 'active',
-            currentPeriodEnd: '2026-05-09T00:00:00Z',
-            inGracePeriod: false,
-          ),
-        ),
-      );
+    me: const MeResponse(
+      profile: MeProfile(userId: '1', phoneE164: '+233241234567'),
+      permissions: [
+        'woleh.account.profile',
+        'woleh.plans.read',
+        'woleh.place.watch',
+        'woleh.place.broadcast',
+      ],
+      tier: 'paid',
+      limits: MeLimits(placeWatchMax: 50, placeBroadcastMax: 50),
+      subscription: MeSubscription(
+        status: 'active',
+        currentPeriodEnd: '2026-05-09T00:00:00Z',
+        inGracePeriod: false,
+      ),
+    ),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -136,42 +156,39 @@ void main() {
   group('Router redirect', () {
     group('unauthenticated', () {
       testWidgets(
-          'leaves splash and shows phone screen once auth is resolved',
-          (tester) async {
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              authStateProvider.overrideWith(_Unauthenticated.new),
-            ],
-            child: const WolehApp(),
-          ),
-        );
-        await tester.pumpAndSettle();
+        'leaves splash and shows phone screen once auth is resolved',
+        (tester) async {
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [authStateProvider.overrideWith(_Unauthenticated.new)],
+              child: const WolehApp(),
+            ),
+          );
+          await tester.pumpAndSettle();
 
-        expect(find.text('Sign in'), findsOneWidget);
-        expect(find.text('Woleh'), findsNothing);
-      });
+          expect(find.text('Sign in'), findsOneWidget);
+          expect(find.text('Woleh'), findsNothing);
+        },
+      );
 
       testWidgets('landing on /home redirects to /auth/phone', (tester) async {
         // Unauthenticated users are never left on /home (splash → phone, or
         // any /home navigation redirects to sign-in).
         await tester.pumpWidget(
           ProviderScope(
-            overrides: [
-              authStateProvider.overrideWith(_Unauthenticated.new),
-            ],
+            overrides: [authStateProvider.overrideWith(_Unauthenticated.new)],
             child: const WolehApp(),
           ),
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Woleh'), findsNothing); // home AppBar title absent
+        expect(find.text('Search places'), findsNothing);
         expect(find.text('Sign in'), findsOneWidget);
       });
     });
 
     group('authenticated', () {
-      testWidgets('shows home screen with profile', (tester) async {
+      testWidgets('shows map home after auth', (tester) async {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
@@ -181,15 +198,15 @@ void main() {
             child: const WolehApp(),
           ),
         );
-        await tester.pumpAndSettle();
+        await pumpWolehWithMap(tester);
 
-        // Home AppBar visible; auth screen absent.
-        expect(find.text('Woleh'), findsOneWidget);
+        expect(find.text('Search places'), findsOneWidget);
         expect(find.text('Sign in'), findsNothing);
       });
 
-      testWidgets(
-          '/auth/phone redirects authenticated user to home', (tester) async {
+      testWidgets('/auth/phone redirects authenticated user to home', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
@@ -199,23 +216,21 @@ void main() {
             child: const WolehApp(),
           ),
         );
-        await tester.pumpAndSettle();
+        await pumpWolehWithMap(tester);
 
         // Splash resolves with a token → user ends on /home.
         expect(find.text('Sign in'), findsNothing);
-        expect(find.text('Woleh'), findsOneWidget);
+        expect(find.text('Search places'), findsOneWidget);
       });
     });
 
     group('auth loading', () {
-      testWidgets(
-          'shows splash while token read is in progress',
-          (tester) async {
+      testWidgets('shows splash while token read is in progress', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           ProviderScope(
-            overrides: [
-              authStateProvider.overrideWith(_AuthLoading.new),
-            ],
+            overrides: [authStateProvider.overrideWith(_AuthLoading.new)],
             child: const WolehApp(),
           ),
         );
@@ -230,9 +245,9 @@ void main() {
     });
 
     group('/auth/setup-name', () {
-      testWidgets(
-          'accessible when authenticated (not redirected to /home)',
-          (tester) async {
+      testWidgets('accessible when authenticated (not redirected to /home)', (
+        tester,
+      ) async {
         // Build the full app with a router and navigate to /auth/setup-name.
         await tester.pumpWidget(
           ProviderScope(
@@ -243,7 +258,7 @@ void main() {
             child: const WolehApp(),
           ),
         );
-        await tester.pumpAndSettle();
+        await pumpWolehWithMap(tester);
 
         // The app is at /home. Verify the setup-name route is reachable by
         // confirming the router doesn't redirect it away on arrival — tested
@@ -262,20 +277,23 @@ void main() {
     // -----------------------------------------------------------------------
 
     group('watch permission gate', () {
-      testWidgets(
-          'user without woleh.place.watch is redirected to /plans',
-          (tester) async {
-        // _StubMeNotifier has permissions: [] — no place.watch.
+      testWidgets('user without woleh.place.watch is redirected to /plans', (
+        tester,
+      ) async {
+        // User has no woleh.place.watch / broadcast — /home redirects to /plans.
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
               authStateProvider.overrideWith(_Authenticated.new),
-              meNotifierProvider.overrideWith(_StubMeNotifier.new),
+              meNotifierProvider.overrideWith(_NoPlaceMeNotifier.new),
             ],
             child: const WolehApp(),
           ),
         );
-        await tester.pumpAndSettle();
+        await pumpWolehWithMap(tester);
+
+        // /home requires place permission → lands on /plans.
+        expect(find.text('Plans'), findsOneWidget);
 
         final context = tester.element(find.byType(Scaffold).first);
         GoRouter.of(context).go('/watch');
@@ -287,66 +305,68 @@ void main() {
       });
 
       testWidgets(
-          'user with woleh.place.watch is allowed through to WatchScreen',
-          (tester) async {
-        // _FreeUserMeNotifier has woleh.place.watch but not broadcast.
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              authStateProvider.overrideWith(_Authenticated.new),
-              meNotifierProvider.overrideWith(_FreeUserMeNotifier.new),
-              placeListRepositoryProvider.overrideWith(
-                (_) => _EmptyPlaceListRepository(routerTestPrefs),
-              ),
-            ],
-            child: const WolehApp(),
-          ),
-        );
-        await tester.pumpAndSettle();
+        'user with woleh.place.watch is allowed through to WatchScreen',
+        (tester) async {
+          // _FreeUserMeNotifier has woleh.place.watch but not broadcast.
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                authStateProvider.overrideWith(_Authenticated.new),
+                meNotifierProvider.overrideWith(_FreeUserMeNotifier.new),
+                placeListRepositoryProvider.overrideWith(
+                  (_) => _EmptyPlaceListRepository(routerTestPrefs),
+                ),
+              ],
+              child: const WolehApp(),
+            ),
+          );
+          await pumpWolehWithMap(tester);
 
-        final context = tester.element(find.byType(Scaffold).first);
-        GoRouter.of(context).go('/watch');
-        await tester.pumpAndSettle();
+          final context = tester.element(find.byType(Scaffold).first);
+          GoRouter.of(context).go('/watch');
+          await tester.pumpAndSettle();
 
-        // Has woleh.place.watch → WatchScreen shown.
-        expect(find.text('Watch List'), findsOneWidget);
-        expect(find.text('Plans'), findsNothing);
-      });
+          // Has woleh.place.watch → WatchScreen shown.
+          expect(find.text('Watch List'), findsOneWidget);
+          expect(find.text('Plans'), findsNothing);
+        },
+      );
     });
 
     group('broadcast permission gate', () {
       testWidgets(
-          'free user navigating to /broadcast is redirected to /plans',
-          (tester) async {
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              authStateProvider.overrideWith(_Authenticated.new),
-              meNotifierProvider.overrideWith(_FreeUserMeNotifier.new),
-              placeListRepositoryProvider.overrideWith(
-                (_) => _EmptyPlaceListRepository(routerTestPrefs),
-              ),
-            ],
-            child: const WolehApp(),
-          ),
-        );
-        await tester.pumpAndSettle();
+        'free user navigating to /broadcast is redirected to /plans',
+        (tester) async {
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                authStateProvider.overrideWith(_Authenticated.new),
+                meNotifierProvider.overrideWith(_FreeUserMeNotifier.new),
+                placeListRepositoryProvider.overrideWith(
+                  (_) => _EmptyPlaceListRepository(routerTestPrefs),
+                ),
+              ],
+              child: const WolehApp(),
+            ),
+          );
+          await pumpWolehWithMap(tester);
 
-        // Navigate to the broadcast-gated route.
-        // Use a widget inside the router's InheritedWidget scope (Scaffold is
-        // rendered by HomeScreen which is a GoRouter child).
-        final context = tester.element(find.byType(Scaffold).first);
-        GoRouter.of(context).go('/broadcast');
-        await tester.pumpAndSettle();
+          // Navigate to the broadcast-gated route.
+          // Use a widget inside the router's InheritedWidget scope (Scaffold is
+          // rendered by MapHomeScreen which is a GoRouter child).
+          final context = tester.element(find.byType(Scaffold).first);
+          GoRouter.of(context).go('/broadcast');
+          await tester.pumpAndSettle();
 
-        // Missing woleh.place.broadcast → redirected to /plans.
-        expect(find.text('Plans'), findsOneWidget);
-        expect(find.text('Broadcast List'), findsNothing);
-      });
+          // Missing woleh.place.broadcast → redirected to /plans.
+          expect(find.text('Plans'), findsOneWidget);
+          expect(find.text('Broadcast List'), findsNothing);
+        },
+      );
 
-      testWidgets(
-          'paid user navigating to /broadcast is allowed through',
-          (tester) async {
+      testWidgets('paid user navigating to /broadcast is allowed through', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
@@ -359,7 +379,7 @@ void main() {
             child: const WolehApp(),
           ),
         );
-        await tester.pumpAndSettle();
+        await pumpWolehWithMap(tester);
 
         // Navigate to the broadcast-gated route.
         final context = tester.element(find.byType(Scaffold).first);
@@ -376,25 +396,26 @@ void main() {
 
     group('/plans route', () {
       testWidgets(
-          'authenticated user can navigate to /plans without redirect',
-          (tester) async {
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              authStateProvider.overrideWith(_Authenticated.new),
-              meNotifierProvider.overrideWith(_StubMeNotifier.new),
-            ],
-            child: const WolehApp(),
-          ),
-        );
-        await tester.pumpAndSettle();
+        'authenticated user can navigate to /plans without redirect',
+        (tester) async {
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                authStateProvider.overrideWith(_Authenticated.new),
+                meNotifierProvider.overrideWith(_StubMeNotifier.new),
+              ],
+              child: const WolehApp(),
+            ),
+          );
+          await pumpWolehWithMap(tester);
 
-        final context = tester.element(find.byType(Scaffold).first);
-        GoRouter.of(context).go('/plans');
-        await tester.pumpAndSettle();
+          final context = tester.element(find.byType(Scaffold).first);
+          GoRouter.of(context).go('/plans');
+          await tester.pumpAndSettle();
 
-        expect(find.text('Plans'), findsOneWidget);
-      });
+          expect(find.text('Plans'), findsOneWidget);
+        },
+      );
     });
   });
 }

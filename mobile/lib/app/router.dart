@@ -9,7 +9,8 @@ import '../features/auth/presentation/otp_screen.dart';
 import '../features/auth/presentation/phone_screen.dart';
 import '../features/auth/presentation/setup_name_screen.dart';
 import '../features/home/presentation/home_screen.dart';
-import '../features/location/presentation/live_map_screen.dart';
+import '../features/home/presentation/map_home_screen.dart';
+import '../features/places/presentation/places_search_placeholder_screen.dart';
 import '../features/me/data/me_dto.dart';
 import '../features/me/presentation/me_notifier.dart';
 import '../features/me/presentation/profile_edit_screen.dart';
@@ -31,6 +32,7 @@ const _permissionGuards = <String, String>{
 
 /// Routes that require **any** of these permissions (e.g. live map: watch or broadcast).
 const _permissionGuardsAny = <String, List<String>>{
+  '/home': ['woleh.place.watch', 'woleh.place.broadcast'],
   '/map': ['woleh.place.watch', 'woleh.place.broadcast'],
 };
 
@@ -45,14 +47,8 @@ GoRouter router(Ref ref) {
     refreshListenable: notifier,
     redirect: notifier.redirect,
     routes: [
-      GoRoute(
-        path: '/splash',
-        builder: (_, __) => const SplashScreen(),
-      ),
-      GoRoute(
-        path: '/auth/phone',
-        builder: (_, __) => const PhoneScreen(),
-      ),
+      GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
+      GoRoute(path: '/auth/phone', builder: (_, __) => const PhoneScreen()),
       GoRoute(
         path: '/auth/otp',
         builder: (context, state) {
@@ -67,35 +63,21 @@ GoRouter router(Ref ref) {
         path: '/auth/setup-name',
         builder: (_, __) => const SetupNameScreen(),
       ),
+      GoRoute(path: '/home', builder: (_, __) => const MapHomeScreen()),
+      GoRoute(path: '/profile', builder: (_, __) => const HomeScreen()),
       GoRoute(
-        path: '/home',
-        builder: (_, __) => const HomeScreen(),
+        path: '/places/search',
+        builder: (_, __) => const PlacesSearchPlaceholderScreen(),
       ),
-      GoRoute(
-        path: '/map',
-        builder: (_, __) => const LiveMapScreen(),
-      ),
-      GoRoute(
-        path: '/me/edit',
-        builder: (_, __) => const ProfileEditScreen(),
-      ),
-      GoRoute(
-        path: '/plans',
-        builder: (_, __) => const PlansScreen(),
-      ),
-      GoRoute(
-        path: '/watch',
-        builder: (_, __) => const WatchScreen(),
-      ),
-      GoRoute(
-        path: '/broadcast',
-        builder: (_, __) => const BroadcastScreen(),
-      ),
+      GoRoute(path: '/map', redirect: (_, __) => '/home'),
+      GoRoute(path: '/me/edit', builder: (_, __) => const ProfileEditScreen()),
+      GoRoute(path: '/plans', builder: (_, __) => const PlansScreen()),
+      GoRoute(path: '/watch', builder: (_, __) => const WatchScreen()),
+      GoRoute(path: '/broadcast', builder: (_, __) => const BroadcastScreen()),
       GoRoute(
         path: '/checkout/:planId',
-        builder: (_, state) => CheckoutWebViewScreen(
-          planId: state.pathParameters['planId']!,
-        ),
+        builder: (_, state) =>
+            CheckoutWebViewScreen(planId: state.pathParameters['planId']!),
       ),
     ],
   );
@@ -163,8 +145,7 @@ class _RouterNotifier extends ChangeNotifier {
       }
 
       final requiredAny = _permissionGuardsAny[location];
-      if (requiredAny != null &&
-          !requiredAny.any(permissions.contains)) {
+      if (requiredAny != null && !requiredAny.any(permissions.contains)) {
         return _kUpgradeRedirect;
       }
     }

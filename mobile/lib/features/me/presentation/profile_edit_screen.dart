@@ -39,7 +39,7 @@ class ProfileEditNotifier extends _$ProfileEditNotifier {
     state = const ProfileEditState(status: ProfileEditStatus.saving);
     try {
       await ref.read(meRepositoryProvider).patchDisplayName(displayName.trim());
-      // Refresh the cached me data so HomeScreen reflects the new name.
+      // Refresh the cached me data so profile UI reflects the new name.
       await ref.read(meNotifierProvider.notifier).refresh();
       state = const ProfileEditState();
       return true;

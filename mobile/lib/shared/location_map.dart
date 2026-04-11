@@ -18,6 +18,7 @@ class LocationMap extends StatefulWidget {
     required this.self,
     required this.peers,
     this.userFollowZoom = 15,
+    this.alwaysShowRecenterButton = false,
   });
 
   final LocationFix? self;
@@ -25,6 +26,10 @@ class LocationMap extends StatefulWidget {
 
   /// Zoom when following the user’s position.
   final double userFollowZoom;
+
+  /// When true, the recenter FAB stays visible even while the camera is
+  /// following the user (map-first home).
+  final bool alwaysShowRecenterButton;
 
   static const _fallbackCenter = LatLng(5.6037, -0.187);
 
@@ -42,7 +47,9 @@ class _LocationMapState extends State<LocationMap> {
   void initState() {
     super.initState();
     _mapController = MapController();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _moveToUserIfFollowing());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _moveToUserIfFollowing(),
+    );
   }
 
   @override
@@ -56,8 +63,9 @@ class _LocationMapState extends State<LocationMap> {
         (oldWidget.self == null ||
             oldWidget.self!.latitude != widget.self!.latitude ||
             oldWidget.self!.longitude != widget.self!.longitude)) {
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => _moveToUserIfFollowing());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _moveToUserIfFollowing(),
+      );
     }
   }
 
@@ -145,7 +153,8 @@ class _LocationMapState extends State<LocationMap> {
             ),
           ],
         ),
-        if (widget.self != null && !_followUser)
+        if (widget.self != null &&
+            (widget.alwaysShowRecenterButton || !_followUser))
           Positioned(
             right: 12,
             bottom: 12,

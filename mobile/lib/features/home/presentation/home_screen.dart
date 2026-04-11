@@ -25,7 +25,13 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Woleh'),
+        title: const Text('Profile'),
+        leading: context.canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              )
+            : null,
         actions: [
           IconButton(
             tooltip: 'Plans',
@@ -53,8 +59,7 @@ class HomeScreen extends ConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => _ErrorView(
                 message: err is OfflineError ? err.message : err.toString(),
-                onRetry: () =>
-                    ref.read(meNotifierProvider.notifier).refresh(),
+                onRetry: () => ref.read(meNotifierProvider.notifier).refresh(),
               ),
               data: (snapshot) {
                 if (snapshot == null) return const SizedBox.shrink();
@@ -121,7 +126,7 @@ class _MeView extends StatelessWidget {
                 onDismiss: () => onDismiss(i),
                 onTap: () {
                   onDismiss(i);
-                  context.push('/watch');
+                  context.go('/home');
                 },
               );
             }),
@@ -144,8 +149,9 @@ class _MeView extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   me.profile.phoneE164,
-                  style: textTheme.bodyMedium
-                      ?.copyWith(color: colors.onSurfaceVariant),
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 _TierChip(tier: me.tier),
@@ -207,8 +213,7 @@ class _MeView extends StatelessWidget {
           PermissionGatedButton(
             icon: Icons.radio_outlined,
             label: 'Broadcast your route',
-            hasPermission:
-                me.permissions.contains('woleh.place.broadcast'),
+            hasPermission: me.permissions.contains('woleh.place.broadcast'),
             onTap: () => context.push('/broadcast'),
             onLockedTap: () => context.push('/plans'),
           ),
@@ -216,9 +221,10 @@ class _MeView extends StatelessWidget {
           PermissionGatedButton(
             icon: Icons.map_outlined,
             label: 'Live map',
-            hasPermission: me.permissions.contains('woleh.place.watch') ||
+            hasPermission:
+                me.permissions.contains('woleh.place.watch') ||
                 me.permissions.contains('woleh.place.broadcast'),
-            onTap: () => context.push('/map'),
+            onTap: () => context.go('/home'),
             onLockedTap: () => context.push('/plans'),
           ),
         ],
@@ -263,17 +269,15 @@ class _MatchCard extends StatelessWidget {
           isWatcher
               ? 'A bus is heading through: $names'
               : 'A watcher needs: $names',
-          style: Theme.of(context)
-              .textTheme
-              .bodyMedium
-              ?.copyWith(fontWeight: FontWeight.w600),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
-          'Tap to view your watch list',
-          style: Theme.of(context)
-              .textTheme
-              .bodySmall
-              ?.copyWith(color: colors.onSurfaceVariant),
+          'Tap to open the map',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -281,7 +285,7 @@ class _MatchCard extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.map_outlined, size: 20),
               tooltip: 'Live map',
-              onPressed: () => context.push('/map'),
+              onPressed: () => context.go('/home'),
             ),
             IconButton(
               icon: const Icon(Icons.close, size: 18),
@@ -316,8 +320,8 @@ class _Avatar extends StatelessWidget {
       child: Text(
         initials,
         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
-            ),
+          color: Theme.of(context).colorScheme.onPrimaryContainer,
+        ),
       ),
     );
   }
@@ -359,10 +363,7 @@ class _PermissionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = _labels[permission] ?? permission.split('.').last;
-    return Chip(
-      label: Text(label),
-      visualDensity: VisualDensity.compact,
-    );
+    return Chip(label: Text(label), visualDensity: VisualDensity.compact);
   }
 }
 
@@ -383,7 +384,11 @@ class _LimitRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          Icon(
+            icon,
+            size: 20,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
@@ -391,11 +396,11 @@ class _LimitRow extends StatelessWidget {
           Text(
             value == 0 ? 'Not available' : '$value',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: value == 0
-                      ? Theme.of(context).colorScheme.onSurfaceVariant
-                      : null,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: value == 0
+                  ? Theme.of(context).colorScheme.onSurfaceVariant
+                  : null,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -421,8 +426,11 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_off_outlined,
-                size: 56, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            Icon(
+              Icons.cloud_off_outlined,
+              size: 56,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             const SizedBox(height: 16),
             Text(
               'Could not load profile',
@@ -433,14 +441,11 @@ class _ErrorView extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 24),
-            FilledButton.tonal(
-              onPressed: onRetry,
-              child: const Text('Retry'),
-            ),
+            FilledButton.tonal(onPressed: onRetry, child: const Text('Retry')),
           ],
         ),
       ),
