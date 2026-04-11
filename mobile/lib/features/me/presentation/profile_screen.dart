@@ -272,7 +272,7 @@ class _TierChip extends StatelessWidget {
       avatar: Icon(
         isPaid ? Icons.star_rounded : Icons.person_outline,
         size: 16,
-        color: isPaid ? Colors.amber : colors.onSurfaceVariant,
+        color: isPaid ? colors.secondary : colors.onSurfaceVariant,
       ),
       label: Text(isPaid ? 'Pro' : 'Free'),
       visualDensity: VisualDensity.compact,

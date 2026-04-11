@@ -146,7 +146,7 @@ class _PlanHeader extends StatelessWidget {
       children: [
         Icon(
           plan.isFree ? Icons.person_outline : Icons.star_rounded,
-          color: plan.isFree ? colors.onSurfaceVariant : Colors.amber,
+          color: plan.isFree ? colors.onSurfaceVariant : colors.secondary,
           size: 28,
         ),
         const SizedBox(width: 12),
