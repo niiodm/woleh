@@ -277,10 +277,10 @@ void main() {
     // -----------------------------------------------------------------------
 
     group('watch permission gate', () {
-      testWidgets('user without woleh.place.watch is redirected to /plans', (
+      testWidgets('user without woleh.place.watch lands on profile; /watch → /plans', (
         tester,
       ) async {
-        // User has no woleh.place.watch / broadcast — /home redirects to /plans.
+        // User has no woleh.place.watch / broadcast — default landing is profile, not /plans.
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
@@ -292,8 +292,9 @@ void main() {
         );
         await pumpWolehWithMap(tester);
 
-        // /home requires place permission → lands on /plans.
-        expect(find.text('Plans'), findsOneWidget);
+        // Profile hub (not map home); "Plans" also appears as a permission chip label.
+        expect(find.text('Limits'), findsOneWidget);
+        expect(find.text('Search places'), findsNothing);
 
         final context = tester.element(find.byType(Scaffold).first);
         GoRouter.of(context).go('/watch');

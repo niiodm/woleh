@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:dio/dio.dart';
+
 import '../../../core/app_error.dart';
 import '../../../core/auth_state.dart';
 import '../../../shared/offline_read_only_hint.dart';
 import '../../../shared/permission_gated_button.dart';
 import '../../subscription/presentation/subscription_status_card.dart';
 import '../data/me_dto.dart';
+import '../data/me_repository.dart';
 import 'me_notifier.dart';
 
 /// Account hub: entitlements, subscription, place-list shortcuts, sign out.
@@ -138,6 +141,15 @@ class _ProfileBody extends StatelessWidget {
             label: 'Broadcast places',
             value: me.limits.placeBroadcastMax,
           ),
+          if (me.permissions.contains('woleh.place.watch') ||
+              me.permissions.contains('woleh.place.broadcast')) ...[
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 16),
+            Text('Map & location', style: textTheme.titleMedium),
+            const SizedBox(height: 8),
+            _LocationSharingTile(me: me),
+          ],
           const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 16),
@@ -193,6 +205,56 @@ class _Avatar extends StatelessWidget {
           color: Theme.of(context).colorScheme.onPrimaryContainer,
         ),
       ),
+    );
+  }
+}
+
+class _LocationSharingTile extends ConsumerStatefulWidget {
+  const _LocationSharingTile({required this.me});
+
+  final MeResponse me;
+
+  @override
+  ConsumerState<_LocationSharingTile> createState() =>
+      _LocationSharingTileState();
+}
+
+class _LocationSharingTileState extends ConsumerState<_LocationSharingTile> {
+  bool _busy = false;
+
+  Future<void> _onChanged(bool value) async {
+    setState(() => _busy = true);
+    try {
+      await ref.read(meRepositoryProvider).putLocationSharing(enabled: value);
+      await ref.read(meNotifierProvider.notifier).refresh();
+    } catch (e) {
+      if (!mounted) return;
+      final err = e is DioException && e.error is AppError
+          ? e.error as AppError
+          : UnknownError(e.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(err.message)),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = widget.me.profile.locationSharingEnabled;
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      title: const Text('Share location with matches'),
+      subtitle: Text(
+        'When on, matched peers can see your position on the map. '
+        'Requires watch or broadcast access.',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+      value: enabled,
+      onChanged: _busy ? null : _onChanged,
     );
   }
 }

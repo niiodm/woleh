@@ -67,6 +67,9 @@ class LocationPublishIntegrationTest {
 
 	@Test
 	void postLocation_whenSharingOff_returns403() throws Exception {
+		user.setLocationSharingEnabled(false);
+		userRepository.save(user);
+
 		mockMvc.perform(post(LOCATION_URL)
 						.header(HttpHeaders.AUTHORIZATION, bearer)
 						.contentType(MediaType.APPLICATION_JSON)
@@ -76,14 +79,7 @@ class LocationPublishIntegrationTest {
 	}
 
 	@Test
-	void enableSharing_thenPost_ok() throws Exception {
-		mockMvc.perform(put(SHARING_URL)
-						.header(HttpHeaders.AUTHORIZATION, bearer)
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("{\"enabled\":true}"))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.enabled").value(true));
-
+	void postLocation_whenDefaultSharingOn_ok() throws Exception {
 		mockMvc.perform(post(LOCATION_URL)
 						.header(HttpHeaders.AUTHORIZATION, bearer)
 						.contentType(MediaType.APPLICATION_JSON)
@@ -113,9 +109,6 @@ class LocationPublishIntegrationTest {
 
 	@Test
 	void secondPostWithinInterval_returns429() throws Exception {
-		user.setLocationSharingEnabled(true);
-		userRepository.save(user);
-
 		mockMvc.perform(post(LOCATION_URL)
 						.header(HttpHeaders.AUTHORIZATION, bearer)
 						.contentType(MediaType.APPLICATION_JSON)

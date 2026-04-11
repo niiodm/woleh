@@ -7,7 +7,7 @@ class MeProfile {
     required this.userId,
     required this.phoneE164,
     this.displayName,
-    this.locationSharingEnabled = false,
+    this.locationSharingEnabled = true,
   });
 
   final String userId;
@@ -24,7 +24,7 @@ class MeProfile {
         userId: json['userId'].toString(),
         phoneE164: json['phoneE164'] as String,
         displayName: json['displayName'] as String?,
-        locationSharingEnabled: json['locationSharingEnabled'] as bool? ?? false,
+        locationSharingEnabled: json['locationSharingEnabled'] as bool? ?? true,
       );
 
   Map<String, dynamic> toJson() => {

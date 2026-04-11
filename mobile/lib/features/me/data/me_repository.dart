@@ -55,6 +55,14 @@ class MeRepository {
     );
   }
 
+  /// Opt in/out of publishing fixes to matched peers (`PUT /me/location-sharing`).
+  Future<void> putLocationSharing({required bool enabled}) async {
+    await _dio.put<void>(
+      '/me/location-sharing',
+      data: {'enabled': enabled},
+    );
+  }
+
   /// Publishes a device fix to matched peers ([`API_CONTRACT.md`](../../../../../docs/API_CONTRACT.md) §6.4.1).
   Future<void> postLocation({
     required double latitude,

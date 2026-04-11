@@ -32,7 +32,7 @@ public class User {
 	private Instant updatedAt;
 
 	@Column(name = "location_sharing_enabled", nullable = false)
-	private boolean locationSharingEnabled = false;
+	private boolean locationSharingEnabled = true;
 
 	protected User() {
 	}

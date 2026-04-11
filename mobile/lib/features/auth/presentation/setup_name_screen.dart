@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/app_error.dart';
 import '../../me/data/me_repository.dart';
+import '../../me/presentation/me_notifier.dart';
 
 part 'setup_name_screen.g.dart';
 
@@ -37,6 +38,7 @@ class SetupNameNotifier extends _$SetupNameNotifier {
     state = const SetupNameState(status: SetupNameStatus.saving);
     try {
       await ref.read(meRepositoryProvider).patchDisplayName(displayName);
+      await ref.read(meNotifierProvider.notifier).refresh();
       state = const SetupNameState();
       return true;
     } catch (e) {

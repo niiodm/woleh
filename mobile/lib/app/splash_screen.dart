@@ -4,7 +4,8 @@ import '../shared/osm_attribution.dart';
 
 /// First route while auth state is loading from secure storage.
 ///
-/// [GoRouter] redirects to `/auth/phone` or `/home` once the token is known.
+/// [GoRouter] redirects to `/auth/phone`, `/home`, or `/profile` once the token
+/// and `GET /me` are known (map permissions choose between home and profile).
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 

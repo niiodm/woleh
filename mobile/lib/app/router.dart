@@ -97,7 +97,19 @@ class _RouterNotifier extends ChangeNotifier {
     });
   }
 
-  final Ref _ref;
+   final Ref _ref;
+
+  /// Map home when the user has watch or broadcast; otherwise profile (free tier).
+  /// Null while [meNotifierProvider] is still loading so splash can wait.
+  String? _authenticatedLandingLocation() {
+    final meAsync = _ref.read(meNotifierProvider);
+    if (meAsync.isLoading) return null;
+    final permissions =
+        meAsync.valueOrNull?.me.permissions ?? const <String>[];
+    final canUseMap = permissions.contains('woleh.place.watch') ||
+        permissions.contains('woleh.place.broadcast');
+    return canUseMap ? '/home' : '/profile';
+  }
 
   String? redirect(BuildContext context, GoRouterState state) {
     final authAsync = _ref.read(authStateProvider);
@@ -112,9 +124,12 @@ class _RouterNotifier extends ChangeNotifier {
 
     final isAuthenticated = authAsync.valueOrNull != null;
 
-    // Auth resolved — leave splash immediately.
+    // Auth resolved — leave splash once [/me] is ready so we can land on map or profile.
     if (location == '/splash') {
-      return isAuthenticated ? '/home' : '/auth/phone';
+      if (!isAuthenticated) return '/auth/phone';
+      final target = _authenticatedLandingLocation();
+      if (target == null) return null;
+      return target;
     }
 
     // Unauthenticated users must stay on auth routes.
@@ -126,7 +141,9 @@ class _RouterNotifier extends ChangeNotifier {
     // /auth/setup-name (signup name-entry step after first token issuance).
     if (isAuthenticated &&
         (location == '/auth/phone' || location == '/auth/otp')) {
-      return '/home';
+      final target = _authenticatedLandingLocation();
+      if (target == null) return '/splash';
+      return target;
     }
 
     // Permission-based route guards (authenticated users only).
