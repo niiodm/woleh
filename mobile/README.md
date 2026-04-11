@@ -1,16 +1,71 @@
-# woleh_mobile
+# Woleh mobile
 
-A new Flutter project.
+Flutter client for **Woleh** (transit / live location). Dart package **`odm_clarity_woleh_mobile`**; Android and iOS bundle id **`odm.clarity.woleh_mobile`**.
 
-## Getting Started
+Monorepo context, API env vars, and staging deploy: [root `README.md`](../README.md). API shapes: [`docs/API_CONTRACT.md`](../docs/API_CONTRACT.md).
 
-This project is a starting point for a Flutter application.
+## Prerequisites
 
-A few resources to get you started if this is your first Flutter project:
+- **Flutter** SDK matching `environment.sdk` in [`pubspec.yaml`](pubspec.yaml) (currently **Dart ^3.8.1**).
+- **JDK17+** and a running **Woleh API** for full app flows (see root README — local Postgres + `./gradlew bootRun`, or staging).
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Setup
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+cd mobile
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs
+```
+
+Regenerate Riverpod/part files after changing `@riverpod` or other codegen targets.
+
+## Run
+
+Default **`API_BASE_URL`** is **`http://10.0.2.2:8080`** (Android emulator → host). **iOS Simulator** usually needs the host loopback instead, for example:
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8080
+```
+
+**Physical device** on the same Wi‑Fi as the machine running the API:
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://<your-lan-ip>:8080
+```
+
+The WebSocket client derives its URL from **`API_BASE_URL`** (same `dart-define`).
+
+### Staging API
+
+Example (matches the repo **Mobile — staging** run configuration):
+
+```bash
+flutter run \
+  --dart-define=API_BASE_URL=https://woleh.okaidarkomorgan.com \
+  --dart-define=OSM_TILE_URL_TEMPLATE=https://tile.openstreetmap.org/{z}/{x}/{y}.png
+```
+
+### Map tiles
+
+Default tiles use the public OSM template. For the optional local tile server in [`server/docker-compose.yml`](../server/docker-compose.yml) (port **8088** on the host), pass **`OSM_TILE_URL_TEMPLATE`** — see comments in [`lib/shared/location_map.dart`](lib/shared/location_map.dart).
+
+## Push notifications (optional)
+
+FCM is **off** unless you opt in at compile time:
+
+```bash
+flutter run --dart-define=WOLEH_PUSH_ENABLED=true
+```
+
+Requires a configured **Firebase** project and platform files (e.g. Android `google-services.json`). Without **`WOLEH_PUSH_ENABLED`**, push code is not initialized.
+
+## Checks (CI-aligned)
+
+```bash
+cd mobile
+dart run build_runner build --delete-conflicting-outputs
+flutter analyze
+flutter test
+```
+
+Same steps run in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) on push/PR to `main`.

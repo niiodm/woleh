@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Mobile — staging" type="FlutterRunConfigurationType" factoryName="Flutter">
-    <option name="additionalArgs" value="--dart-define=API_BASE_URL=https://api.staging.example.com" />
+    <option name="additionalArgs" value="--dart-define=API_BASE_URL=https://woleh.okaidarkomorgan.com --dart-define=OSM_TILE_URL_TEMPLATE=https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
     <option name="filePath" value="$PROJECT_DIR$/lib/main.dart" />
     <method v="2" />
   </configuration>
