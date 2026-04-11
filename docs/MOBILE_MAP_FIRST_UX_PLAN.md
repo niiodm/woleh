@@ -9,8 +9,8 @@ This document describes a **navigation and UX restructuring** for the Flutter ap
 ## Implementation checklist
 
 - [x] **Splash / router** — `/splash`, `initialLocation`, redirects for auth loading → splash, splash → auth or `/home`; update [`mobile/test/app/router_redirect_test.dart`](../mobile/test/app/router_redirect_test.dart). *(Done: [`mobile/lib/app/splash_screen.dart`](../mobile/lib/app/splash_screen.dart), [`mobile/lib/app/router.dart`](../mobile/lib/app/router.dart).)*
-- [x] **Map home** — Full-page map, search chrome, profile icon, persistent recenter; `WsStatusBanner` + match SnackBars; `/profile` → current [`HomeScreen`](../mobile/lib/features/home/presentation/home_screen.dart); `/places/search` placeholder; `/map` → `/home`. *(Done: [`map_home_screen.dart`](../mobile/lib/features/home/presentation/map_home_screen.dart), [`live_map_stack.dart`](../mobile/lib/features/location/presentation/live_map_stack.dart), [`location_map.dart`](../mobile/lib/shared/location_map.dart), [`pump_map_home.dart`](../mobile/test/support/pump_map_home.dart).)*
-- [ ] **Profile screen** — `/profile`, migrate content from current [`HomeScreen`](../mobile/lib/features/home/presentation/home_screen.dart); logout, plans, edit profile.
+- [x] **Map home** — Full-page map, search chrome, profile icon, persistent recenter; `WsStatusBanner` + match SnackBars; `/profile` → [`ProfileScreen`](../mobile/lib/features/me/presentation/profile_screen.dart); `/places/search` placeholder; `/map` → `/home`. *(Done: [`map_home_screen.dart`](../mobile/lib/features/home/presentation/map_home_screen.dart), [`live_map_stack.dart`](../mobile/lib/features/location/presentation/live_map_stack.dart), [`location_map.dart`](../mobile/lib/shared/location_map.dart), [`pump_map_home.dart`](../mobile/test/support/pump_map_home.dart).)*
+- [x] **Profile screen** — `/profile` → [`ProfileScreen`](../mobile/lib/features/me/presentation/profile_screen.dart); AppBar: plans, edit, sign out; body: avatar, subscription, permissions, limits, place-list + map actions; no duplicate `WsStatusBanner` / match list (map-first). *(Removed `features/home/presentation/home_screen.dart`.)*
 - [ ] **Places search** — `/places/search`, draft list, autosave with watch-XOR-broadcast clears, permissions, invalidate notifiers, pop back to map.
 - [ ] **Mode exclusivity** — Same XOR rule on optional `/watch` and `/broadcast` editors (or shared save helper); legacy dual-list migration if needed.
 - [ ] **Profile edit pop** — Post-frame `pop` + fallback `go`, widget test.
@@ -19,10 +19,10 @@ This document describes a **navigation and UX restructuring** for the Flutter ap
 
 ## Current baseline
 
-- **Routing:** [`mobile/lib/app/router.dart`](../mobile/lib/app/router.dart) uses `initialLocation: '/auth/phone'`, `GoRouter` + `_RouterNotifier` redirects (auth loading → no redirect; unauthenticated → `/auth/phone`; authenticated leaving phone/otp → `/home`). Post-login home is [`HomeScreen`](../mobile/lib/features/home/presentation/home_screen.dart) (profile + links), not the map.
+- **Routing:** [`mobile/lib/app/router.dart`](../mobile/lib/app/router.dart) uses `initialLocation: '/splash'` and redirects (authenticated → `/home` map-first; `/profile` → [`ProfileScreen`](../mobile/lib/features/me/presentation/profile_screen.dart)).
 - **Map:** [`LiveMapScreen`](../mobile/lib/features/location/presentation/live_map_screen.dart) wraps [`LocationMap`](../mobile/lib/shared/location_map.dart) (recenter FAB exists **only while not** “following” the user — see `if (widget.self != null && !_followUser)` in `location_map.dart`).
 - **Lists:** Watch/broadcast UIs use [`WatchNotifier`](../mobile/lib/features/places/presentation/watch_notifier.dart) / [`BroadcastNotifier`](../mobile/lib/features/places/presentation/broadcast_notifier.dart); server replace is already available as [`PlaceListRepository.putWatchList`](../mobile/lib/features/places/data/place_list_repository.dart) / `putBroadcastList`.
-- **Profile edit:** [`ProfileEditScreen`](../mobile/lib/features/me/presentation/profile_edit_screen.dart) calls `context.pop()` after a successful `save()`; navigation is only from `context.push('/me/edit')` on home today.
+- **Profile edit:** [`ProfileEditScreen`](../mobile/lib/features/me/presentation/profile_edit_screen.dart) calls `context.pop()` after a successful `save()`; opened from profile AppBar (`/me/edit`).
 
 ---
 
@@ -58,7 +58,7 @@ This document describes a **navigation and UX restructuring** for the Flutter ap
     - **Option A (minimal API change):** add an optional `VoidCallback? onRecenterTap` + `bool showRecenterFab` to `LocationMap` and call the same logic as `_recenterOnUser`, **or**
     - **Option B:** hoist `MapController` to the parent (larger change).
   - Recommend **Option A** for a small, focused diff.
-- **Banners / match UI:** Today [`WsStatusBanner`](../mobile/lib/shared/ws_status_banner.dart) and match cards live on `HomeScreen`. Move **WsStatusBanner** to the map home `Stack` (top under search). **The map is the primary surface for understanding where matches are:** matched counterparts who publish location appear as **peer markers** from [`peerLocationsNotifierProvider`](../mobile/lib/features/location/presentation/peer_locations_notifier.dart) (fed into [`LocationMap`](../mobile/lib/shared/location_map.dart)). Replace or supplement old “Recent Matches” list tiles with map-centric affordances, e.g. non-blocking **SnackBar** / slim banner when a [`MatchMessage`](../mobile/lib/core/ws_message.dart) arrives, optional **focus or pulse** on the relevant peer marker when its `userId` is known, and clearer **labels/tooltips** than today’s generic `Peer (userId)` where product copy allows. Ephemeral match notifications should not pull the user off the map after search.
+- **Banners / match UI:** [`WsStatusBanner`](../mobile/lib/shared/ws_status_banner.dart) on map home; profile has no duplicate banner. Match cards were removed from profile (map SnackBars + pins). **The map is the primary surface for understanding where matches are:** matched counterparts who publish location appear as **peer markers** from [`peerLocationsNotifierProvider`](../mobile/lib/features/location/presentation/peer_locations_notifier.dart) (fed into [`LocationMap`](../mobile/lib/shared/location_map.dart)). Replace or supplement old “Recent Matches” list tiles with map-centric affordances, e.g. non-blocking **SnackBar** / slim banner when a [`MatchMessage`](../mobile/lib/core/ws_message.dart) arrives, optional **focus or pulse** on the relevant peer marker when its `userId` is known, and clearer **labels/tooltips** than today’s generic `Peer (userId)` where product copy allows. Ephemeral match notifications should not pull the user off the map after search.
 - **Live marker motion:** Peer pins **already update** as counterparts move: each `peer_location` WS message updates state in [`PeerLocationsNotifier`](../mobile/lib/features/location/presentation/peer_locations_notifier.dart), and `LiveMapScreen` rebuilds `LocationMap` markers from that map. Implementation work is mainly **UX polish** (smooth updates are automatic on rebuild; avoid unnecessary full-map jank if needed later). Remind users in-copy that **location sharing must be on** for peers to appear ([`LiveMapScreen`](../mobile/lib/features/location/presentation/live_map_screen.dart) already hints when sharing is off).
 - **`/map` route:** Either remove and update all `context.push('/map')` to `/home`, or keep `/map` as **redirect → `/home`** for backward compatibility and update call sites gradually.
 
@@ -66,14 +66,9 @@ This document describes a **navigation and UX restructuring** for the Flutter ap
 
 ## 3) Profile screen (logout + subscriptions)
 
-**Goal:** Central place for account, **logout**, **plans/subscriptions**, and **edit profile**.
+**Status:** Implemented as [`ProfileScreen`](../mobile/lib/features/me/presentation/profile_screen.dart) at `/profile` (replaces deleted `home_screen.dart`).
 
-**Approach:**
-
-- Add **`/profile`** route building a new `ProfileScreen`.
-- **Migrate** the substantive content from [`HomeScreen`](../mobile/lib/features/home/presentation/home_screen.dart) `_MeView` (avatar, name, phone, tier, `SubscriptionStatusCard`, permissions/limits if you still want them visible, actions).
-- **Move** from the old home app bar: **Sign out** (`authStateProvider.notifier.signOut()`), **Plans** (`/plans`), **Edit profile** (`/me/edit`).
-- **Delete or slim** the old `HomeScreen` if nothing else references it; grep for `/home` and tests.
+**Contents:** AppBar — **Plans**, **Edit profile**, **Sign out**. Body — avatar, name, phone, tier, `SubscriptionStatusCard`, permissions, limits, gated actions (watch list, broadcast, map home).
 
 ---
 
@@ -156,7 +151,7 @@ flowchart TD
 |------|--------|
 | Router / splash | [`mobile/lib/app/router.dart`](../mobile/lib/app/router.dart), new `splash_screen.dart`, [`router_redirect_test.dart`](../mobile/test/app/router_redirect_test.dart) |
 | Map home | [`live_map_screen.dart`](../mobile/lib/features/location/presentation/live_map_screen.dart) and/or new `map_home_screen.dart`, [`location_map.dart`](../mobile/lib/shared/location_map.dart) |
-| Profile | New `profile_screen.dart`, trim/remove [`home_screen.dart`](../mobile/lib/features/home/presentation/home_screen.dart) |
+| Profile | [`profile_screen.dart`](../mobile/lib/features/me/presentation/profile_screen.dart) (replaces removed `home_screen.dart`) |
 | Search + mode | New `places_search_screen.dart` (+ optional notifier); updates to [`watch_screen.dart`](../mobile/lib/features/places/presentation/watch_screen.dart) / `broadcast_screen.dart` or shared save helper for XOR clears |
 | Bugfix | [`profile_edit_screen.dart`](../mobile/lib/features/me/presentation/profile_edit_screen.dart), new test |
 | Call sites | Grep/update `context.push('/map')`, `/home`, match cards, subscription card links if they assumed old home |

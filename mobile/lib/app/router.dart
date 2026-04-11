@@ -8,8 +8,8 @@ import 'splash_screen.dart';
 import '../features/auth/presentation/otp_screen.dart';
 import '../features/auth/presentation/phone_screen.dart';
 import '../features/auth/presentation/setup_name_screen.dart';
-import '../features/home/presentation/home_screen.dart';
 import '../features/home/presentation/map_home_screen.dart';
+import '../features/me/presentation/profile_screen.dart';
 import '../features/places/presentation/places_search_placeholder_screen.dart';
 import '../features/me/data/me_dto.dart';
 import '../features/me/presentation/me_notifier.dart';
@@ -64,7 +64,7 @@ GoRouter router(Ref ref) {
         builder: (_, __) => const SetupNameScreen(),
       ),
       GoRoute(path: '/home', builder: (_, __) => const MapHomeScreen()),
-      GoRoute(path: '/profile', builder: (_, __) => const HomeScreen()),
+      GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
       GoRoute(
         path: '/places/search',
         builder: (_, __) => const PlacesSearchPlaceholderScreen(),

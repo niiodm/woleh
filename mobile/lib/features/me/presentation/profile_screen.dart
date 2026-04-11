@@ -2,26 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/auth_state.dart';
-import '../../../core/ws_message.dart';
-import '../../../shared/permission_gated_button.dart';
 import '../../../core/app_error.dart';
+import '../../../core/auth_state.dart';
 import '../../../shared/offline_read_only_hint.dart';
-import '../../../shared/ws_status_banner.dart';
-import '../../me/data/me_dto.dart';
-import '../../me/presentation/me_notifier.dart';
-import '../../places/presentation/match_notifier.dart';
+import '../../../shared/permission_gated_button.dart';
 import '../../subscription/presentation/subscription_status_card.dart';
+import '../data/me_dto.dart';
+import 'me_notifier.dart';
 
-class HomeScreen extends ConsumerWidget {
-  const HomeScreen({super.key});
+/// Account hub: entitlements, subscription, place-list shortcuts, sign out.
+///
+/// WebSocket status lives on [MapHomeScreen]; matches surface as map toasts.
+class ProfileScreen extends ConsumerWidget {
+  const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final meAsync = ref.watch(meNotifierProvider);
-    // Always watch so the notifier is alive and captures events while the
-    // user is on this screen.
-    final matches = ref.watch(matchNotifierProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -50,51 +47,26 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const WsStatusBanner(),
-          Expanded(
-            child: meAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => _ErrorView(
-                message: err is OfflineError ? err.message : err.toString(),
-                onRetry: () => ref.read(meNotifierProvider.notifier).refresh(),
-              ),
-              data: (snapshot) {
-                if (snapshot == null) return const SizedBox.shrink();
-                return _MeView(
-                  me: snapshot.me,
-                  fromCache: snapshot.fromCache,
-                  matches: matches,
-                  onDismiss: (i) =>
-                      ref.read(matchNotifierProvider.notifier).dismiss(i),
-                );
-              },
-            ),
-          ),
-        ],
+      body: meAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => _ErrorView(
+          message: err is OfflineError ? err.message : err.toString(),
+          onRetry: () => ref.read(meNotifierProvider.notifier).refresh(),
+        ),
+        data: (snapshot) {
+          if (snapshot == null) return const SizedBox.shrink();
+          return _ProfileBody(me: snapshot.me, fromCache: snapshot.fromCache);
+        },
       ),
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// Profile + entitlements view
-// ---------------------------------------------------------------------------
-
-class _MeView extends StatelessWidget {
-  const _MeView({
-    required this.me,
-    required this.fromCache,
-    required this.matches,
-    required this.onDismiss,
-  });
+class _ProfileBody extends StatelessWidget {
+  const _ProfileBody({required this.me, required this.fromCache});
 
   final MeResponse me;
   final bool fromCache;
-  final List<MatchMessage> matches;
-  final void Function(int index) onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +75,6 @@ class _MeView extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        // Exposed via the notifier; pull-to-refresh re-fetches GET /me.
         final container = ProviderScope.containerOf(context);
         await container.read(meNotifierProvider.notifier).refresh();
       },
@@ -115,27 +86,6 @@ class _MeView extends StatelessWidget {
               alignment: Alignment.center,
               child: ShowingSavedDataChip(),
             ),
-          // ── Match banner (shown when recent matches are available) ─────────
-          if (matches.isNotEmpty) ...[
-            Text('Recent Matches', style: textTheme.titleMedium),
-            const SizedBox(height: 8),
-            ...List.generate(matches.length, (i) {
-              final match = matches[i];
-              return _MatchCard(
-                match: match,
-                onDismiss: () => onDismiss(i),
-                onTap: () {
-                  onDismiss(i);
-                  context.go('/home');
-                },
-              );
-            }),
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 16),
-          ],
-
-          // Avatar + name + phone
           Center(
             child: Column(
               children: [
@@ -160,12 +110,9 @@ class _MeView extends StatelessWidget {
               ],
             ),
           ),
-
           const SizedBox(height: 32),
           const Divider(),
           const SizedBox(height: 16),
-
-          // Permissions
           Text('Permissions', style: textTheme.titleMedium),
           const SizedBox(height: 12),
           if (me.permissions.isEmpty)
@@ -178,10 +125,7 @@ class _MeView extends StatelessWidget {
                   .map((p) => _PermissionChip(permission: p))
                   .toList(),
             ),
-
           const SizedBox(height: 24),
-
-          // Limits
           Text('Limits', style: textTheme.titleMedium),
           const SizedBox(height: 12),
           _LimitRow(
@@ -194,12 +138,9 @@ class _MeView extends StatelessWidget {
             label: 'Broadcast places',
             value: me.limits.placeBroadcastMax,
           ),
-
           const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 16),
-
-          // Actions
           Text('Actions', style: textTheme.titleMedium),
           const SizedBox(height: 12),
           PermissionGatedButton(
@@ -220,7 +161,7 @@ class _MeView extends StatelessWidget {
           const SizedBox(height: 8),
           PermissionGatedButton(
             icon: Icons.map_outlined,
-            label: 'Live map',
+            label: 'Map home',
             hasPermission:
                 me.permissions.contains('woleh.place.watch') ||
                 me.permissions.contains('woleh.place.broadcast'),
@@ -232,77 +173,6 @@ class _MeView extends StatelessWidget {
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Match card (dismissible notification tile)
-// ---------------------------------------------------------------------------
-
-class _MatchCard extends StatelessWidget {
-  const _MatchCard({
-    required this.match,
-    required this.onDismiss,
-    required this.onTap,
-  });
-
-  final MatchMessage match;
-  final VoidCallback onDismiss;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final names = match.matchedNames.join(', ');
-    final isWatcher = match.kind == 'watcher';
-    final colors = Theme.of(context).colorScheme;
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: colors.tertiaryContainer,
-          child: Icon(
-            isWatcher
-                ? Icons.directions_bus_outlined
-                : Icons.person_search_outlined,
-            color: colors.onTertiaryContainer,
-          ),
-        ),
-        title: Text(
-          isWatcher
-              ? 'A bus is heading through: $names'
-              : 'A watcher needs: $names',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(
-          'Tap to open the map',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.map_outlined, size: 20),
-              tooltip: 'Live map',
-              onPressed: () => context.go('/home'),
-            ),
-            IconButton(
-              icon: const Icon(Icons.close, size: 18),
-              onPressed: onDismiss,
-              tooltip: 'Dismiss',
-            ),
-          ],
-        ),
-        onTap: onTap,
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Small reusable widgets
-// ---------------------------------------------------------------------------
 
 class _Avatar extends StatelessWidget {
   const _Avatar({required this.displayName});
@@ -407,10 +277,6 @@ class _LimitRow extends StatelessWidget {
     );
   }
 }
-
-// ---------------------------------------------------------------------------
-// Error state
-// ---------------------------------------------------------------------------
 
 class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.message, required this.onRetry});
