@@ -1,6 +1,25 @@
-# Local dependencies for the Woleh API (PostgreSQL).
-# From this directory: docker compose up -d
-# Spring Boot (spring-boot-docker-compose) also uses this file when cwd is `server/`.
+# Local dependencies for the Woleh API (PostgreSQL) and optional OSM raster tiles.
+#
+# Default: `docker compose up -d` starts only Postgres (no Compose profile).
+# Spring Boot (`spring-boot-docker-compose`, cwd `server/`) uses the same file and
+# likewise starts only unprofiled services.
+#
+# OSM tile server (overv/openstreetmap-tile-server, image tag v2.3.0):
+#   1. One-time import — downloads PBF into named volumes (pick a small regional extract):
+#        docker compose --profile manual run --rm osm-tiles-import
+#      Custom extract:
+#        OSM_PBF_URL=https://download.geofabrik.de/europe/luxembourg-latest.osm.pbf \
+#          docker compose --profile manual run --rm osm-tiles-import
+#   2. Serve tiles — host port 8088 → container 80; URL path /tile/{z}/{x}/{y}.png
+#        docker compose --profile tiles up -d osm-tiles
+#   Mobile (Android emulator), after the server is running:
+#        flutter run --dart-define=OSM_TILE_URL_TEMPLATE=http://10.0.2.2:8088/tile/{z}/{x}/{y}.png
+#   Physical device: use http://<host-LAN-IP>:8088/tile/{z}/{x}/{y}.png
+#
+# Default OSM_PBF_URL is Ghana (matches app map fallback ~Accra). First import can take
+# significant time and disk; first map views may be slow while tiles render.
+#
+# Apple silicon: image is amd64; Docker uses emulation via platform below.
 
 services:
   postgres:
@@ -22,5 +41,36 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  osm-tiles-import:
+    profiles:
+      - manual
+    image: overv/openstreetmap-tile-server:v2.3.0
+    platform: linux/amd64
+    volumes:
+      - woleh_osm_data:/data/database/
+      - woleh_osm_tiles:/data/tiles/
+    environment:
+      DOWNLOAD_PBF: ${OSM_PBF_URL:-https://download.geofabrik.de/africa/ghana-latest.osm.pbf}
+    command: import
+
+  osm-tiles:
+    profiles:
+      - tiles
+    image: overv/openstreetmap-tile-server:v2.3.0
+    platform: linux/amd64
+    container_name: woleh-osm-tiles
+    ports:
+      - "${OSM_TILES_PORT:-8088}:80"
+    volumes:
+      - woleh_osm_data:/data/database/
+      - woleh_osm_tiles:/data/tiles/
+    environment:
+      ALLOW_CORS: enabled
+    command: run
+    shm_size: "256m"
+    restart: unless-stopped
+
 volumes:
   woleh_pgdata:
+  woleh_osm_data:
+  woleh_osm_tiles:

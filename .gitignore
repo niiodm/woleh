@@ -1,7 +1,13 @@
 # IDE
-.idea/
 *.iml
 .vscode/
+!mobile/.vscode/
+!mobile/.vscode/launch.json
+
+# Android Studio / IntelliJ — ignore .idea everywhere except shared Flutter run configs
+**/.idea/**
+!mobile/.idea/runConfigurations/
+!mobile/.idea/runConfigurations/**
 
 # OS
 .DS_Store

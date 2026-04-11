@@ -6,6 +6,19 @@ import '../core/location/location_fix.dart';
 import 'map_location_pin.dart';
 import 'osm_attribution.dart';
 
+// Raster tile URL for [TileLayer] (`{z}`, `{x}`, `{y}`). Injected at build time.
+// Default: public OSM CDN. For the local Docker tile server in `server/docker-compose.yml`
+// (`osm-tiles` on host port 8088), use e.g.:
+//
+//   Android emulator:
+//     flutter run --dart-define=OSM_TILE_URL_TEMPLATE=http://10.0.2.2:8088/tile/{z}/{x}/{y}.png
+//   Physical device (same Wi-Fi as host):
+//     flutter run --dart-define=OSM_TILE_URL_TEMPLATE=http://<LAN-IP>:8088/tile/{z}/{x}/{y}.png
+const _kOsmTileUrlTemplate = String.fromEnvironment(
+  'OSM_TILE_URL_TEMPLATE',
+  defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+);
+
 /// OpenStreetMap + markers for **self** (blue) and **peers** (orange).
 ///
 /// While **following** the user, the camera moves with [self]. After the user
@@ -117,7 +130,7 @@ class _LocationMapState extends State<LocationMap> {
           ),
           children: [
             TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              urlTemplate: _kOsmTileUrlTemplate,
               userAgentPackageName: 'odm.clarity.woleh_mobile',
             ),
             SimpleAttributionWidget(

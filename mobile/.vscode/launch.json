@@ -1,0 +1,38 @@
+{
+  // Open the repo at `woleh/` (not only `mobile/`) so `cwd` resolves.
+  // Local tiles: `docker compose --profile tiles up -d osm-tiles` from `server/`.
+  // Physical device: set WOLEH_HOST_LAN_IP (host machine LAN address, same as API).
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "mobile (dev · Android emulator)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/mobile",
+      "toolArgs": [
+        "--dart-define=OSM_TILE_URL_TEMPLATE=http://10.0.2.2:8088/tile/{z}/{x}/{y}.png"
+      ]
+    },
+    {
+      "name": "mobile (dev · iOS simulator)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/mobile",
+      "toolArgs": [
+        "--dart-define=OSM_TILE_URL_TEMPLATE=http://127.0.0.1:8088/tile/{z}/{x}/{y}.png"
+      ]
+    },
+    {
+      "name": "mobile (dev · physical device)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/mobile",
+      "toolArgs": [
+        "--dart-define=OSM_TILE_URL_TEMPLATE=http://${env:WOLEH_HOST_LAN_IP}:8088/tile/{z}/{x}/{y}.png"
+      ]
+    }
+  ]
+}
