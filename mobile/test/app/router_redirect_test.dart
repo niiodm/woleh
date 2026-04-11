@@ -135,7 +135,9 @@ void main() {
 
   group('Router redirect', () {
     group('unauthenticated', () {
-      testWidgets('shows phone/sign-in screen as initial route', (tester) async {
+      testWidgets(
+          'leaves splash and shows phone screen once auth is resolved',
+          (tester) async {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
@@ -147,11 +149,12 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Sign in'), findsOneWidget);
+        expect(find.text('Woleh'), findsNothing);
       });
 
       testWidgets('landing on /home redirects to /auth/phone', (tester) async {
-        // The app always starts at /auth/phone; the only way to verify the
-        // redirect fires is to confirm the auth screen (not home) is shown.
+        // Unauthenticated users are never left on /home (splash → phone, or
+        // any /home navigation redirects to sign-in).
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
@@ -198,8 +201,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // Router starts at /auth/phone by default but token is present →
-        // redirect to /home.
+        // Splash resolves with a token → user ends on /home.
         expect(find.text('Sign in'), findsNothing);
         expect(find.text('Woleh'), findsOneWidget);
       });
@@ -207,7 +209,7 @@ void main() {
 
     group('auth loading', () {
       testWidgets(
-          'renders without crashing while token read is in progress',
+          'shows splash while token read is in progress',
           (tester) async {
         await tester.pumpWidget(
           ProviderScope(
@@ -220,8 +222,10 @@ void main() {
         // Only pump one frame — don't settle, as the future never resolves.
         await tester.pump();
 
-        // App must render without throwing; route stays at initial location.
         expect(tester.takeException(), isNull);
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.text('Woleh'), findsOneWidget);
+        expect(find.text('Sign in'), findsNothing);
       });
     });
 

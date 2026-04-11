@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../core/auth_state.dart';
+import 'splash_screen.dart';
 import '../features/auth/presentation/otp_screen.dart';
 import '../features/auth/presentation/phone_screen.dart';
 import '../features/auth/presentation/setup_name_screen.dart';
@@ -40,10 +41,14 @@ const _kUpgradeRedirect = '/plans';
 GoRouter router(Ref ref) {
   final notifier = _RouterNotifier(ref);
   return GoRouter(
-    initialLocation: '/auth/phone',
+    initialLocation: '/splash',
     refreshListenable: notifier,
     redirect: notifier.redirect,
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (_, __) => const SplashScreen(),
+      ),
       GoRoute(
         path: '/auth/phone',
         builder: (_, __) => const PhoneScreen(),
@@ -114,15 +119,26 @@ class _RouterNotifier extends ChangeNotifier {
 
   String? redirect(BuildContext context, GoRouterState state) {
     final authAsync = _ref.read(authStateProvider);
-
-    // Don't redirect while the token is still being loaded from secure storage.
-    if (authAsync.isLoading) return null;
-
-    final isAuthenticated = authAsync.valueOrNull != null;
     final location = state.matchedLocation;
 
+    // While the token is still loading, only [/splash] is shown (avoids flashing
+    // /auth/phone before we know if the user is signed in).
+    if (authAsync.isLoading) {
+      if (location != '/splash') return '/splash';
+      return null;
+    }
+
+    final isAuthenticated = authAsync.valueOrNull != null;
+
+    // Auth resolved — leave splash immediately.
+    if (location == '/splash') {
+      return isAuthenticated ? '/home' : '/auth/phone';
+    }
+
     // Unauthenticated users must stay on auth routes.
-    if (!isAuthenticated && !location.startsWith('/auth')) return '/auth/phone';
+    if (!isAuthenticated && !location.startsWith('/auth')) {
+      return '/auth/phone';
+    }
 
     // Authenticated users skip phone/otp entry — but are allowed on
     // /auth/setup-name (signup name-entry step after first token issuance).

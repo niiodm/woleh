@@ -8,7 +8,7 @@ This document describes a **navigation and UX restructuring** for the Flutter ap
 
 ## Implementation checklist
 
-- [ ] **Splash / router** — `/splash`, `initialLocation`, redirects for auth loading → splash, splash → auth or `/home`; update [`mobile/test/app/router_redirect_test.dart`](../mobile/test/app/router_redirect_test.dart).
+- [x] **Splash / router** — `/splash`, `initialLocation`, redirects for auth loading → splash, splash → auth or `/home`; update [`mobile/test/app/router_redirect_test.dart`](../mobile/test/app/router_redirect_test.dart). *(Done: [`mobile/lib/app/splash_screen.dart`](../mobile/lib/app/splash_screen.dart), [`mobile/lib/app/router.dart`](../mobile/lib/app/router.dart).)*
 - [ ] **Map home** — Full-page map, search chrome, profile icon, persistent recenter; `WsStatusBanner` + map-primary match UX; live peer markers via [`PeerLocationsNotifier`](../mobile/lib/features/location/presentation/peer_locations_notifier.dart).
 - [ ] **Profile screen** — `/profile`, migrate content from current [`HomeScreen`](../mobile/lib/features/home/presentation/home_screen.dart); logout, plans, edit profile.
 - [ ] **Places search** — `/places/search`, draft list, autosave with watch-XOR-broadcast clears, permissions, invalidate notifiers, pop back to map.
