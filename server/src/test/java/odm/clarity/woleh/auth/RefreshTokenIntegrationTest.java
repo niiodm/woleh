@@ -11,9 +11,11 @@ import odm.clarity.woleh.model.OtpChallenge;
 import odm.clarity.woleh.model.RefreshToken;
 import odm.clarity.woleh.model.User;
 import odm.clarity.woleh.repository.OtpChallengeRepository;
+import odm.clarity.woleh.repository.PlanRepository;
 import odm.clarity.woleh.repository.RefreshTokenRepository;
 import odm.clarity.woleh.repository.UserRepository;
 import odm.clarity.woleh.security.JwtService;
+import odm.clarity.woleh.support.PlanCatalogTestHelper;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,6 +49,7 @@ class RefreshTokenIntegrationTest {
 	@Autowired ObjectMapper objectMapper;
 	@Autowired OtpChallengeRepository otpChallengeRepository;
 	@Autowired UserRepository userRepository;
+	@Autowired PlanRepository planRepository;
 	@Autowired RefreshTokenRepository refreshTokenRepository;
 	@Autowired PasswordEncoder passwordEncoder;
 	@Autowired JwtService jwtService;
@@ -56,6 +59,7 @@ class RefreshTokenIntegrationTest {
 		refreshTokenRepository.deleteAll();
 		otpChallengeRepository.deleteAll();
 		userRepository.deleteAll();
+		PlanCatalogTestHelper.ensureDefaultPlans(planRepository);
 		otpChallengeRepository.save(
 				new OtpChallenge(PHONE, passwordEncoder.encode(OTP), Instant.now().plusSeconds(300)));
 	}

@@ -16,6 +16,7 @@ import odm.clarity.woleh.repository.PlanRepository;
 import odm.clarity.woleh.repository.SubscriptionRepository;
 import odm.clarity.woleh.repository.UserRepository;
 import odm.clarity.woleh.security.JwtService;
+import odm.clarity.woleh.subscription.SubscriptionPlanIds;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -73,6 +74,25 @@ class SubscriptionStatusIntegrationTest {
 				.andExpect(jsonPath("$.data.limits.placeWatchMax").value(5))
 				.andExpect(jsonPath("$.data.limits.placeBroadcastMax").value(0))
 				.andExpect(jsonPath("$.data.subscription.status").value("none"))
+				.andExpect(jsonPath("$.data.subscription.inGracePeriod").value(false));
+	}
+
+	@Test
+	void status_activeFreeCatalogSubscription_returnsFreeTier() throws Exception {
+		Plan plan = planRepository.save(new Plan(
+				SubscriptionPlanIds.FREE, "Free",
+				List.of("woleh.account.profile", "woleh.plans.read",
+						"woleh.place.watch", "woleh.place.broadcast"),
+				0, "GHS", 999999999, 999999999, true));
+		Instant periodEnd = Instant.now().plus(36500, ChronoUnit.DAYS);
+		subscriptionRepository.save(new Subscription(
+				user, plan, SubscriptionStatus.ACTIVE,
+				Instant.now(), periodEnd, periodEnd.plus(7, ChronoUnit.DAYS)));
+
+		mockMvc.perform(get(STATUS_URL).header(HttpHeaders.AUTHORIZATION, bearerToken))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.tier").value("free"))
+				.andExpect(jsonPath("$.data.subscription.status").value("active"))
 				.andExpect(jsonPath("$.data.subscription.inGracePeriod").value(false));
 	}
 

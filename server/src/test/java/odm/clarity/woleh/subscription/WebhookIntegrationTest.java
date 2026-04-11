@@ -134,6 +134,32 @@ class WebhookIntegrationTest {
 				.andExpect(jsonPath("$.data.subscription.status").value("active"));
 	}
 
+	@Test
+	void webhook_successEvent_cancelsLongRunningFreeSubscription() throws Exception {
+		subscriptionRepository.deleteAll();
+		Plan freePlan = planRepository.save(new Plan(
+				SubscriptionPlanIds.FREE, "Free",
+				List.of("woleh.account.profile", "woleh.plans.read",
+						"woleh.place.watch", "woleh.place.broadcast"),
+				0, "GHS", 999999999, 999999999, true));
+		Instant freeHorizon = Instant.now().plus(36500, ChronoUnit.DAYS);
+		Subscription freeSub = subscriptionRepository.save(new Subscription(
+				user, freePlan, SubscriptionStatus.ACTIVE,
+				Instant.now(), freeHorizon, freeHorizon.plus(7, ChronoUnit.DAYS)));
+
+		mockMvc.perform(post(WEBHOOK_URL)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(successBody()))
+				.andExpect(status().isOk());
+
+		assertThat(subscriptionRepository.findById(freeSub.getId()).orElseThrow().getStatus())
+				.isEqualTo(SubscriptionStatus.CANCELLED);
+		var active = subscriptionRepository.findTopByUser_IdAndStatusOrderByCurrentPeriodEndDesc(
+				user.getId(), SubscriptionStatus.ACTIVE);
+		assertThat(active).isPresent();
+		assertThat(active.get().getPlan().getPlanId()).isEqualTo("woleh_paid_monthly");
+	}
+
 	// ── failure path ──────────────────────────────────────────────────────────
 
 	@Test

@@ -12,6 +12,7 @@ import odm.clarity.woleh.model.User;
 import odm.clarity.woleh.repository.OtpChallengeRepository;
 import odm.clarity.woleh.repository.UserRepository;
 import odm.clarity.woleh.sms.SmsAdapter;
+import odm.clarity.woleh.subscription.SubscriptionService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,18 +33,21 @@ public class OtpService {
 	private final PasswordEncoder passwordEncoder;
 	private final SmsAdapter smsAdapter;
 	private final OtpProperties otpProperties;
+	private final SubscriptionService subscriptionService;
 
 	public OtpService(
 			OtpChallengeRepository otpChallengeRepository,
 			UserRepository userRepository,
 			PasswordEncoder passwordEncoder,
 			SmsAdapter smsAdapter,
-			OtpProperties otpProperties) {
+			OtpProperties otpProperties,
+			SubscriptionService subscriptionService) {
 		this.otpChallengeRepository = otpChallengeRepository;
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.smsAdapter = smsAdapter;
 		this.otpProperties = otpProperties;
+		this.subscriptionService = subscriptionService;
 	}
 
 	/**
@@ -105,6 +109,9 @@ public class OtpService {
 		User user = isNewUser
 				? userRepository.save(new User(phoneE164))
 				: userRepository.findByPhoneE164(phoneE164).orElseThrow();
+		if (isNewUser) {
+			subscriptionService.activateFreePlanForNewUser(user);
+		}
 
 		String flow = isNewUser ? "signup" : "login";
 		return new VerifyOtpResult(user.getId(), flow);

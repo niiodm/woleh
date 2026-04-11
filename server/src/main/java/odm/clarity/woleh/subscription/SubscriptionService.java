@@ -2,6 +2,7 @@ package odm.clarity.woleh.subscription;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -35,6 +36,8 @@ public class SubscriptionService {
 	private static final String RETURN_URL = "woleh://subscription/result";
 	private static final int SUBSCRIPTION_PERIOD_DAYS = 30;
 	private static final int GRACE_PERIOD_DAYS = 7;
+	/** Long horizon so the free row does not expire in normal product lifetimes. */
+	private static final int FREE_SUBSCRIPTION_HORIZON_DAYS = 36_500;
 
 	private final PlanRepository planRepository;
 	private final PaymentSessionRepository paymentSessionRepository;
@@ -115,6 +118,23 @@ public class SubscriptionService {
 	}
 
 	/**
+	 * Creates an active {@link SubscriptionPlanIds#FREE} subscription for a newly registered user so
+	 * entitlements come from the plan catalog instead of {@link EntitlementService} hard-coded
+	 * free-tier constants.
+	 */
+	public void activateFreePlanForNewUser(User user) {
+		Plan plan = planRepository.findByPlanId(SubscriptionPlanIds.FREE)
+				.filter(Plan::isActive)
+				.orElseThrow(() -> new IllegalStateException(
+						"Active plan not found: " + SubscriptionPlanIds.FREE));
+		Instant now = Instant.now();
+		Instant periodEnd = now.plus(FREE_SUBSCRIPTION_HORIZON_DAYS, ChronoUnit.DAYS);
+		Instant graceEnd = periodEnd.plus(GRACE_PERIOD_DAYS, ChronoUnit.DAYS);
+		subscriptionRepository.save(
+				new Subscription(user, plan, SubscriptionStatus.ACTIVE, now, periodEnd, graceEnd));
+	}
+
+	/**
 	 * Processes the outcome of a payment confirmed by the provider (webhook or redirect callback).
 	 *
 	 * <p>On success: marks the {@code PaymentSession} completed and activates a new
@@ -159,7 +179,17 @@ public class SubscriptionService {
 		Instant now = Instant.now();
 		Instant periodEnd = now.plus(SUBSCRIPTION_PERIOD_DAYS, ChronoUnit.DAYS);
 		Instant graceEnd = periodEnd.plus(GRACE_PERIOD_DAYS, ChronoUnit.DAYS);
+		cancelActiveSubscriptions(user.getId());
 		subscriptionRepository.save(
 				new Subscription(user, plan, SubscriptionStatus.ACTIVE, now, periodEnd, graceEnd));
+	}
+
+	private void cancelActiveSubscriptions(Long userId) {
+		List<Subscription> active = subscriptionRepository.findAllByUser_IdAndStatus(
+				userId, SubscriptionStatus.ACTIVE);
+		for (Subscription s : active) {
+			s.setStatus(SubscriptionStatus.CANCELLED);
+		}
+		subscriptionRepository.saveAll(active);
 	}
 }

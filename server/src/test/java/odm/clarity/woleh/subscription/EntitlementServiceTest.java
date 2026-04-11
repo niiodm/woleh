@@ -53,6 +53,30 @@ class EntitlementServiceTest {
 	}
 
 	@Test
+	void freeTierWhenActiveFreeCatalogSubscription() {
+		Instant periodEnd = Instant.now().plus(100, ChronoUnit.DAYS);
+		Instant graceEnd = periodEnd.plus(7, ChronoUnit.DAYS);
+		Plan plan = new Plan(
+				SubscriptionPlanIds.FREE, "Free",
+				PAID_PERMISSIONS, 0, "GHS", 999999999, 999999999, true);
+		User user = new User("+233241000001");
+		Subscription sub = new Subscription(user, plan, SubscriptionStatus.ACTIVE,
+				Instant.now(), periodEnd, graceEnd);
+
+		when(subscriptionRepository.findTopByUser_IdAndStatusOrderByCurrentPeriodEndDesc(
+				eq(USER_ID), any())).thenReturn(Optional.of(sub));
+
+		Entitlements result = service.computeEntitlements(USER_ID);
+
+		assertThat(result.tier()).isEqualTo("free");
+		assertThat(result.permissions()).containsExactlyElementsOf(PAID_PERMISSIONS);
+		assertThat(result.placeWatchMax()).isEqualTo(999999999);
+		assertThat(result.placeBroadcastMax()).isEqualTo(999999999);
+		assertThat(result.subscriptionStatus()).isEqualTo("active");
+		assertThat(result.inGracePeriod()).isFalse();
+	}
+
+	@Test
 	void paidTierWhenActiveSubscriptionWithinPeriod() {
 		Instant periodEnd = Instant.now().plus(29, ChronoUnit.DAYS);
 		Instant graceEnd = periodEnd.plus(7, ChronoUnit.DAYS);

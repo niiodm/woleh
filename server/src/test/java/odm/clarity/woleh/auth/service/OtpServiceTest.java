@@ -23,6 +23,7 @@ import odm.clarity.woleh.model.User;
 import odm.clarity.woleh.repository.OtpChallengeRepository;
 import odm.clarity.woleh.repository.UserRepository;
 import odm.clarity.woleh.sms.SmsAdapter;
+import odm.clarity.woleh.subscription.SubscriptionService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -43,6 +44,7 @@ class OtpServiceTest {
 	@Mock OtpChallengeRepository otpChallengeRepository;
 	@Mock UserRepository userRepository;
 	@Mock SmsAdapter smsAdapter;
+	@Mock SubscriptionService subscriptionService;
 
 	// Real encoder so hash/match behaviour is genuine
 	private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -53,7 +55,8 @@ class OtpServiceTest {
 	@BeforeEach
 	void setUp() {
 		props = new OtpProperties(Duration.ofMinutes(5), Duration.ofHours(1), 3, false);
-		service = new OtpService(otpChallengeRepository, userRepository, passwordEncoder, smsAdapter, props);
+		service = new OtpService(otpChallengeRepository, userRepository, passwordEncoder, smsAdapter, props,
+				subscriptionService);
 	}
 
 	// ── issueOtp ─────────────────────────────────────────────────────────────
@@ -238,6 +241,17 @@ class OtpServiceTest {
 			assertThat(captor.getValue().getPhoneE164()).isEqualTo(PHONE);
 		}
 
+		@Test
+		void activatesFreePlan_forNewUser() {
+			stubCorrectOtp(false);
+
+			service.verifyOtp(PHONE, OTP);
+
+			ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+			verify(subscriptionService).activateFreePlanForNewUser(captor.capture());
+			assertThat(captor.getValue().getPhoneE164()).isEqualTo(PHONE);
+		}
+
 		// ── correct OTP / login flow ──────────────────────────────────────────
 
 		@Test
@@ -256,6 +270,7 @@ class OtpServiceTest {
 			service.verifyOtp(PHONE, OTP);
 
 			verify(userRepository, never()).save(any(User.class));
+			verify(subscriptionService, never()).activateFreePlanForNewUser(any());
 		}
 
 		// ── consumed guard ────────────────────────────────────────────────────

@@ -8,8 +8,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Instant;
 
 import odm.clarity.woleh.model.OtpChallenge;
+import odm.clarity.woleh.model.SubscriptionStatus;
 import odm.clarity.woleh.repository.OtpChallengeRepository;
+import odm.clarity.woleh.repository.PlanRepository;
+import odm.clarity.woleh.repository.SubscriptionRepository;
 import odm.clarity.woleh.repository.UserRepository;
+import odm.clarity.woleh.subscription.SubscriptionPlanIds;
+import odm.clarity.woleh.support.PlanCatalogTestHelper;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,12 +38,15 @@ class VerifyOtpIntegrationTest {
 	@Autowired MockMvc mockMvc;
 	@Autowired OtpChallengeRepository otpChallengeRepository;
 	@Autowired UserRepository userRepository;
+	@Autowired PlanRepository planRepository;
+	@Autowired SubscriptionRepository subscriptionRepository;
 	@Autowired PasswordEncoder passwordEncoder;
 
 	@BeforeEach
 	void seed() {
 		otpChallengeRepository.deleteAll();
 		userRepository.deleteAll();
+		PlanCatalogTestHelper.ensureDefaultPlans(planRepository);
 		createChallenge(PHONE, OTP, Instant.now().plusSeconds(300));
 	}
 
@@ -94,6 +102,33 @@ class VerifyOtpIntegrationTest {
 				.andExpect(status().isOk());
 
 		assertThat(userRepository.existsByPhoneE164(PHONE)).isTrue();
+	}
+
+	@Test
+	void verifyOtp_newUser_createsActiveFreeSubscription() throws Exception {
+		mockMvc.perform(post(VERIFY_URL)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body(PHONE, OTP)))
+				.andExpect(status().isOk());
+
+		var user = userRepository.findByPhoneE164(PHONE).orElseThrow();
+		var sub = subscriptionRepository.findTopByUser_IdAndStatusOrderByCurrentPeriodEndDesc(
+				user.getId(), SubscriptionStatus.ACTIVE);
+		assertThat(sub).isPresent();
+		assertThat(sub.get().getPlan().getPlanId()).isEqualTo(SubscriptionPlanIds.FREE);
+	}
+
+	@Test
+	void verifyOtp_existingUser_doesNotAddSecondSubscription() throws Exception {
+		userRepository.save(new odm.clarity.woleh.model.User(PHONE));
+		long subsBefore = subscriptionRepository.count();
+
+		mockMvc.perform(post(VERIFY_URL)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body(PHONE, OTP)))
+				.andExpect(status().isOk());
+
+		assertThat(subscriptionRepository.count()).isEqualTo(subsBefore);
 	}
 
 	// ── error cases ──────────────────────────────────────────────────────────

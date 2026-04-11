@@ -22,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Falls back to free-tier defaults (PRD §13.1) when no active subscription exists
  * or when the grace window has also closed.
+ *
+ * <p>Tier {@code "free"} is returned both for that fallback and for an active subscription
+ * on plan {@link SubscriptionPlanIds#FREE}; paid catalog plans use tier {@code "paid"}.
  */
 @Service
 @Transactional(readOnly = true)
@@ -65,10 +68,11 @@ public class EntitlementService {
 
 		Plan plan = sub.getPlan();
 		boolean inGrace = now.isAfter(sub.getCurrentPeriodEnd());
+		String tier = SubscriptionPlanIds.FREE.equals(plan.getPlanId()) ? "free" : "paid";
 
 		return new Entitlements(
 				plan.getPermissionsGranted(),
-				"paid",
+				tier,
 				plan.getPlaceWatchMax(),
 				plan.getPlaceBroadcastMax(),
 				"active",

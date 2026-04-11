@@ -20,6 +20,8 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 	Optional<Subscription> findTopByUser_IdAndStatusOrderByCurrentPeriodEndDesc(
 			Long userId, SubscriptionStatus status);
 
+	List<Subscription> findAllByUser_IdAndStatus(Long userId, SubscriptionStatus status);
+
 	@Query("""
 			select s from Subscription s
 			join fetch s.user
