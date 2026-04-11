@@ -8,6 +8,7 @@ Mono-repo for the **Woleh** transit app: Flutter client and Spring Boot API.
 | [`mobile/`](mobile/) | Flutter app — Dart package **`odm_clarity_woleh_mobile`**; Android/iOS **`odm.clarity.woleh_mobile`** |
 | [`server/`](server/) | Spring Boot API — Java **`odm.clarity.woleh`** |
 | [`server/docker-compose.yml`](server/docker-compose.yml) | Local PostgreSQL for development |
+| [`deploy/staging/`](deploy/staging/) | Staging stack: API + Postgres + Caddy (TLS) |
 | [`server/api-tests/`](server/api-tests/) | `.http` collections for manual API checks |
 | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | CI (Gradle + Flutter) on push/PR to `main` |
 
@@ -21,6 +22,23 @@ Mono-repo for the **Woleh** transit app: Flutter client and Spring Boot API.
 | `CORS_ALLOWED_ORIGIN_PATTERNS` | Comma-separated patterns for browser clients (default local `http://localhost:*`, `http://127.0.0.1:*`). |
 
 See `server/src/main/resources/application.yml` (`woleh.jwt.*`, `woleh.cors.*`).
+
+## Staging (Docker Compose)
+
+Public hostname: **`https://woleh.okaidarkomorgan.com`** (REST `/api/v1`, WebSocket `/ws/v1/transit`). Deploy on a VPS with Docker Compose v2.
+
+1. Point **DNS** (A/AAAA) for `woleh.okaidarkomorgan.com` at the host. Allow inbound **TCP 80** and **443** (Postgres is not published to the host). The server needs **Docker** + **Compose v2**; **`deploy.sh --local`** can install them on **Amazon Linux 2023** via `dnf` and the official Compose CLI plugin (requires passwordless `sudo`, e.g. `ec2-user`). Your laptop uses **`rsync`** and **SSH** for file transfer (macOS/Linux include them).
+2. **No git clone on the server** is required. [`deploy/staging/deploy.sh`](deploy/staging/deploy.sh) creates **`~/woleh/deploy/staging`** on first connect (override with **`WOLEH_STAGING_REMOTE_DIR`**), **rsync**s **`docker-compose.yml`**, **`Dockerfile.api`**, **`Caddyfile`**, **`deploy.sh`**, and **`.env.example`**, then streams the built **`application.jar`** and (if present) **`deploy/staging/.env`** over **SSH** (avoids macOS **scp**/**rsync** quirks for single-file remote paths).
+3. On your **laptop**, copy [`deploy/staging/.env.example`](deploy/staging/.env.example) to **`deploy/staging/.env`** and set **`POSTGRES_PASSWORD`** and **`JWT_SECRET`** (and optional **`CORS_ALLOWED_ORIGIN_PATTERNS`**). The next deploy uploads **`.env`** to the server. Alternatively, create **`.env`** once on the server by hand; later laptop deploys without a local **`.env`** will not overwrite it.
+4. **From your laptop** (SSH host **`WOLEH_STAGING_SSH`**, default **`woleh-staging`**), run **`./deploy/staging/deploy.sh`**. It **`git pull`**s the monorepo on the laptop when you pass **`--pull`** (if **`REPO_ROOT`** is a git checkout), runs **`./gradlew bootJar`**, **rsync**s the bundle, then **SSH** + **`./deploy.sh --local`**. **`./deploy.sh --skip-jar-sync`** skips Gradle and re-uploading the JAR. On the VPS alone, **`./deploy.sh --local`** runs Compose in the synced directory.
+
+Smoke check: `curl -fsS https://woleh.okaidarkomorgan.com/actuator/health/readiness`.
+
+The staging API image is built from [`deploy/staging/Dockerfile.api`](deploy/staging/Dockerfile.api) (Java 17 JRE) using that **`application.jar`**. [`server/Dockerfile`](server/Dockerfile) remains a full multi-stage build for other uses. Staging uses profile **`staging`** ([`application-staging.yml`](server/src/main/resources/application-staging.yml)). Flyway runs on startup against the Compose Postgres volume.
+
+**Scaling note:** Rate limits and WebSocket session state are **in-memory** on a single node ([`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)). Running more than one API replica without shared state changes that behavior.
+
+**Map tiles:** Staging does not host map tiles. The mobile app defaults to a public OSM tile URL; for local dev you can still run the optional tile server in [`server/docker-compose.yml`](server/docker-compose.yml) and point **`OSM_TILE_URL_TEMPLATE`** at it.
 
 ## Continuous integration
 

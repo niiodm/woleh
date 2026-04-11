@@ -1,0 +1,15 @@
+# Profile `staging`: used by Docker Compose staging stack (not for local dev H2).
+spring:
+  application:
+    name: woleh
+
+management:
+  endpoint:
+    health:
+      show-details: ${HEALTH_SHOW_DETAILS:when-authorized}
+      show-components: ${HEALTH_SHOW_COMPONENTS:always}
+
+logging:
+  level:
+    root: INFO
+    odm.clarity.woleh: INFO

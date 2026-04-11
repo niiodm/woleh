@@ -59,7 +59,7 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
-		<!-- HTTP tiles from host machine (local Docker OSM tile server); see OSM_TILE_URL_TEMPLATE. -->
+		<!-- HTTP map tiles in local dev (e.g. server/docker-compose optional tile server); see OSM_TILE_URL_TEMPLATE. -->
 		<key>NSAppTransportSecurity</key>
 		<dict>
 			<key>NSAllowsLocalNetworking</key>

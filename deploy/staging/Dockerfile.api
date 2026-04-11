@@ -1,0 +1,21 @@
+# Runtime image: expects pre-built `application.jar` in this directory (copied by deploy.sh).
+# syntax=docker/dockerfile:1
+
+FROM eclipse-temurin:17-jre-jammy
+WORKDIR /app
+
+RUN groupadd --system spring && useradd --system --gid spring --no-create-home spring
+
+COPY application.jar /app/application.jar
+RUN chown spring:spring /app/application.jar
+
+USER spring:spring
+
+ENV SPRING_DOCKER_COMPOSE_ENABLED=false
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+	CMD curl -fsS http://127.0.0.1:8080/actuator/health/readiness || exit 1
+
+ENTRYPOINT ["java", "-jar", "/app/application.jar"]

@@ -1,0 +1,14 @@
+# Build outputs & caches
+build/
+.gradle/
+
+# Local / IDE
+.idea/
+*.iml
+.vscode/
+
+# Not needed in image
+api-tests/
+docker-compose.yml
+*.md
+.DS_Store
