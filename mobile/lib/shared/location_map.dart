@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../core/location/location_fix.dart';
 import 'map_location_pin.dart';
+import 'osm_attribution.dart';
 
 /// OpenStreetMap + markers for **self** (blue) and **peers** (orange).
 ///
@@ -118,6 +119,11 @@ class _LocationMapState extends State<LocationMap> {
             TileLayer(
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'odm.clarity.woleh_mobile',
+            ),
+            SimpleAttributionWidget(
+              alignment: Alignment.bottomLeft,
+              source: const Text('OpenStreetMap contributors'),
+              onTap: openOsmCopyrightPage,
             ),
             MarkerLayer(
               markers: [
