@@ -8,7 +8,7 @@ Mono-repo for the **Woleh** transit app: Flutter client and Spring Boot API.
 | [`mobile/`](mobile/) | Flutter app — Dart package **`odm_clarity_woleh_mobile`**; Android/iOS **`odm.clarity.woleh_mobile`** |
 | [`server/`](server/) | Spring Boot API — Java **`odm.clarity.woleh`** |
 | [`server/docker-compose.yml`](server/docker-compose.yml) | Local PostgreSQL for development |
-| [`deploy/staging/`](deploy/staging/) | Staging stack: API + Postgres + Caddy (TLS) |
+| [`deploy/staging/`](deploy/staging/) | Staging stack: API + Postgres + Caddy (TLS); [`connect-staging.sh`](deploy/staging/connect-staging.sh), [`logs-staging.sh`](deploy/staging/logs-staging.sh), [`app-logs-staging.sh`](deploy/staging/app-logs-staging.sh) |
 | [`server/api-tests/`](server/api-tests/) | `.http` collections for manual API checks |
 | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | CI (Gradle + Flutter) on push/PR to `main` |
 
@@ -33,6 +33,17 @@ Public hostname: **`https://woleh.okaidarkomorgan.com`** (REST `/api/v1`, WebSoc
 4. **From your laptop** (SSH host **`WOLEH_STAGING_SSH`**, default **`woleh-staging`**), run **`./deploy/staging/deploy.sh`**. It **`git pull`**s the monorepo on the laptop when you pass **`--pull`** (if **`REPO_ROOT`** is a git checkout), runs **`./gradlew bootJar`**, **rsync**s the bundle, then **SSH** + **`./deploy.sh --local`**. **`./deploy.sh --skip-jar-sync`** skips Gradle and re-uploading the JAR. On the VPS alone, **`./deploy.sh --local`** runs Compose in the synced directory.
 
 Smoke check: `curl -fsS https://woleh.okaidarkomorgan.com/actuator/health/readiness`.
+
+**SSH and logs (from your laptop):** same env as deploy — **`WOLEH_STAGING_SSH`** (default **`woleh-staging`**), optional **`WOLEH_STAGING_REMOTE_DIR`**.
+
+```bash
+./deploy/staging/connect-staging.sh              # shell in ~/woleh/deploy/staging (or your override)
+./deploy/staging/connect-staging.sh docker compose ps
+./deploy/staging/logs-staging.sh                 # follow all service logs
+./deploy/staging/logs-staging.sh -f --tail=50 api
+./deploy/staging/app-logs-staging.sh             # follow API (Spring Boot) logs only
+./deploy/staging/app-logs-staging.sh --tail=100
+```
 
 The staging API image is built from [`deploy/staging/Dockerfile.api`](deploy/staging/Dockerfile.api) (Java 17 JRE) using that **`application.jar`**. [`server/Dockerfile`](server/Dockerfile) remains a full multi-stage build for other uses. Staging uses profile **`staging`** ([`application-staging.yml`](server/src/main/resources/application-staging.yml)). Flyway runs on startup against the Compose Postgres volume.
 
