@@ -4,7 +4,7 @@
 # Spring Boot (`spring-boot-docker-compose`, cwd `server/`) uses the same file and
 # likewise starts only unprofiled services.
 #
-# OSM tile server (overv/openstreetmap-tile-server, image tag v2.3.0):
+# OSM tile server (overv/openstreetmap-tile-server, image tag 2.3.0):
 #   1. One-time import — downloads PBF into named volumes (pick a small regional extract):
 #        docker compose --profile manual run --rm osm-tiles-import
 #      Custom extract:
@@ -44,7 +44,7 @@ services:
   osm-tiles-import:
     profiles:
       - manual
-    image: overv/openstreetmap-tile-server:v2.3.0
+    image: overv/openstreetmap-tile-server:2.3.0
     platform: linux/amd64
     volumes:
       - woleh_osm_data:/data/database/
@@ -54,9 +54,9 @@ services:
     command: import
 
   osm-tiles:
-    profiles:
-      - tiles
-    image: overv/openstreetmap-tile-server:v2.3.0
+#    profiles:
+#      - tiles
+    image: overv/openstreetmap-tile-server:2.3.0
     platform: linux/amd64
     container_name: woleh-osm-tiles
     ports:
