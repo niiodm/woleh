@@ -2,14 +2,14 @@
 
 This document describes a **navigation and UX restructuring** for the Flutter app under [`mobile/`](../mobile/). It complements live-location behavior in [MAP_LIVE_LOCATION_PLAN.md](./MAP_LIVE_LOCATION_PLAN.md) and place-list APIs in [API_CONTRACT.md](./API_CONTRACT.md).
 
-**Summary:** Map-first `/home`, splash while auth resolves, dedicated `/profile` (logout, subscriptions, edit name), `/places/search` with autosave then return to the map (matches as live peer markers), **mutually exclusive watch vs broadcast** (only one active list), and a fix for profile edit not closing after save.
+**Summary:** Map-first `/home`, splash while auth resolves, dedicated `/profile` (logout, subscriptions, edit name), `/places/search` with autosave then return to the map (matches as live peer markers), **mutually exclusive watch vs broadcast** (only one active list), a **stop** control on the map when the user is actively watching or broadcasting (clears the active list without opening search), and a fix for profile edit not closing after save.
 
 ---
 
 ## Implementation checklist
 
 - [x] **Splash / router** — `/splash`, `initialLocation`, redirects for auth loading → splash, splash → auth or `/home`; update [`mobile/test/app/router_redirect_test.dart`](../mobile/test/app/router_redirect_test.dart). *(Done: [`mobile/lib/app/splash_screen.dart`](../mobile/lib/app/splash_screen.dart), [`mobile/lib/app/router.dart`](../mobile/lib/app/router.dart).)*
-- [x] **Map home** — Full-page map, search chrome, profile icon, persistent recenter; `WsStatusBanner` + match SnackBars; `/profile` → [`ProfileScreen`](../mobile/lib/features/me/presentation/profile_screen.dart); `/places/search` → [`PlacesSearchScreen`](../mobile/lib/features/places/presentation/places_search_screen.dart); `/map` → `/home`. *(Done: [`map_home_screen.dart`](../mobile/lib/features/home/presentation/map_home_screen.dart), [`live_map_stack.dart`](../mobile/lib/features/location/presentation/live_map_stack.dart), [`location_map.dart`](../mobile/lib/shared/location_map.dart), [`pump_map_home.dart`](../mobile/test/support/pump_map_home.dart).)*
+- [x] **Map home** — Full-page map, search chrome, **stop watching/broadcast** (between search and profile when the corresponding list is non-empty), profile icon, persistent recenter; `WsStatusBanner` + match SnackBars; `/profile` → [`ProfileScreen`](../mobile/lib/features/me/presentation/profile_screen.dart); `/places/search` → [`PlacesSearchScreen`](../mobile/lib/features/places/presentation/places_search_screen.dart); `/map` → `/home`. *(Done: [`map_home_screen.dart`](../mobile/lib/features/home/presentation/map_home_screen.dart), [`live_map_stack.dart`](../mobile/lib/features/location/presentation/live_map_stack.dart), [`location_map.dart`](../mobile/lib/shared/location_map.dart), [`pump_map_home.dart`](../mobile/test/support/pump_map_home.dart), [`map_home_stop_button_test.dart`](../mobile/test/features/home/map_home_stop_button_test.dart).)*
 - [x] **Profile screen** — `/profile` → [`ProfileScreen`](../mobile/lib/features/me/presentation/profile_screen.dart); AppBar: plans, edit, sign out; body: avatar, subscription, permissions, limits, place-list + map actions; no duplicate `WsStatusBanner` / match list (map-first). *(Removed `features/home/presentation/home_screen.dart`.)*
 - [x] **Places search** — `/places/search`, draft list, autosave with watch-XOR-broadcast clears, permissions, invalidate notifiers, pop back to map. *(Done: [`places_search_screen.dart`](../mobile/lib/features/places/presentation/places_search_screen.dart); save paths await [`meNotifierProvider.future`](../mobile/lib/features/me/presentation/me_notifier.dart) so a cold open of search still resolves `me` before PUT; tests: [`places_search_screen_test.dart`](../mobile/test/features/places/places_search_screen_test.dart).)*
 - [ ] **Mode exclusivity** — Same XOR rule on optional `/watch` and `/broadcast` editors (or shared save helper); legacy dual-list migration if needed.
@@ -53,6 +53,7 @@ This document describes a **navigation and UX restructuring** for the Flutter ap
 - **Layout:** `Scaffold` with **no** traditional `AppBar` (or a transparent one); use a `Stack`:
   - **Bottom:** full-bleed map (reuse location gate + `LocationMap` from [`live_map_screen.dart`](../mobile/lib/features/location/presentation/live_map_screen.dart)).
   - **Top:** padded “search” `Material` / `SearchBar` **read-only** `onTap` → `context.push('/places/search')` (or similar).
+  - **Between search and profile:** when the user is **actively watching** (non-empty watch list) or **actively broadcasting** (non-empty broadcast list), show a compact **stop** control (`PUT` empty list for that mode, then invalidate watch/broadcast notifiers). Use the same **derived mode** rule as elsewhere: if **both** lists are non-empty (legacy), prefer **broadcast** for the stop action first. Hide while the list is loading, in error state, empty, or **offline read-only** for that notifier. Missing permission for the clear → `push('/plans')` (same as places search). Errors → `SnackBar`.
   - **Top-right:** `IconButton` → `context.push('/profile')`.
   - **Bottom-right:** recenter control. Today recenter lives inside `LocationMap` only when `_followUser` is false; **product ask** is a **persistent** corner button — either:
     - **Option A (minimal API change):** add an optional `VoidCallback? onRecenterTap` + `bool showRecenterFab` to `LocationMap` and call the same logic as `_recenterOnUser`, **or**
@@ -133,6 +134,8 @@ flowchart TD
   splash -->|no token| auth
   splash -->|token| home
   home -->|search tap| search
+  home -->|stop control| clearList[PUT empty watch or broadcast]
+  clearList --> home
   home -->|profile icon| profile
   search -->|PUT watch then clear broadcast then pop| home
   search -->|PUT broadcast then clear watch then pop| home
@@ -150,7 +153,7 @@ flowchart TD
 | Area | Files |
 |------|--------|
 | Router / splash | [`mobile/lib/app/router.dart`](../mobile/lib/app/router.dart), new `splash_screen.dart`, [`router_redirect_test.dart`](../mobile/test/app/router_redirect_test.dart) |
-| Map home | [`live_map_screen.dart`](../mobile/lib/features/location/presentation/live_map_screen.dart) and/or new `map_home_screen.dart`, [`location_map.dart`](../mobile/lib/shared/location_map.dart) |
+| Map home | [`live_map_screen.dart`](../mobile/lib/features/location/presentation/live_map_screen.dart) and/or [`map_home_screen.dart`](../mobile/lib/features/home/presentation/map_home_screen.dart) (search / **stop** / profile chrome), [`location_map.dart`](../mobile/lib/shared/location_map.dart) |
 | Profile | [`profile_screen.dart`](../mobile/lib/features/me/presentation/profile_screen.dart) (replaces removed `home_screen.dart`) |
 | Search + mode | New `places_search_screen.dart` (+ optional notifier); updates to [`watch_screen.dart`](../mobile/lib/features/places/presentation/watch_screen.dart) / `broadcast_screen.dart` or shared save helper for XOR clears |
 | Bugfix | [`profile_edit_screen.dart`](../mobile/lib/features/me/presentation/profile_edit_screen.dart), new test |

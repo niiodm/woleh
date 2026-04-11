@@ -1,11 +1,17 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/app_error.dart';
 import '../../../core/ws_message.dart';
 import '../../../shared/ws_status_banner.dart';
 import '../../location/presentation/live_map_stack.dart';
+import '../../me/presentation/me_notifier.dart';
+import '../../places/data/place_list_repository.dart';
+import '../../places/presentation/broadcast_notifier.dart';
 import '../../places/presentation/match_notifier.dart';
+import '../../places/presentation/watch_notifier.dart';
 
 /// Full-screen map with search entry, profile, WS status, and match toasts.
 class MapHomeScreen extends ConsumerStatefulWidget {
@@ -15,7 +21,85 @@ class MapHomeScreen extends ConsumerStatefulWidget {
   ConsumerState<MapHomeScreen> createState() => _MapHomeScreenState();
 }
 
+enum _ActivePlaceMode { broadcast, watch }
+
+/// Strong red for the destructive “stop” control (readable on `surfaceContainerHigh`).
+const _kStopButtonRed = Color(0xFFE53935);
+
 class _MapHomeScreenState extends ConsumerState<MapHomeScreen> {
+  bool _stopping = false;
+
+  AppError _toAppError(Object? o) {
+    if (o is AppError) return o;
+    return const UnknownError('Something went wrong. Please try again.');
+  }
+
+  String _dioMessage(DioException e) => _toAppError(e.error).message;
+
+  _ActivePlaceMode? _activeStopMode(WatchState watch, BroadcastState broadcast) {
+    final br = broadcast is BroadcastReady ? broadcast : null;
+    if (br != null &&
+        br.names.isNotEmpty &&
+        !br.readOnlyOffline) {
+      return _ActivePlaceMode.broadcast;
+    }
+    final wr = watch is WatchReady ? watch : null;
+    if (wr != null &&
+        wr.names.isNotEmpty &&
+        !wr.readOnlyOffline) {
+      return _ActivePlaceMode.watch;
+    }
+    return null;
+  }
+
+  String _stopTooltip(_ActivePlaceMode mode) => switch (mode) {
+        _ActivePlaceMode.broadcast => 'Stop broadcasting',
+        _ActivePlaceMode.watch => 'Stop watching',
+      };
+
+  Future<void> _stopActive(_ActivePlaceMode mode) async {
+    if (_stopping) return;
+    final snapshot = await ref.read(meNotifierProvider.future);
+    if (snapshot == null || !mounted) return;
+    final me = snapshot.me;
+    if (mode == _ActivePlaceMode.broadcast &&
+        !me.permissions.contains('woleh.place.broadcast')) {
+      if (mounted) context.push('/plans');
+      return;
+    }
+    if (mode == _ActivePlaceMode.watch &&
+        !me.permissions.contains('woleh.place.watch')) {
+      if (mounted) context.push('/plans');
+      return;
+    }
+
+    setState(() => _stopping = true);
+    final repo = ref.read(placeListRepositoryProvider);
+    try {
+      if (mode == _ActivePlaceMode.broadcast) {
+        await repo.putBroadcastList([]);
+      } else {
+        await repo.putWatchList([]);
+      }
+      ref.invalidate(watchNotifierProvider);
+      ref.invalidate(broadcastNotifierProvider);
+    } on DioException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_dioMessage(e))),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not stop. Please try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _stopping = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<List<MatchMessage>>(matchNotifierProvider, (prev, next) {
@@ -35,6 +119,10 @@ class _MapHomeScreenState extends ConsumerState<MapHomeScreen> {
 
     // Keep the notifier subscribed while on the map.
     ref.watch(matchNotifierProvider);
+
+    final watchState = ref.watch(watchNotifierProvider);
+    final broadcastState = ref.watch(broadcastNotifierProvider);
+    final stopMode = _activeStopMode(watchState, broadcastState);
 
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
@@ -91,6 +179,34 @@ class _MapHomeScreenState extends ConsumerState<MapHomeScreen> {
                           ),
                         ),
                       ),
+                      if (stopMode != null) ...[
+                        const SizedBox(width: 8),
+                        Material(
+                          elevation: 2,
+                          shadowColor: Colors.black26,
+                          shape: const CircleBorder(),
+                          color: scheme.surfaceContainerHigh,
+                          child: IconButton(
+                            tooltip: _stopTooltip(stopMode),
+                            onPressed: _stopping
+                                ? null
+                                : () => _stopActive(stopMode),
+                            icon: _stopping
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: _kStopButtonRed,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.stop_circle_outlined,
+                                    color: _kStopButtonRed,
+                                  ),
+                          ),
+                        ),
+                      ],
                       const SizedBox(width: 8),
                       Material(
                         elevation: 2,
