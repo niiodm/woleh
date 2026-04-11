@@ -43,6 +43,11 @@ services:
       CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGIN_PATTERNS:-https://woleh.okaidarkomorgan.com,http://localhost:*,http://127.0.0.1:*}
       HEALTH_SHOW_DETAILS: ${HEALTH_SHOW_DETAILS:-when-authorized}
       HEALTH_SHOW_COMPONENTS: ${HEALTH_SHOW_COMPONENTS:-always}
+      # SMS: default mock (StubSmsAdapter — no real texts). Set SMS_PROVIDER=nalo + NALO_SMS_API_KEY in .env for NALO.
+      SMS_PROVIDER: ${SMS_PROVIDER:-mock}
+      NALO_SMS_API_KEY: ${NALO_SMS_API_KEY:-}
+      NALO_SMS_API_URL: ${NALO_SMS_API_URL:-https://sms.nalosolutions.com/smsbackend/Resl_Nalo/send-message/}
+      NALO_SMS_SENDER_ID: ${NALO_SMS_SENDER_ID:-Woleh}
     depends_on:
       postgres:
         condition: service_healthy
