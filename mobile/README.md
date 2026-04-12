@@ -59,6 +59,23 @@ flutter run --dart-define=WOLEH_PUSH_ENABLED=true
 
 Requires a configured **Firebase** project and platform files (e.g. Android `google-services.json`). Without **`WOLEH_PUSH_ENABLED`**, push code is not initialized.
 
+## Crashlytics and Performance (Phase 2)
+
+By default the app initializes **Firebase** when **push** is enabled **or** when **Firebase monitoring** is enabled (see [`lib/core/firebase_monitoring.dart`](lib/core/firebase_monitoring.dart)). That enables **Crashlytics** (fatal Flutter/async errors) and **Performance Monitoring**:
+
+- **HTTP:** [`FirebasePerformanceInterceptor`](lib/core/firebase_performance_dio.dart) on the API `Dio` clients (including token refresh).
+- **Custom traces:** `ws_transit_connect` (WebSocket until first frame/message), `map_home_first_frame` (map screen first frame).
+
+**Opt out** of monitoring (no Crashlytics/Performance, and Firebase is not initialized unless push is enabled):
+
+```bash
+flutter run --dart-define=WOLEH_FIREBASE_MONITORING=false
+```
+
+If **`WOLEH_FIREBASE_MONITORING`** is true but **`google-services`** / **`GoogleService-Info.plist`** are missing or invalid, `Firebase.initializeApp` fails gracefully and the app still runs.
+
+**Release health** in the Firebase console uses the app **version** and **build** from [`pubspec.yaml`](pubspec.yaml) (`version:` / `+` build number) and standard Android/iOS build metadata.
+
 ## Checks (CI-aligned)
 
 ```bash

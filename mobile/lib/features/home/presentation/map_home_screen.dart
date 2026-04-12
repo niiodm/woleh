@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
+import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/app_error.dart';
+import '../../../core/firebase_monitoring.dart';
 import '../../../core/ws_message.dart';
 import '../../../shared/ws_status_banner.dart';
 import '../../location/presentation/live_map_stack.dart';
@@ -28,6 +32,19 @@ const _kStopButtonRed = Color(0xFFE53935);
 
 class _MapHomeScreenState extends ConsumerState<MapHomeScreen> {
   bool _stopping = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!firebaseCustomPerformanceEnabled) return;
+    try {
+      final trace = FirebasePerformance.instance.newTrace('map_home_first_frame');
+      unawaited(trace.start());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(trace.stop());
+      });
+    } catch (_) {}
+  }
 
   AppError _toAppError(Object? o) {
     if (o is AppError) return o;

@@ -86,6 +86,6 @@ flowchart LR
 
 - [x] Restrict actuator metrics/prometheus (management port + Security/Caddy); document staging scrape path
 - [x] Optional: Prometheus (+ Grafana) in staging compose scraping internal `/actuator/prometheus`
-- [ ] Add Firebase Crashlytics + Performance; init with Firebase; Dio/WS traces as needed
+- [x] Add Firebase Crashlytics + Performance; init with Firebase; Dio/WS traces as needed
 - [ ] Event catalog + Dart `Analytics` wrapper + GoRouter observer + user id on auth
 - [ ] Consent/ATT notes + `mobile/README.md` section on telemetry and dev toggles

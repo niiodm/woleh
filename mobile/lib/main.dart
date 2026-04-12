@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/router.dart';
 import 'core/app_colors.dart';
+import 'core/firebase_monitoring.dart';
 import 'core/push_bootstrap.dart';
 import 'core/push_hook.dart';
 import 'core/shared_preferences_provider.dart';
@@ -13,6 +14,7 @@ import 'features/location/presentation/peer_locations_notifier.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await bootstrapFirebaseObservability();
   final prefs = await SharedPreferences.getInstance();
   runApp(
     ProviderScope(

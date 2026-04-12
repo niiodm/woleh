@@ -6,6 +6,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'app_error.dart';
 import 'auth_state.dart';
 import 'auth_token_storage.dart';
+import 'firebase_monitoring.dart';
+import 'firebase_performance_dio.dart';
 
 part 'api_client.g.dart';
 
@@ -47,6 +49,8 @@ ApiClient apiClient(Ref ref) {
     ),
   );
 
+  final perfInterceptor = FirebasePerformanceInterceptor();
+
   final tokenRefreshInterceptor = TokenRefreshInterceptor(
     getRefreshToken: storage.readRefreshToken,
     storeTokens: (accessToken, refreshToken) async {
@@ -66,7 +70,12 @@ ApiClient apiClient(Ref ref) {
     retry: dio.fetch,
   );
 
+  if (kFirebaseMonitoringEnabled) {
+    refreshDio.interceptors.add(perfInterceptor);
+  }
+
   dio.interceptors.addAll([
+    if (kFirebaseMonitoringEnabled) perfInterceptor,
     _AuthInterceptor(ref),
     if (kDebugMode)
       LogInterceptor(

@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'auth_state.dart';
+import 'firebase_monitoring.dart';
 import 'ws_message.dart';
 
 part 'ws_client.g.dart';
@@ -55,6 +57,7 @@ class WsClient extends _$WsClient {
   Timer? _reconnectTimer;
   int _attempt = 0;
   String? _currentToken;
+  Trace? _connectTrace;
   late final ValueNotifier<WsConnectionState> _connectionState;
 
   /// Current WS connectivity for UI (banner, etc.).
@@ -85,6 +88,7 @@ class WsClient extends _$WsClient {
     );
 
     ref.onDispose(() {
+      _stopConnectTrace();
       _reconnectTimer?.cancel();
       _reconnectTimer = null;
       // Clear token first so _scheduleReconnect no-ops if sink.close()
@@ -110,6 +114,7 @@ class WsClient extends _$WsClient {
   void connect() {
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
+    _stopConnectTrace();
     _channel?.sink.close();
     _channel = null;
 
@@ -117,6 +122,15 @@ class WsClient extends _$WsClient {
     if (token == null) return;
 
     _setConnectionState(WsConnectionState.connecting);
+
+    if (firebaseCustomPerformanceEnabled) {
+      try {
+        _connectTrace = FirebasePerformance.instance.newTrace('ws_transit_connect');
+        unawaited(_connectTrace!.start());
+      } catch (_) {
+        _connectTrace = null;
+      }
+    }
 
     final wsBase = _kApiBaseUrl
         .replaceFirst('https://', 'wss://')
@@ -134,6 +148,7 @@ class WsClient extends _$WsClient {
 
   /// Closes the active connection and cancels any pending reconnect.
   void disconnect() {
+    _stopConnectTrace();
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _channel?.sink.close();
@@ -175,6 +190,7 @@ class WsClient extends _$WsClient {
   // ── Internal ───────────────────────────────────────────────────────────────
 
   void _onData(dynamic rawData) {
+    _stopConnectTrace();
     // Reset backoff on any successfully received message (including heartbeat).
     _attempt = 0;
     _setConnectionState(WsConnectionState.connected);
@@ -233,13 +249,22 @@ class WsClient extends _$WsClient {
   }
 
   void _onError(Object error) {
+    _stopConnectTrace();
     debugPrint('[WsClient] Connection error: $error');
     _scheduleReconnect();
   }
 
   void _onDone() {
+    _stopConnectTrace();
     debugPrint('[WsClient] Connection closed');
     _scheduleReconnect();
+  }
+
+  void _stopConnectTrace() {
+    final t = _connectTrace;
+    if (t == null) return;
+    _connectTrace = null;
+    unawaited(t.stop());
   }
 
   void _scheduleReconnect() {

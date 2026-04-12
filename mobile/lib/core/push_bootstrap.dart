@@ -66,7 +66,9 @@ class _PushBootstrapState extends ConsumerState<PushBootstrap> {
 
   Future<void> _initFirebase() async {
     try {
-      await Firebase.initializeApp();
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp();
+      }
       if (!mounted) return;
       _firebaseReady = true;
       _foregroundSub = FirebaseMessaging.onMessage.listen(_onForegroundMessage);
