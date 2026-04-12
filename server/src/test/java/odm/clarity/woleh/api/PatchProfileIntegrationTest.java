@@ -77,6 +77,21 @@ class PatchProfileIntegrationTest {
 	}
 
 	@Test
+	void patchProfile_setProductAnalyticsConsent_persists() throws Exception {
+		mockMvc.perform(patch(PATCH_URL)
+				.header(HttpHeaders.AUTHORIZATION, bearerToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"productAnalyticsConsent": true}
+						"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.profile.productAnalyticsConsent").value(true));
+
+		User updated = userRepository.findById(user.getId()).orElseThrow();
+		assertThat(updated.isProductAnalyticsConsent()).isTrue();
+	}
+
+	@Test
 	void patchProfile_setDisplayName_persistsInDatabase() throws Exception {
 		mockMvc.perform(patch(PATCH_URL)
 				.header(HttpHeaders.AUTHORIZATION, bearerToken)

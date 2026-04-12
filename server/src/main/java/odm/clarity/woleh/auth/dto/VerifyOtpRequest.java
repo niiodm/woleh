@@ -12,5 +12,8 @@ public record VerifyOtpRequest(
 		@NotBlank(message = "must not be blank")
 		@Pattern(regexp = "\\d{6}", message = "must be exactly 6 digits")
 		@Size(min = 6, max = 6, message = "must be exactly 6 digits")
-		String otp) {
+		String otp,
+
+		/** When set, persisted on the user before tokens are issued (product analytics opt-in / out). **/
+		Boolean productAnalyticsConsent) {
 }

@@ -66,7 +66,8 @@ public class AuthController {
 	ResponseEntity<ApiEnvelope<VerifyOtpResponse>> verifyOtp(
 			@RequestBody @Valid VerifyOtpRequest request) {
 
-		VerifyOtpResult result = otpService.verifyOtp(request.phoneE164(), request.otp());
+		VerifyOtpResult result = otpService.verifyOtp(
+				request.phoneE164(), request.otp(), request.productAnalyticsConsent());
 
 		Instant now = Instant.now();
 		String accessToken = jwtService.createAccessToken(result.userId(), now);

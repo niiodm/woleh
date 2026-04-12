@@ -57,8 +57,16 @@ public class MeController {
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new UserNotFoundException(userId));
 
+		boolean dirty = false;
 		if (request.displayName() != null) {
 			user.setDisplayName(request.displayName());
+			dirty = true;
+		}
+		if (request.productAnalyticsConsent() != null) {
+			user.setProductAnalyticsConsent(request.productAnalyticsConsent());
+			dirty = true;
+		}
+		if (dirty) {
 			userRepository.save(user);
 		}
 
@@ -74,7 +82,8 @@ public class MeController {
 						String.valueOf(user.getId()),
 						user.getPhoneE164(),
 						user.getDisplayName(),
-						user.isLocationSharingEnabled()),
+						user.isLocationSharingEnabled(),
+						user.isProductAnalyticsConsent()),
 				e.permissions(),
 				e.tier(),
 				new MeResponse.Limits(e.placeWatchMax(), e.placeBroadcastMax()),

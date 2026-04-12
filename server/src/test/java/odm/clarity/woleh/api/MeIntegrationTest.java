@@ -61,7 +61,8 @@ class MeIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.result").value("SUCCESS"))
 				.andExpect(jsonPath("$.data.profile.userId").value(String.valueOf(user.getId())))
-				.andExpect(jsonPath("$.data.profile.phoneE164").value(PHONE));
+				.andExpect(jsonPath("$.data.profile.phoneE164").value(PHONE))
+				.andExpect(jsonPath("$.data.profile.productAnalyticsConsent").value(false));
 	}
 
 	@Test

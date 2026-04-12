@@ -19,7 +19,8 @@ public record MeResponse(
 			String userId,
 			String phoneE164,
 			@JsonInclude(JsonInclude.Include.ALWAYS) String displayName,
-			boolean locationSharingEnabled) {
+			boolean locationSharingEnabled,
+			boolean productAnalyticsConsent) {
 	}
 
 	public record Limits(int placeWatchMax, int placeBroadcastMax) {

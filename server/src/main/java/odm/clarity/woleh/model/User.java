@@ -34,6 +34,9 @@ public class User {
 	@Column(name = "location_sharing_enabled", nullable = false)
 	private boolean locationSharingEnabled = true;
 
+	@Column(name = "product_analytics_consent", nullable = false)
+	private boolean productAnalyticsConsent = false;
+
 	protected User() {
 	}
 
@@ -87,5 +90,13 @@ public class User {
 
 	public void setLocationSharingEnabled(boolean locationSharingEnabled) {
 		this.locationSharingEnabled = locationSharingEnabled;
+	}
+
+	public boolean isProductAnalyticsConsent() {
+		return productAnalyticsConsent;
+	}
+
+	public void setProductAnalyticsConsent(boolean productAnalyticsConsent) {
+		this.productAnalyticsConsent = productAnalyticsConsent;
 	}
 }

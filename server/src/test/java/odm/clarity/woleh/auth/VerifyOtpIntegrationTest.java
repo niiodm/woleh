@@ -119,6 +119,17 @@ class VerifyOtpIntegrationTest {
 	}
 
 	@Test
+	void verifyOtp_withProductAnalyticsConsent_persistsOnUser() throws Exception {
+		mockMvc.perform(post(VERIFY_URL)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(bodyWithConsent(PHONE, OTP, true)))
+				.andExpect(status().isOk());
+
+		var user = userRepository.findByPhoneE164(PHONE).orElseThrow();
+		assertThat(user.isProductAnalyticsConsent()).isTrue();
+	}
+
+	@Test
 	void verifyOtp_existingUser_doesNotAddSecondSubscription() throws Exception {
 		userRepository.save(new odm.clarity.woleh.model.User(PHONE));
 		long subsBefore = subscriptionRepository.count();
@@ -241,5 +252,11 @@ class VerifyOtpIntegrationTest {
 		return """
 				{"phoneE164": "%s", "otp": "%s"}
 				""".formatted(phone, otp);
+	}
+
+	private static String bodyWithConsent(String phone, String otp, boolean consent) {
+		return """
+				{"phoneE164": "%s", "otp": "%s", "productAnalyticsConsent": %s}
+				""".formatted(phone, otp, consent);
 	}
 }

@@ -93,7 +93,7 @@ public class OtpService {
 	 * @throws InvalidOtpException on any verification failure
 	 */
 	@Transactional
-	public VerifyOtpResult verifyOtp(String phoneE164, String otp) {
+	public VerifyOtpResult verifyOtp(String phoneE164, String otp, Boolean productAnalyticsConsent) {
 		OtpChallenge challenge = resolveActiveChallenge(phoneE164);
 
 		if (!passwordEncoder.matches(otp, challenge.getOtpHash())) {
@@ -111,6 +111,11 @@ public class OtpService {
 				: userRepository.findByPhoneE164(phoneE164).orElseThrow();
 		if (isNewUser) {
 			subscriptionService.activateFreePlanForNewUser(user);
+		}
+
+		if (productAnalyticsConsent != null) {
+			user.setProductAnalyticsConsent(productAnalyticsConsent);
+			userRepository.save(user);
 		}
 
 		String flow = isNewUser ? "signup" : "login";

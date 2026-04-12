@@ -163,7 +163,7 @@ class OtpServiceTest {
 			when(otpChallengeRepository.findByPhoneE164AndConsumedOrderByCreatedAtDesc(PHONE, false))
 					.thenReturn(List.of());
 
-			assertThatThrownBy(() -> service.verifyOtp(PHONE, OTP))
+			assertThatThrownBy(() -> service.verifyOtp(PHONE, OTP, null))
 					.isInstanceOf(InvalidOtpException.class)
 					.hasMessageContaining("No active OTP");
 		}
@@ -175,7 +175,7 @@ class OtpServiceTest {
 			when(otpChallengeRepository.findByPhoneE164AndConsumedOrderByCreatedAtDesc(PHONE, false))
 					.thenReturn(List.of(expired));
 
-			assertThatThrownBy(() -> service.verifyOtp(PHONE, OTP))
+			assertThatThrownBy(() -> service.verifyOtp(PHONE, OTP, null))
 					.isInstanceOf(InvalidOtpException.class)
 					.hasMessageContaining("expired");
 		}
@@ -186,7 +186,7 @@ class OtpServiceTest {
 			when(otpChallengeRepository.findByPhoneE164AndConsumedOrderByCreatedAtDesc(PHONE, false))
 					.thenReturn(List.of(validChallenge));
 
-			assertThatThrownBy(() -> service.verifyOtp(PHONE, OTP))
+			assertThatThrownBy(() -> service.verifyOtp(PHONE, OTP, null))
 					.isInstanceOf(InvalidOtpException.class)
 					.hasMessageContaining("too many failed attempts");
 		}
@@ -199,7 +199,7 @@ class OtpServiceTest {
 					.thenReturn(List.of(validChallenge));
 			when(otpChallengeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-			assertThatThrownBy(() -> service.verifyOtp(PHONE, "000000"))
+			assertThatThrownBy(() -> service.verifyOtp(PHONE, "000000", null))
 					.isInstanceOf(InvalidOtpException.class);
 
 			ArgumentCaptor<OtpChallenge> captor = ArgumentCaptor.forClass(OtpChallenge.class);
@@ -213,7 +213,7 @@ class OtpServiceTest {
 					.thenReturn(List.of(validChallenge));
 			when(otpChallengeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-			assertThatThrownBy(() -> service.verifyOtp(PHONE, "000000"))
+			assertThatThrownBy(() -> service.verifyOtp(PHONE, "000000", null))
 					.isInstanceOf(InvalidOtpException.class);
 
 			verify(userRepository, never()).save(any());
@@ -225,7 +225,7 @@ class OtpServiceTest {
 		void returnsSignupFlow_forNewUser() {
 			stubCorrectOtp(false);
 
-			VerifyOtpResult result = service.verifyOtp(PHONE, OTP);
+			VerifyOtpResult result = service.verifyOtp(PHONE, OTP, null);
 
 			assertThat(result.flow()).isEqualTo("signup");
 		}
@@ -234,7 +234,7 @@ class OtpServiceTest {
 		void createsUser_forNewPhone() {
 			stubCorrectOtp(false);
 
-			service.verifyOtp(PHONE, OTP);
+			service.verifyOtp(PHONE, OTP, null);
 
 			ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
 			verify(userRepository).save(captor.capture());
@@ -245,7 +245,7 @@ class OtpServiceTest {
 		void activatesFreePlan_forNewUser() {
 			stubCorrectOtp(false);
 
-			service.verifyOtp(PHONE, OTP);
+			service.verifyOtp(PHONE, OTP, null);
 
 			ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
 			verify(subscriptionService).activateFreePlanForNewUser(captor.capture());
@@ -258,7 +258,7 @@ class OtpServiceTest {
 		void returnsLoginFlow_forExistingUser() {
 			stubCorrectOtp(true);
 
-			VerifyOtpResult result = service.verifyOtp(PHONE, OTP);
+			VerifyOtpResult result = service.verifyOtp(PHONE, OTP, null);
 
 			assertThat(result.flow()).isEqualTo("login");
 		}
@@ -267,7 +267,7 @@ class OtpServiceTest {
 		void doesNotCreateUser_forExistingPhone() {
 			stubCorrectOtp(true);
 
-			service.verifyOtp(PHONE, OTP);
+			service.verifyOtp(PHONE, OTP, null);
 
 			verify(userRepository, never()).save(any(User.class));
 			verify(subscriptionService, never()).activateFreePlanForNewUser(any());
@@ -279,7 +279,7 @@ class OtpServiceTest {
 		void marksChallengeConsumed_onSuccess() {
 			stubCorrectOtp(false);
 
-			service.verifyOtp(PHONE, OTP);
+			service.verifyOtp(PHONE, OTP, null);
 
 			ArgumentCaptor<OtpChallenge> captor = ArgumentCaptor.forClass(OtpChallenge.class);
 			// save is called once to mark consumed (user save is separate repo call)
