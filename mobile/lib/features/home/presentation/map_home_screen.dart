@@ -5,6 +5,7 @@ import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../core/analytics_provider.dart';
 import '../../../core/app_error.dart';
@@ -33,6 +34,9 @@ const _kStopButtonRed = Color(0xFFE53935);
 
 class _MapHomeScreenState extends ConsumerState<MapHomeScreen> {
   bool _stopping = false;
+
+  /// Last [stopMode] we applied to [WakelockPlus] (avoid redundant platform calls).
+  _ActivePlaceMode? _wakelockAppliedForMode;
 
   @override
   void initState() {
@@ -118,6 +122,22 @@ class _MapHomeScreenState extends ConsumerState<MapHomeScreen> {
     }
   }
 
+  void _syncWakelockForActiveSession(_ActivePlaceMode? stopMode) {
+    if (stopMode == _wakelockAppliedForMode) return;
+    _wakelockAppliedForMode = stopMode;
+    if (stopMode != null) {
+      unawaited(WakelockPlus.enable());
+    } else {
+      unawaited(WakelockPlus.disable());
+    }
+  }
+
+  @override
+  void dispose() {
+    unawaited(WakelockPlus.disable());
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<List<MatchMessage>>(matchNotifierProvider, (prev, next) {
@@ -141,6 +161,7 @@ class _MapHomeScreenState extends ConsumerState<MapHomeScreen> {
     final watchState = ref.watch(watchNotifierProvider);
     final broadcastState = ref.watch(broadcastNotifierProvider);
     final stopMode = _activeStopMode(watchState, broadcastState);
+    _syncWakelockForActiveSession(stopMode);
 
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
