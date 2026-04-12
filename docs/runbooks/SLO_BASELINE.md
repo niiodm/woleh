@@ -31,7 +31,7 @@ management:
 
 Without this, Prometheus cannot derive reliable p95/p99 from buckets. Custom meters (WS sessions, place-list PUTs, match evaluation, API errors) are registered in application code; see `MetricsIntegrationTest` for names.
 
-**Expose metrics safely:** In production, prefer `management.server.port` (separate from the public API port) and firewall rules so `/actuator/metrics` and `/actuator/prometheus` are not internet-routable. See the TODO in `application.yml`.
+**Expose metrics safely:** In production and staging, use `management.server.port` (separate from the public API port) and firewall rules so `/actuator/metrics` and `/actuator/prometheus` are not internet-routable. The **`staging`** profile sets port **8081** in [`application-staging.yml`](../../server/src/main/resources/application-staging.yml); Caddy proxies only the API port. Staging Prometheus scrapes `http://api:8081/actuator/prometheus` on the Docker network with HTTP Basic (see [`deploy/staging/prometheus.yml`](../../deploy/staging/prometheus.yml) and [`deploy/staging/docker-compose.yml`](../../deploy/staging/docker-compose.yml)).
 
 ## 3. Querying baselines
 

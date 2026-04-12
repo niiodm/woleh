@@ -147,9 +147,11 @@ Content-Type: application/json
 ###############################################################################
 # 3. Observability (FR-O1) — Actuator health, info, metrics, Prometheus
 #
-# NOTE: in production, {{managementBaseUrl}} differs from {{baseUrl}}
-#       (separate management port 8081, blocked from the public internet).
-#       In dev both are on 8080, so managementBaseUrl == baseUrl.
+# NOTE: In staging, {{managementBaseUrl}} is the API container's management port (8081), not HTTPS.
+#       SSH tunnel: ssh -L 8081:127.0.0.1:8081 user@host — then use 127.0.0.1:8081 for mgmtUrl.
+#       /actuator/prometheus requires HTTP Basic (prometheus:changeme by default); add:
+#       Authorization: Basic cHJvbWV0aGV1czpjaGFuZ2VtZQ==
+#       In dev, managementBaseUrl == baseUrl (8080) and metrics are usually open without Basic.
 ###############################################################################
 
 ### GET /actuator/health — expects { "status": "UP", components: { ws: {...}, db: {...} } }
@@ -171,6 +173,7 @@ GET {{mgmtUrl}}/actuator/metrics/woleh.place.list.put?tag=list_type:watch
 GET {{mgmtUrl}}/actuator/metrics/woleh.api.errors?tag=status_class:4xx
 
 ### GET /actuator/prometheus — full Prometheus scrape output (text/plain)
+# Staging: add Authorization: Basic cHJvbWV0aGV1czpjaGFuZ2VtZQ==  (default user prometheus:changeme)
 GET {{mgmtUrl}}/actuator/prometheus
 
 ###############################################################################

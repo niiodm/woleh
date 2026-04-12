@@ -5,6 +5,9 @@
 #   docker compose up -d --build
 #
 # Point DNS for woleh.okaidarkomorgan.com at this host; open TCP 80 and 443.
+#
+# Actuator (health, metrics, Prometheus) listens on api:8081 only — not proxied by Caddy.
+# Prometheus scrapes api:8081 on the Docker network. Grafana binds to loopback:3000 on the host.
 
 services:
   postgres:
@@ -48,15 +51,61 @@ services:
       NALO_SMS_API_KEY: ${NALO_SMS_API_KEY:-}
       NALO_SMS_API_URL: ${NALO_SMS_API_URL:-https://sms.nalosolutions.com/smsbackend/Resl_Nalo/send-message/}
       NALO_SMS_SENDER_ID: ${NALO_SMS_SENDER_ID:-Woleh}
+      # Actuator on 8081 (see application-staging.yml). Main API + WS stay on 8080.
+      MANAGEMENT_SERVER_PORT: ${MANAGEMENT_SERVER_PORT:-8081}
+      # HTTP Basic for /actuator/prometheus (must match deploy/staging/prometheus.yml basic_auth).
+      SPRING_SECURITY_USER_NAME: ${PROMETHEUS_SCRAPE_USER:-prometheus}
+      SPRING_SECURITY_USER_PASSWORD: ${PROMETHEUS_SCRAPE_PASSWORD:-changeme}
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/actuator/health/readiness"]
+      test:
+        [
+          "CMD",
+          "curl",
+          "-fsS",
+          "http://127.0.0.1:8081/actuator/health/readiness",
+        ]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 90s
+    networks:
+      - woleh_staging
+
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    container_name: woleh-staging-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - woleh_staging
+
+  grafana:
+    image: grafana/grafana:10.4.3
+    container_name: woleh-staging-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_HTTP_PORT: "3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - prometheus
     networks:
       - woleh_staging
 
@@ -81,6 +130,7 @@ volumes:
   woleh_staging_pgdata:
   caddy_data:
   caddy_config:
+  grafana_data:
 
 networks:
   woleh_staging:

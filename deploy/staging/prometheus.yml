@@ -1,0 +1,17 @@
+# Scrape Woleh API metrics on the internal Docker network only (management port 8081).
+# Prometheus has no published host port; use Grafana or docker exec to inspect.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: woleh-api
+    metrics_path: /actuator/prometheus
+    # Must match SPRING_SECURITY_USER_NAME / SPRING_SECURITY_USER_PASSWORD on the API service.
+    basic_auth:
+      username: prometheus
+      password: changeme
+    static_configs:
+      - targets:
+          - api:8081

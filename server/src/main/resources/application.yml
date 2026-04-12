@@ -40,9 +40,9 @@ server:
     context-path: /
 
 management:
-  # TODO (production): set management.server.port=8081 (or use an API gateway) so that
-  # /actuator/metrics and /actuator/prometheus are not reachable from the public internet.
-  # The ops firewall must block external traffic to the management port.
+  # When `management.server.port` is set (see `application-staging.yml` / env), all actuator
+  # endpoints move off the API port so Caddy never exposes metrics to the internet.
+  # Local dev and tests omit it — actuator stays on the same port as the API (8080).
   endpoints:
     web:
       exposure:

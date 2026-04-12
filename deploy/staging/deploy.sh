@@ -131,6 +131,8 @@ sync_staging_bundle() {
 		"${SCRIPT_DIR}/docker-compose.yml"
 		"${SCRIPT_DIR}/Dockerfile.api"
 		"${SCRIPT_DIR}/Caddyfile"
+		"${SCRIPT_DIR}/prometheus.yml"
+		"${SCRIPT_DIR}/grafana"
 		"${SCRIPT_DIR}/deploy.sh"
 		"${SCRIPT_DIR}/.env.example"
 	)
