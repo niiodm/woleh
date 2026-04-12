@@ -515,7 +515,7 @@ The publisher does **not** receive their own `peer_location` on the wire.
 
 ### 8.3 `type: peer_location_revoked` (Phase 4, §3.4)
 
-Sent to each **matched** peer when the other user turns **off** location sharing (`PUT /me/location-sharing` with `enabled: false`). Clients should **remove** that user’s last-known position from the map.
+Sent to each **matched** peer when the other user turns **off** location sharing (`PUT /me/location-sharing` with `enabled: false`), or when **match adjacency ends** (e.g. a watch or broadcast list change so names no longer intersect). Clients should **remove** that user’s last-known position from the map.
 
 ```json
 {

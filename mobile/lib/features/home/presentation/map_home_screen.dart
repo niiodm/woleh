@@ -13,6 +13,7 @@ import '../../../core/firebase_monitoring.dart';
 import '../../../core/ws_message.dart';
 import '../../../shared/ws_status_banner.dart';
 import '../../location/presentation/live_map_stack.dart';
+import '../../location/presentation/peer_locations_notifier.dart';
 import '../../me/presentation/me_notifier.dart';
 import '../../places/data/place_list_repository.dart';
 import '../../places/presentation/broadcast_notifier.dart';
@@ -105,6 +106,7 @@ class _MapHomeScreenState extends ConsumerState<MapHomeScreen> {
       }
       ref.invalidate(watchNotifierProvider);
       ref.invalidate(broadcastNotifierProvider);
+      ref.invalidate(peerLocationsNotifierProvider);
     } on DioException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

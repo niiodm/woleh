@@ -5,6 +5,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import odm.clarity.woleh.ws.WsSessionRegistry;
+
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -46,6 +51,7 @@ public class PlaceListService {
 	private final PlaceNameNormalizer normalizer;
 	private final MatchingService matchingService;
 	private final MatchAdjacencyRegistry matchAdjacencyRegistry;
+	private final WsSessionRegistry wsSessionRegistry;
 	private final Counter watchPutCounter;
 	private final Counter broadcastPutCounter;
 
@@ -56,6 +62,7 @@ public class PlaceListService {
 			PlaceNameNormalizer normalizer,
 			MatchingService matchingService,
 			MatchAdjacencyRegistry matchAdjacencyRegistry,
+			WsSessionRegistry wsSessionRegistry,
 			MeterRegistry meterRegistry) {
 		this.placeListRepository = placeListRepository;
 		this.userRepository = userRepository;
@@ -63,6 +70,7 @@ public class PlaceListService {
 		this.normalizer = normalizer;
 		this.matchingService = matchingService;
 		this.matchAdjacencyRegistry = matchAdjacencyRegistry;
+		this.wsSessionRegistry = wsSessionRegistry;
 		this.watchPutCounter = Counter.builder("woleh.place.list.put")
 				.tag("list_type", "watch")
 				.description("Successful PUT operations on the watch place-name list")
@@ -105,7 +113,8 @@ public class PlaceListService {
 
 		upsert(userId, PlaceListType.WATCH, deduped);
 		watchPutCounter.increment();
-		matchAdjacencyRegistry.rebuildAdjacencyForUser(userId);
+		Set<Long> lostPeers = matchAdjacencyRegistry.rebuildAdjacencyForUser(userId);
+		notifyLiveLocationAdjacencyLoss(userId, lostPeers);
 		matchingService.dispatchWatchMatches(userId, deduped.normalizedNames());
 
 		return new PlaceNamesResponse(deduped.displayNames());
@@ -144,13 +153,42 @@ public class PlaceListService {
 
 		upsert(userId, PlaceListType.BROADCAST, deduped);
 		broadcastPutCounter.increment();
-		matchAdjacencyRegistry.rebuildAdjacencyForUser(userId);
+		Set<Long> lostPeers = matchAdjacencyRegistry.rebuildAdjacencyForUser(userId);
+		notifyLiveLocationAdjacencyLoss(userId, lostPeers);
 		matchingService.dispatchBroadcastMatches(userId, deduped.normalizedNames());
 
 		return new PlaceNamesResponse(deduped.displayNames());
 	}
 
 	// ── helpers ───────────────────────────────────────────────────────────
+
+	/**
+	 * When a place-list change breaks match adjacency, matched peers must drop each other's
+	 * map markers ({@code peer_location_revoked}), same as turning off location sharing.
+	 */
+	private void notifyLiveLocationAdjacencyLoss(Long userId, Set<Long> lostPeers) {
+		if (lostPeers.isEmpty()) {
+			return;
+		}
+		String uidStr = String.valueOf(userId);
+		Runnable notify = () -> {
+			for (Long peerId : lostPeers) {
+				wsSessionRegistry.sendPeerLocationRevoked(peerId, uidStr);
+				wsSessionRegistry.sendPeerLocationRevoked(userId, String.valueOf(peerId));
+			}
+		};
+		if (TransactionSynchronizationManager.isSynchronizationActive()) {
+			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+				@Override
+				public void afterCommit() {
+					notify.run();
+				}
+			});
+		}
+		else {
+			notify.run();
+		}
+	}
 
 	/**
 	 * Checks that the user has the required permission; throws {@link PermissionDeniedException}

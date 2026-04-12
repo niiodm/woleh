@@ -37,12 +37,20 @@ public class MatchAdjacencyRegistry {
 	/**
 	 * Drops all edges for {@code userId}, recomputes their counterparties from the database,
 	 * and re-adds bidirectional edges. Safe to call after each place-list PUT.
+	 *
+	 * @return counterparties that {@code userId} was matched to immediately before this rebuild
+	 *         but is no longer matched to afterward (for {@code peer_location_revoked} fan-out).
 	 */
-	public void rebuildAdjacencyForUser(Long userId) {
+	public Set<Long> rebuildAdjacencyForUser(Long userId) {
+		Set<Long> before = getCounterparties(userId);
 		removeAllEdgesForUser(userId);
 		for (Long peerId : computeCounterparties(userId)) {
 			addBidirectional(userId, peerId);
 		}
+		Set<Long> after = getCounterparties(userId);
+		Set<Long> lost = new HashSet<>(before);
+		lost.removeAll(after);
+		return lost;
 	}
 
 	/** Snapshot of user IDs matched to {@code userId} (empty if none). */

@@ -82,7 +82,7 @@ Content-Type: application/json
   "names": ["MADINA", "Kaneshie"]
 }
 
-### §3.5 — Break match: disjoint broadcast (no `peer_location_revoked`; further publishes simply do not fan out)
+### §3.5 — Break match: disjoint broadcast (`peer_location_revoked` to both sides; further publishes do not fan out)
 PUT {{baseUrl}}/api/v1/me/places/broadcast
 Authorization: Bearer {{tokenB}}
 Content-Type: application/json

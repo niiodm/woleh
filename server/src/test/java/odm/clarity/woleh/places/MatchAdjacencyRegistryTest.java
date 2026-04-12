@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import odm.clarity.woleh.model.PlaceListType;
 import odm.clarity.woleh.model.User;
@@ -92,8 +93,9 @@ class MatchAdjacencyRegistryTest {
 		UserPlaceList watchB = watchList(watcherId, List.of("circle"));
 		when(repository.findAllByListType(PlaceListType.WATCH)).thenReturn(List.of(watchB));
 
-		registry.rebuildAdjacencyForUser(broadcasterId);
+		Set<Long> lost = registry.rebuildAdjacencyForUser(broadcasterId);
 
+		assertThat(lost).containsExactly(watcherId);
 		assertThat(registry.getCounterparties(broadcasterId)).isEmpty();
 		assertThat(registry.getCounterparties(watcherId)).isEmpty();
 	}

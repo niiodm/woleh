@@ -132,6 +132,25 @@ class PeerLocationDispatchIntegrationTest {
 	}
 
 	@Test
+	void afterBroadcasterRemovesMatch_watcherReceivesPeerLocationRevoked() throws Exception {
+		assertPutOk(WATCH_URL, watcherToken, "{\"names\":[\"Madina\",\"Lapaz\"]}");
+		assertPutOk(BROADCAST_URL, broadcasterToken, "{\"names\":[\"MADINA\",\"Kaneshie\"]}");
+
+		CompletableFuture<String> revokeFuture = new CompletableFuture<>();
+		WebSocket ws = connectWs(watcherToken, revokeFuture, "\"peer_location_revoked\"");
+		try {
+			assertPutOk(BROADCAST_URL, broadcasterToken, "{\"names\":[\"Kumasi\",\"Sunyani\"]}");
+
+			String message = revokeFuture.get(5, TimeUnit.SECONDS);
+			assertThat(message).contains("\"peer_location_revoked\"");
+			assertThat(message).contains("\"userId\":\"" + broadcaster.getId() + "\"");
+		}
+		finally {
+			closeQuietly(ws);
+		}
+	}
+
+	@Test
 	void afterBroadcasterRemovesMatch_secondPostDoesNotDeliverPeerLocation() throws Exception {
 		assertPutOk(WATCH_URL, watcherToken, "{\"names\":[\"Madina\",\"Lapaz\"]}");
 		assertPutOk(BROADCAST_URL, broadcasterToken, "{\"names\":[\"MADINA\",\"Kaneshie\"]}");
