@@ -195,12 +195,22 @@ class WsClient extends _$WsClient {
     _attempt = 0;
     _setConnectionState(WsConnectionState.connected);
 
+    final rawString = rawData is String ? rawData : rawData.toString();
+    if (kDebugMode) {
+      debugPrint('[WsClient] ← $rawString');
+    }
+
     try {
       final envelope =
-          jsonDecode(rawData as String) as Map<String, dynamic>;
+          jsonDecode(rawString) as Map<String, dynamic>;
       final type = envelope['type'] as String?;
 
-      if (type == 'heartbeat') return; // Silently discard heartbeats.
+      if (type == 'heartbeat') {
+        if (kDebugMode) {
+          debugPrint('[WsClient] heartbeat ping (server keep-alive, ~15s)');
+        }
+        return;
+      }
 
       if (type == 'match') {
         final data = envelope['data'] as Map<String, dynamic>;

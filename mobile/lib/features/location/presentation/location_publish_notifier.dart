@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -193,7 +194,21 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
     if (!_hasLocationPermission(me)) return;
 
     final fix = state;
-    if (fix == null) return;
+    if (fix == null) {
+      if (kDebugMode) {
+        debugPrint(
+          '[LocationPublish] heartbeat tick: no fix in state yet — '
+          'cannot repost while stationary (waiting for seed/stream)',
+        );
+      }
+      return;
+    }
+    if (kDebugMode) {
+      debugPrint(
+        '[LocationPublish] heartbeat tick: repost check '
+        '(interval=${heartbeatInterval.inSeconds}s, lastSent=$_lastSentAt)',
+      );
+    }
     _tryPostThrottled(fix);
   }
 
@@ -241,6 +256,12 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
             speed: fix.speedMetersPerSecond,
             recordedAt: fix.recordedAt,
           );
+      if (kDebugMode) {
+        debugPrint(
+          '[LocationPublish] POST /me/location ok '
+          '(${fix.latitude.toStringAsFixed(5)}, ${fix.longitude.toStringAsFixed(5)})',
+        );
+      }
     } catch (e, st) {
       debugPrint('[LocationPublish] post failed: $e $st');
     }

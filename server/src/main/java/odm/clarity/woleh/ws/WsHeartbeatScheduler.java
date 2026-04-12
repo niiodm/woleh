@@ -34,7 +34,8 @@ public class WsHeartbeatScheduler {
 
 	@Scheduled(fixedDelay = 15_000)
 	public void sendHeartbeats() {
-		log.trace("Sending heartbeat to all open sessions");
+		int n = registry.sessionCount();
+		log.debug("Sending WebSocket heartbeat (ping) to {} open session(s)", n);
 		registry.sendToAllOpen(heartbeatJson);
 	}
 }
