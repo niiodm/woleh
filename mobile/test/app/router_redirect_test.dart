@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import 'package:odm_clarity_woleh_mobile/core/auth_state.dart';
 import 'package:odm_clarity_woleh_mobile/core/shared_preferences_provider.dart';
+import 'package:odm_clarity_woleh_mobile/core/location_onboarding.dart';
 import 'package:odm_clarity_woleh_mobile/core/telemetry_consent.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/data/me_dto.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/presentation/me_notifier.dart';
@@ -153,6 +154,7 @@ void main() {
     TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues({
       kTelemetryProductAnalyticsConsentKey: true,
+      kLocationOnboardingCompletedKey: true,
     });
     routerTestPrefs = await SharedPreferences.getInstance();
   });

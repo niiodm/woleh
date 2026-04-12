@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:odm_clarity_woleh_mobile/core/auth_state.dart';
+import 'package:odm_clarity_woleh_mobile/core/location_onboarding.dart';
 import 'package:odm_clarity_woleh_mobile/core/shared_preferences_provider.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/data/me_dto.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/presentation/me_notifier.dart';
@@ -92,7 +93,9 @@ void main() {
   late SharedPreferences prefs;
 
   setUp(() async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      kLocationOnboardingCompletedKey: true,
+    });
     prefs = await SharedPreferences.getInstance();
   });
 

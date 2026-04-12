@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../core/auth_state.dart';
+import '../core/location_onboarding.dart';
 import '../core/product_analytics_nav_observers.dart';
+import '../core/shared_preferences_provider.dart';
 import 'splash_screen.dart';
+import '../features/auth/presentation/location_onboarding_screen.dart';
 import '../features/auth/presentation/otp_screen.dart';
 import '../features/auth/presentation/phone_screen.dart';
 import '../features/auth/presentation/setup_name_screen.dart';
@@ -77,6 +80,11 @@ GoRouter router(Ref ref) {
         builder: (_, __) => const SetupNameScreen(),
       ),
       GoRoute(
+        path: '/auth/location-intro',
+        name: '/auth/location-intro',
+        builder: (_, __) => const LocationOnboardingScreen(),
+      ),
+      GoRoute(
         path: '/home',
         name: '/home',
         builder: (_, __) => const MapHomeScreen(),
@@ -139,6 +147,7 @@ class _RouterNotifier extends ChangeNotifier {
    final Ref _ref;
 
   /// Map home when the user has watch or broadcast; otherwise profile (free tier).
+  /// Map-eligible users who have not completed [LocationOnboardingScreen] go there first.
   /// Null while [meNotifierProvider] is still loading so splash can wait.
   String? _authenticatedLandingLocation() {
     final meAsync = _ref.read(meNotifierProvider);
@@ -147,7 +156,13 @@ class _RouterNotifier extends ChangeNotifier {
         meAsync.valueOrNull?.me.permissions ?? const <String>[];
     final canUseMap = permissions.contains('woleh.place.watch') ||
         permissions.contains('woleh.place.broadcast');
-    return canUseMap ? '/home' : '/profile';
+    if (!canUseMap) return '/profile';
+    final introDone = _ref.read(sharedPreferencesProvider).getBool(
+          kLocationOnboardingCompletedKey,
+        ) ??
+        false;
+    if (!introDone) return '/auth/location-intro';
+    return '/home';
   }
 
   String? redirect(BuildContext context, GoRouterState state) {
@@ -183,6 +198,39 @@ class _RouterNotifier extends ChangeNotifier {
       final target = _authenticatedLandingLocation();
       if (target == null) return '/splash';
       return target;
+    }
+
+    // Map-eligible users must complete location intro once before /home.
+    if (isAuthenticated && location == '/home') {
+      final meAsync = _ref.read(meNotifierProvider);
+      if (meAsync.isLoading) return null;
+      final permissions =
+          meAsync.valueOrNull?.me.permissions ?? const <String>[];
+      final canUseMap = permissions.contains('woleh.place.watch') ||
+          permissions.contains('woleh.place.broadcast');
+      if (canUseMap) {
+        final introDone = _ref.read(sharedPreferencesProvider).getBool(
+              kLocationOnboardingCompletedKey,
+            ) ??
+            false;
+        if (!introDone) return '/auth/location-intro';
+      }
+    }
+
+    if (isAuthenticated && location == '/auth/location-intro') {
+      final meAsync = _ref.read(meNotifierProvider);
+      if (!meAsync.isLoading) {
+        final permissions =
+            meAsync.valueOrNull?.me.permissions ?? const <String>[];
+        final canUseMap = permissions.contains('woleh.place.watch') ||
+            permissions.contains('woleh.place.broadcast');
+        if (!canUseMap) return '/profile';
+        final introDone = _ref.read(sharedPreferencesProvider).getBool(
+              kLocationOnboardingCompletedKey,
+            ) ??
+            false;
+        if (introDone) return '/home';
+      }
     }
 
     // Permission-based route guards (authenticated users only).
