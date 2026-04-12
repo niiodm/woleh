@@ -8,6 +8,7 @@ class MeProfile {
     required this.phoneE164,
     this.displayName,
     this.locationSharingEnabled = true,
+    this.productAnalyticsConsent = false,
   });
 
   final String userId;
@@ -17,6 +18,9 @@ class MeProfile {
   /// When true, server accepts {@code POST /api/v1/me/location} (Phase 4).
   final bool locationSharingEnabled;
 
+  /// Stored server-side; synced to device prefs after `GET /me`.
+  final bool productAnalyticsConsent;
+
   /// Returns [displayName] when set, otherwise falls back to [phoneE164].
   String get displayNameOrPhone => displayName?.isNotEmpty == true ? displayName! : phoneE164;
 
@@ -25,6 +29,7 @@ class MeProfile {
         phoneE164: json['phoneE164'] as String,
         displayName: json['displayName'] as String?,
         locationSharingEnabled: json['locationSharingEnabled'] as bool? ?? true,
+        productAnalyticsConsent: json['productAnalyticsConsent'] as bool? ?? false,
       );
 
   Map<String, dynamic> toJson() => {
@@ -32,6 +37,7 @@ class MeProfile {
         'phoneE164': phoneE164,
         'displayName': displayName,
         'locationSharingEnabled': locationSharingEnabled,
+        'productAnalyticsConsent': productAnalyticsConsent,
       };
 }
 

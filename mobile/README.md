@@ -90,11 +90,11 @@ Event names and parameters: [`docs/ANALYTICS_EVENTS.md`](../docs/ANALYTICS_EVENT
 
 ## Privacy and consent (Phase 4)
 
-**Product analytics** (events, screen views, optional Analytics user id) is **opt-in** on first launch when Firebase is available and **`WOLEH_FIREBASE_ANALYTICS`** is true: users see a short dialog, and the choice is stored on-device and can be changed under **Profile → Privacy** (Product analytics switch). Internally this uses Firebase **Consent Mode** (`analyticsStorageConsentGranted`).
+**Product analytics** (events, screen views, optional Analytics user id) is **opt-in** when Firebase is available and **`WOLEH_FIREBASE_ANALYTICS`** is true: users choose on the **phone sign-in** screen (pre-checked box) and the value is stored **on the server** and on-device; it can be changed under **Profile → Privacy** (Product analytics switch). Internally this uses Firebase **Consent Mode** (`analyticsStorageConsentGranted`).
 
-**Crashlytics** and **Performance** are **not** gated by that dialog; they follow **`WOLEH_FIREBASE_MONITORING`** only. Describe both in your public privacy policy for regulated regions.
+**Crashlytics** and **Performance** are **not** gated by that choice; they follow **`WOLEH_FIREBASE_MONITORING`** only. Describe both in your public privacy policy for regulated regions.
 
-**Tests / CI:** Pre-seed consent or skip the dialog:
+**Tests / CI:** Pre-seed consent or skip telemetry UI:
 
 ```bash
 flutter test --dart-define=WOLEH_SKIP_TELEMETRY_CONSENT=true

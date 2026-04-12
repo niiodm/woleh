@@ -49,10 +49,21 @@ class MeRepository {
   }
 
   Future<void> patchDisplayName(String displayName) async {
-    await _dio.patch<void>(
-      '/me/profile',
-      data: {'displayName': displayName},
-    );
+    await patchProfile(displayName: displayName);
+  }
+
+  /// Partial update (`PATCH /me/profile`). Omits null fields.
+  Future<void> patchProfile({
+    String? displayName,
+    bool? productAnalyticsConsent,
+  }) async {
+    final body = <String, dynamic>{};
+    if (displayName != null) body['displayName'] = displayName;
+    if (productAnalyticsConsent != null) {
+      body['productAnalyticsConsent'] = productAnalyticsConsent;
+    }
+    if (body.isEmpty) return;
+    await _dio.patch<void>('/me/profile', data: body);
   }
 
   /// Opt in/out of publishing fixes to matched peers (`PUT /me/location-sharing`).

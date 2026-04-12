@@ -71,6 +71,7 @@ GoRouter router(Ref ref) {
           return OtpScreen(
             phone: extra['phone'] as String,
             expiresInSeconds: extra['expiresInSeconds'] as int,
+            productAnalyticsConsent: extra['productAnalyticsConsent'] as bool? ?? true,
           );
         },
       ),

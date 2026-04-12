@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'analytics_provider.dart';
 import 'auth_state.dart';
+import 'telemetry_consent_provider.dart';
 import '../features/me/presentation/me_notifier.dart';
 
 /// Sets [Firebase Analytics user id](https://support.google.com/analytics/answer/9213390)
@@ -22,10 +23,15 @@ class AnalyticsIdentitySync extends ConsumerWidget {
       }
     });
     ref.listen(meNotifierProvider, (_, next) {
-      final uid = next.valueOrNull?.me.profile.userId;
-      if (uid != null) {
-        unawaited(ref.read(wolehAnalyticsProvider).setUserId(uid));
-      }
+      final snap = next.valueOrNull;
+      if (snap == null) return;
+      final uid = snap.me.profile.userId;
+      unawaited(ref.read(wolehAnalyticsProvider).setUserId(uid));
+      unawaited(
+        ref.read(telemetryConsentProvider.notifier).setProductAnalyticsAllowed(
+              snap.me.profile.productAnalyticsConsent,
+            ),
+      );
     });
     return child;
   }

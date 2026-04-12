@@ -19,8 +19,11 @@ Widget _buildOtpScreen({List<Override> overrides = const []}) {
     routes: [
       GoRoute(
         path: '/auth/otp',
-        builder: (_, __) =>
-            const OtpScreen(phone: _phone, expiresInSeconds: _expires),
+               builder: (_, __) => const OtpScreen(
+              phone: _phone,
+              expiresInSeconds: _expires,
+              productAnalyticsConsent: true,
+            ),
       ),
       GoRoute(
         path: '/auth/phone',

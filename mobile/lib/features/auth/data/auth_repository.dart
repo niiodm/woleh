@@ -28,10 +28,18 @@ class AuthRepository {
   Future<VerifyOtpResponse> verifyOtp({
     required String phoneE164,
     required String otp,
+    bool? productAnalyticsConsent,
   }) async {
+    final body = <String, dynamic>{
+      'phoneE164': phoneE164,
+      'otp': otp,
+    };
+    if (productAnalyticsConsent != null) {
+      body['productAnalyticsConsent'] = productAnalyticsConsent;
+    }
     final response = await _dio.post<Map<String, dynamic>>(
       '/auth/verify-otp',
-      data: {'phoneE164': phoneE164, 'otp': otp},
+      data: body,
     );
     final data = (response.data!['data'] as Map<String, dynamic>);
     return VerifyOtpResponse.fromJson(data);

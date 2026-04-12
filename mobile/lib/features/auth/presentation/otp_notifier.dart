@@ -67,12 +67,16 @@ class OtpNotifier extends _$OtpNotifier {
   }
 
   /// Verifies the OTP. Returns the response on success, null on failure.
-  Future<VerifyOtpResponse?> verify(String otp) async {
+  Future<VerifyOtpResponse?> verify(
+    String otp, {
+    bool? productAnalyticsConsent,
+  }) async {
     state = state.withStatus(OtpActionStatus.verifying);
     try {
       final result = await ref.read(authRepositoryProvider).verifyOtp(
             phoneE164: phoneE164,
             otp: otp,
+            productAnalyticsConsent: productAnalyticsConsent,
           );
       _countdownTimer?.cancel();
       state = state.withCountdown(0).withStatus(OtpActionStatus.idle);

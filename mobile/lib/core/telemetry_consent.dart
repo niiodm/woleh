@@ -3,8 +3,8 @@
 const kTelemetryProductAnalyticsConsentKey =
     'telemetry.product_analytics_consent_v1';
 
-/// When **true**, the first-run analytics consent dialog is skipped and consent is
-/// treated as granted (for tests / internal builds). Compile with:
+/// When **true**, consent is always treated as granted (for tests / internal builds).
+/// The phone-screen checkbox is hidden. Compile with:
 /// `--dart-define=WOLEH_SKIP_TELEMETRY_CONSENT=true`
 const kSkipTelemetryConsentPrompt = bool.fromEnvironment(
   'WOLEH_SKIP_TELEMETRY_CONSENT',

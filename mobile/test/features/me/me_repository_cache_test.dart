@@ -53,6 +53,7 @@ final _sampleMeData = {
     'userId': '1',
     'phoneE164': '+233241234567',
     'displayName': 'Ama',
+    'productAnalyticsConsent': false,
   },
   'permissions': ['woleh.account.profile'],
   'tier': 'free',

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/analytics_provider.dart';
 import '../../../core/auth_state.dart';
+import '../../../core/telemetry_consent.dart';
 import 'otp_notifier.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
@@ -14,10 +15,14 @@ class OtpScreen extends ConsumerStatefulWidget {
     super.key,
     required this.phone,
     required this.expiresInSeconds,
+    required this.productAnalyticsConsent,
   });
 
   final String phone;
   final int expiresInSeconds;
+
+  /// Value from the phone screen (or `true` when [kSkipTelemetryConsentPrompt]).
+  final bool productAnalyticsConsent;
 
   @override
   ConsumerState<OtpScreen> createState() => _OtpScreenState();
@@ -53,9 +58,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final otp = _controller.text.trim();
+    final consentForServer = kSkipTelemetryConsentPrompt
+        ? true
+        : widget.productAnalyticsConsent;
     final result = await ref
         .read(otpNotifierProvider(widget.phone).notifier)
-        .verify(otp);
+        .verify(
+          otp,
+          productAnalyticsConsent: consentForServer,
+        );
     if (result == null || !mounted) return;
 
     // Persist access + refresh tokens — triggers router redirect.

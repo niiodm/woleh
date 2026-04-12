@@ -278,10 +278,20 @@ class _PrivacyAnalyticsTile extends ConsumerWidget {
         'Anonymous usage and screen views. Crash reporting follows '
         'WOLEH_FIREBASE_MONITORING — see mobile README.',
       ),
-      value: consent == true,
-      onChanged: (v) => ref
-          .read(telemetryConsentProvider.notifier)
-          .setProductAnalyticsAllowed(v),
+           value: consent == true,
+      onChanged: (v) async {
+        await ref
+            .read(telemetryConsentProvider.notifier)
+            .setProductAnalyticsAllowed(v);
+        try {
+          await ref.read(meRepositoryProvider).patchProfile(
+                productAnalyticsConsent: v,
+              );
+          await ref.read(meNotifierProvider.notifier).refresh();
+        } catch (_) {
+          await ref.read(meNotifierProvider.notifier).refresh();
+        }
+      },
     );
   }
 }
