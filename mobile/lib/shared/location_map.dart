@@ -19,7 +19,8 @@ const _kOsmTileUrlTemplate = String.fromEnvironment(
   defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
 );
 
-/// OpenStreetMap + markers for **self** (blue) and **peers** (orange).
+/// OpenStreetMap + markers for **self** ([ColorScheme.secondary]) and **peers**
+/// ([ColorScheme.primary]) as small circles.
 ///
 /// While **following** the user, the camera moves with [self]. After the user
 /// pans or zooms the map ([MapOptions.onPositionChanged] with `hasGesture`),
@@ -113,8 +114,23 @@ class _LocationMapState extends State<LocationMap> {
     return 12;
   }
 
+  static const double _markerSize = 14;
+
+  Widget _locationDot({required Color color, required Color borderColor}) {
+    return Container(
+      width: _markerSize,
+      height: _markerSize,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+        border: Border.all(color: borderColor, width: 1.5),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -143,28 +159,26 @@ class _LocationMapState extends State<LocationMap> {
                 for (final p in widget.peers)
                   Marker(
                     point: p.toLatLng(),
-                    width: 36,
-                    height: 36,
+                    width: _markerSize,
+                    height: _markerSize,
                     child: Tooltip(
                       message: p.label ?? 'Peer ${p.id}',
-                      child: Icon(
-                        Icons.place,
-                        color: Colors.deepOrange.shade700,
-                        size: 36,
+                      child: _locationDot(
+                        color: scheme.primary,
+                        borderColor: scheme.surface,
                       ),
                     ),
                   ),
                 if (widget.self != null)
                   Marker(
                     point: widget.self!.toLatLng(),
-                    width: 40,
-                    height: 40,
+                    width: _markerSize,
+                    height: _markerSize,
                     child: Tooltip(
                       message: 'You',
-                      child: Icon(
-                        Icons.navigation,
-                        color: Colors.blue.shade700,
-                        size: 40,
+                      child: _locationDot(
+                        color: scheme.secondary,
+                        borderColor: scheme.surface,
                       ),
                     ),
                   ),
