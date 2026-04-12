@@ -6,7 +6,7 @@ part of 'analytics_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$wolehAnalyticsHash() => r'fbbfdf8672007199a7f4546b55f8bdfa3de76931';
+String _$wolehAnalyticsHash() => r'a5f34203b6edeaa62050a216186d5b3a871f89f5';
 
 /// See also [wolehAnalytics].
 @ProviderFor(wolehAnalytics)

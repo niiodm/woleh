@@ -4,12 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'analytics.dart';
+import 'telemetry_consent_provider.dart';
 
 part 'analytics_provider.g.dart';
 
 @Riverpod(keepAlive: true)
 WolehAnalytics wolehAnalytics(Ref ref) {
   if (!kFirebaseAnalyticsEnabled || Firebase.apps.isEmpty) {
+    return const NoOpWolehAnalytics();
+  }
+  if (!ref.watch(productAnalyticsConsentGrantedProvider)) {
     return const NoOpWolehAnalytics();
   }
   return FirebaseWolehAnalytics(FirebaseAnalytics.instance);

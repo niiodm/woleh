@@ -1,19 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/pump_map_home.dart';
 
 import 'package:odm_clarity_woleh_mobile/core/auth_state.dart';
+import 'package:odm_clarity_woleh_mobile/core/shared_preferences_provider.dart';
+import 'package:odm_clarity_woleh_mobile/core/telemetry_consent.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/data/me_dto.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/presentation/me_notifier.dart';
 import 'package:odm_clarity_woleh_mobile/main.dart';
 
 void main() {
+  late SharedPreferences testPrefs;
+
+  setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    SharedPreferences.setMockInitialValues({
+      kTelemetryProductAnalyticsConsentKey: true,
+    });
+    testPrefs = await SharedPreferences.getInstance();
+  });
+
   testWidgets('unauthenticated user sees phone/sign-in screen', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authStateProvider.overrideWith(_UnauthenticatedState.new)],
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(testPrefs),
+          authStateProvider.overrideWith(_UnauthenticatedState.new),
+        ],
         child: const WolehApp(),
       ),
     );
@@ -28,6 +44,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(testPrefs),
           authStateProvider.overrideWith(_AuthenticatedState.new),
           meNotifierProvider.overrideWith(_StubMeNotifier.new),
         ],

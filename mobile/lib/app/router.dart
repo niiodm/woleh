@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../core/analytics.dart';
 import '../core/auth_state.dart';
+import '../core/product_analytics_nav_observers.dart';
 import 'splash_screen.dart';
 import '../features/auth/presentation/otp_screen.dart';
 import '../features/auth/presentation/phone_screen.dart';
@@ -43,11 +43,12 @@ const _kUpgradeRedirect = '/plans';
 @Riverpod(keepAlive: true)
 GoRouter router(Ref ref) {
   final notifier = _RouterNotifier(ref);
+  final navObservers = ref.watch(productAnalyticsNavigatorObserversProvider);
   return GoRouter(
     initialLocation: '/splash',
     refreshListenable: notifier,
     redirect: notifier.redirect,
-    observers: firebaseAnalyticsNavigatorObservers(),
+    observers: navObservers,
     routes: [
       GoRoute(
         path: '/splash',

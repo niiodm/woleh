@@ -1,5 +1,4 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/widgets.dart';
 
@@ -11,20 +10,6 @@ const kFirebaseAnalyticsEnabled = bool.fromEnvironment(
   'WOLEH_FIREBASE_ANALYTICS',
   defaultValue: true,
 );
-
-/// True when Firebase Analytics API calls should run.
-bool get wolehAnalyticsRuntimeEnabled =>
-    kFirebaseAnalyticsEnabled && Firebase.apps.isNotEmpty;
-
-/// [NavigatorObserver]s for automatic `screen_view` events (GoRouter route names).
-List<NavigatorObserver> firebaseAnalyticsNavigatorObservers() {
-  if (!wolehAnalyticsRuntimeEnabled) {
-    return const [];
-  }
-  return [
-    FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance),
-  ];
-}
 
 /// Product analytics facade (Firebase today; swappable implementation).
 abstract class WolehAnalytics {
@@ -39,18 +24,10 @@ class NoOpWolehAnalytics implements WolehAnalytics {
   const NoOpWolehAnalytics();
 
   @override
-  Future<void> logEvent(String name, [Map<String, Object>? parameters]) async {
-    if (kDebugMode) {
-      debugPrint('[WolehAnalytics] logEvent: $name ${parameters ?? {}}');
-    }
-  }
+  Future<void> logEvent(String name, [Map<String, Object>? parameters]) async {}
 
   @override
-  Future<void> setUserId(String? id) async {
-    if (kDebugMode) {
-      debugPrint('[WolehAnalytics] setUserId: ${id ?? '(cleared)'}');
-    }
-  }
+  Future<void> setUserId(String? id) async {}
 
   @override
   Future<void> logButtonTapped(String buttonId, {required String screenName}) async {

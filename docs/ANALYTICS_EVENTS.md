@@ -4,7 +4,7 @@ Firebase Analytics (GA4) events logged by the Flutter app. Parameter values are 
 
 **User id:** After sign-in, `GET /me` resolves `profile.userId`; that value is passed to `setUserId`. It is cleared on sign-out.
 
-**Opt-out:** `--dart-define=WOLEH_FIREBASE_ANALYTICS=false` (see [`mobile/README.md`](../mobile/README.md)).
+**Opt-out / consent:** Compile-time `--dart-define=WOLEH_FIREBASE_ANALYTICS=false`, or in-app **product analytics** opt-in (Consent Mode) when Firebase is active — see [`docs/PRIVACY_TELEMETRY.md`](PRIVACY_TELEMETRY.md) and [`mobile/README.md`](../mobile/README.md).
 
 | Event | Parameters | When |
 |-------|------------|------|

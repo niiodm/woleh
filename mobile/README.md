@@ -88,7 +88,19 @@ flutter run --dart-define=WOLEH_FIREBASE_ANALYTICS=false
 
 Event names and parameters: [`docs/ANALYTICS_EVENTS.md`](../docs/ANALYTICS_EVENTS.md). For local validation, use **Firebase DebugView** with a debug build.
 
-**Privacy:** For GDPR/CCPA regions, add consent before non-essential analytics when you ship broadly; on iOS, review **App Tracking Transparency** if you enable ad-related features. See Phase 4 in [`docs/MONITORING_AND_ANALYTICS_PLAN.md`](../docs/MONITORING_AND_ANALYTICS_PLAN.md).
+## Privacy and consent (Phase 4)
+
+**Product analytics** (events, screen views, optional Analytics user id) is **opt-in** on first launch when Firebase is available and **`WOLEH_FIREBASE_ANALYTICS`** is true: users see a short dialog, and the choice is stored on-device and can be changed under **Profile → Privacy** (Product analytics switch). Internally this uses Firebase **Consent Mode** (`analyticsStorageConsentGranted`).
+
+**Crashlytics** and **Performance** are **not** gated by that dialog; they follow **`WOLEH_FIREBASE_MONITORING`** only. Describe both in your public privacy policy for regulated regions.
+
+**Tests / CI:** Pre-seed consent or skip the dialog:
+
+```bash
+flutter test --dart-define=WOLEH_SKIP_TELEMETRY_CONSENT=true
+```
+
+**Details:** ATT (iOS), Play/App Store disclosures, GDPR notes — [`docs/PRIVACY_TELEMETRY.md`](../docs/PRIVACY_TELEMETRY.md).
 
 ## Checks (CI-aligned)
 

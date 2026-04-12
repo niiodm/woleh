@@ -9,6 +9,8 @@ import 'core/firebase_monitoring.dart';
 import 'core/push_bootstrap.dart';
 import 'core/push_hook.dart';
 import 'core/shared_preferences_provider.dart';
+import 'core/telemetry_consent_gate.dart';
+import 'core/telemetry_firebase_consent.dart';
 import 'core/ws_client.dart';
 import 'features/location/presentation/location_publish_notifier.dart';
 import 'features/location/presentation/peer_locations_notifier.dart';
@@ -17,6 +19,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await bootstrapFirebaseObservability();
   final prefs = await SharedPreferences.getInstance();
+  await syncFirebaseProductAnalyticsConsentFromPrefs(prefs);
   runApp(
     ProviderScope(
       overrides: [
@@ -27,7 +30,9 @@ Future<void> main() async {
       ],
       child: PushBootstrap(
         child: AnalyticsIdentitySync(
-          child: const WolehApp(),
+          child: TelemetryConsentGate(
+            child: const WolehApp(),
+          ),
         ),
       ),
     ),

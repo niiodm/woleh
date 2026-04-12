@@ -1,12 +1,16 @@
 import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:dio/dio.dart';
 
+import '../../../core/analytics.dart';
 import '../../../core/analytics_provider.dart';
+import '../../../core/telemetry_consent.dart';
+import '../../../core/telemetry_consent_provider.dart';
 import '../../../core/app_error.dart';
 import '../../../core/auth_state.dart';
 import '../../../shared/offline_read_only_hint.dart';
@@ -177,6 +181,14 @@ class _ProfileBody extends StatelessWidget {
             const SizedBox(height: 8),
             _LocationSharingTile(me: me),
           ],
+          if (kFirebaseAnalyticsEnabled) ...[
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 16),
+            Text('Privacy', style: textTheme.titleMedium),
+            const SizedBox(height: 8),
+            const _PrivacyAnalyticsTile(),
+          ],
           const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 16),
@@ -232,6 +244,44 @@ class _Avatar extends StatelessWidget {
           color: Theme.of(context).colorScheme.onPrimaryContainer,
         ),
       ),
+    );
+  }
+}
+
+class _PrivacyAnalyticsTile extends ConsumerWidget {
+  const _PrivacyAnalyticsTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (kSkipTelemetryConsentPrompt) {
+      return Text(
+        'Product analytics is controlled by the build (WOLEH_SKIP_TELEMETRY_CONSENT).',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+      );
+    }
+    final firebaseUp = Firebase.apps.isNotEmpty;
+    if (!firebaseUp) {
+      return Text(
+        'Product analytics: enable Firebase (e.g. push, monitoring, or analytics) to change this.',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+      );
+    }
+    final consent = ref.watch(telemetryConsentProvider);
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      title: const Text('Product analytics'),
+      subtitle: const Text(
+        'Anonymous usage and screen views. Crash reporting follows '
+        'WOLEH_FIREBASE_MONITORING — see mobile README.',
+      ),
+      value: consent == true,
+      onChanged: (v) => ref
+          .read(telemetryConsentProvider.notifier)
+          .setProductAnalyticsAllowed(v),
     );
   }
 }

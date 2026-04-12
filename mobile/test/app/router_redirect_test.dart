@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 
 import 'package:dio/dio.dart';
 import 'package:odm_clarity_woleh_mobile/core/auth_state.dart';
+import 'package:odm_clarity_woleh_mobile/core/shared_preferences_provider.dart';
+import 'package:odm_clarity_woleh_mobile/core/telemetry_consent.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/data/me_dto.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/presentation/me_notifier.dart';
 import 'package:odm_clarity_woleh_mobile/features/places/data/place_list_repository.dart';
@@ -149,7 +151,9 @@ void main() {
 
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      kTelemetryProductAnalyticsConsentKey: true,
+    });
     routerTestPrefs = await SharedPreferences.getInstance();
   });
 
@@ -160,7 +164,10 @@ void main() {
         (tester) async {
           await tester.pumpWidget(
             ProviderScope(
-              overrides: [authStateProvider.overrideWith(_Unauthenticated.new)],
+              overrides: [
+                sharedPreferencesProvider.overrideWithValue(routerTestPrefs),
+                authStateProvider.overrideWith(_Unauthenticated.new),
+              ],
               child: const WolehApp(),
             ),
           );
@@ -176,7 +183,10 @@ void main() {
         // any /home navigation redirects to sign-in).
         await tester.pumpWidget(
           ProviderScope(
-            overrides: [authStateProvider.overrideWith(_Unauthenticated.new)],
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(routerTestPrefs),
+              authStateProvider.overrideWith(_Unauthenticated.new),
+            ],
             child: const WolehApp(),
           ),
         );
@@ -192,6 +202,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              sharedPreferencesProvider.overrideWithValue(routerTestPrefs),
               authStateProvider.overrideWith(_Authenticated.new),
               meNotifierProvider.overrideWith(_StubMeNotifier.new),
             ],
@@ -210,6 +221,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              sharedPreferencesProvider.overrideWithValue(routerTestPrefs),
               authStateProvider.overrideWith(_Authenticated.new),
               meNotifierProvider.overrideWith(_StubMeNotifier.new),
             ],
@@ -230,7 +242,10 @@ void main() {
       ) async {
         await tester.pumpWidget(
           ProviderScope(
-            overrides: [authStateProvider.overrideWith(_AuthLoading.new)],
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(routerTestPrefs),
+              authStateProvider.overrideWith(_AuthLoading.new),
+            ],
             child: const WolehApp(),
           ),
         );
@@ -252,6 +267,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              sharedPreferencesProvider.overrideWithValue(routerTestPrefs),
               authStateProvider.overrideWith(_Authenticated.new),
               meNotifierProvider.overrideWith(_StubMeNotifier.new),
             ],
@@ -284,6 +300,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              sharedPreferencesProvider.overrideWithValue(routerTestPrefs),
               authStateProvider.overrideWith(_Authenticated.new),
               meNotifierProvider.overrideWith(_NoPlaceMeNotifier.new),
             ],
@@ -312,6 +329,7 @@ void main() {
           await tester.pumpWidget(
             ProviderScope(
               overrides: [
+                sharedPreferencesProvider.overrideWithValue(routerTestPrefs),
                 authStateProvider.overrideWith(_Authenticated.new),
                 meNotifierProvider.overrideWith(_FreeUserMeNotifier.new),
                 placeListRepositoryProvider.overrideWith(
@@ -341,6 +359,7 @@ void main() {
           await tester.pumpWidget(
             ProviderScope(
               overrides: [
+                sharedPreferencesProvider.overrideWithValue(routerTestPrefs),
                 authStateProvider.overrideWith(_Authenticated.new),
                 meNotifierProvider.overrideWith(_FreeUserMeNotifier.new),
                 placeListRepositoryProvider.overrideWith(
@@ -371,6 +390,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              sharedPreferencesProvider.overrideWithValue(routerTestPrefs),
               authStateProvider.overrideWith(_Authenticated.new),
               meNotifierProvider.overrideWith(_PaidUserMeNotifier.new),
               placeListRepositoryProvider.overrideWith(
@@ -402,6 +422,7 @@ void main() {
           await tester.pumpWidget(
             ProviderScope(
               overrides: [
+                sharedPreferencesProvider.overrideWithValue(routerTestPrefs),
                 authStateProvider.overrideWith(_Authenticated.new),
                 meNotifierProvider.overrideWith(_StubMeNotifier.new),
               ],
