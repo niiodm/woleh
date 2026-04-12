@@ -13,7 +13,7 @@ This document complements [`docs/MONITORING_AND_ANALYTICS_PLAN.md`](MONITORING_A
 
 ## GDPR / CCPA
 
-- **Product analytics** uses an **opt-in** first-run dialog when Firebase is initialized and `WOLEH_FIREBASE_ANALYTICS` is true. Choice is stored under `telemetry.product_analytics_consent_v1` and can be changed in **Profile → Privacy**.
+- **Product analytics** uses an **opt-in** pre-checked checkbox on the **phone sign-in** screen when `WOLEH_FIREBASE_ANALYTICS` is true (and a switch in **Profile → Privacy**). The choice is stored under `telemetry.product_analytics_consent_v1` on-device and as `productAnalyticsConsent` on the user record (`POST /auth/verify-otp` optional field, `GET/PATCH /me`).
 - **Crashlytics / Performance** remain **compile-time** toggles for engineering; document their use in your public privacy policy if you ship to regulated regions.
 - For broad EU/US launches, add or extend a **privacy policy** and, if required, a **Data Processing Agreement** with Google (Firebase).
 

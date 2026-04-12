@@ -67,7 +67,7 @@ flowchart LR
 
 ## Phase 4 — Privacy and policy
 
-1. **Consent:** In-app opt-in for **product analytics** when Firebase is active (`TelemetryConsentGate`); persisted preference + GA4 Consent Mode (`setConsent`). Crashlytics/Performance remain compile-time flags—document separately in your privacy policy.
+1. **Consent:** In-app opt-in for **product analytics** when Firebase is active (phone screen checkbox + Profile); persisted on server and device + GA4 Consent Mode (`setConsent`). Crashlytics/Performance remain compile-time flags—document separately in your privacy policy.
 2. **iOS:** ATT is optional for analytics-only Firebase; see [`docs/PRIVACY_TELEMETRY.md`](PRIVACY_TELEMETRY.md). Add `NSUserTrackingUsageDescription` only if you use IDFA (e.g. ads).
 3. **Documentation:** [`docs/PRIVACY_TELEMETRY.md`](PRIVACY_TELEMETRY.md) + `mobile/README.md` (telemetry section).
 

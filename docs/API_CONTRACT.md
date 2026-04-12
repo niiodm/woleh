@@ -162,9 +162,12 @@ The client does **not** send signup vs login intent. The server looks up whether
 ```json
 {
   "phoneE164": "+233241234567",
-  "otp": "123456"
+  "otp": "123456",
+  "productAnalyticsConsent": true
 }
 ```
+
+`productAnalyticsConsent` is optional. When present, it is stored on the user **before** access and refresh tokens are issued so the first `GET /me` matches the client.
 
 **Success `data`:**
 
@@ -201,7 +204,8 @@ Signup completion (name, etc.) may be a separate **`PATCH /me/profile`** after f
     "userId": "1",
     "phoneE164": "+233241234567",
     "displayName": "Ama",
-    "locationSharingEnabled": false
+    "locationSharingEnabled": false,
+    "productAnalyticsConsent": false
   },
   "permissions": ["woleh.account.profile", "woleh.plans.read", "woleh.place.watch"],
   "tier": "free",
@@ -229,11 +233,12 @@ Clients **must** use `permissions` and `limits` for gating and validation; `tier
 
 ```json
 {
-  "displayName": "Ama K."
+  "displayName": "Ama K.",
+  "productAnalyticsConsent": true
 }
 ```
 
-Immutable fields (e.g. phone) are not patchable unless product allows.
+Each field is optional; send only fields to change. Immutable fields (e.g. phone) are not patchable unless product allows.
 
 ---
 
