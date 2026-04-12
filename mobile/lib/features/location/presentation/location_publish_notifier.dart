@@ -42,7 +42,11 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
   /// Aligns with server default `LOCATION_PUBLISH_MIN_INTERVAL_MS` (~1 Hz).
   static const minPostInterval = Duration(milliseconds: 1000);
 
+  /// Reposts the last fix on this interval while stationary (stream may be quiet).
+  static const heartbeatInterval = Duration(seconds: 5);
+
   StreamSubscription<LocationFix>? _posSub;
+  Timer? _heartbeat;
   _AppLifecycleBinding? _lifecycle;
   bool _foreground = true;
   bool _disposed = false;
@@ -70,6 +74,7 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
 
     ref.onDispose(() {
       _disposed = true;
+      _cancelHeartbeat();
       _stopPositionStream(resetThrottle: true);
       _lifecycle?.detach();
       _lifecycle = null;
@@ -92,6 +97,7 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
   }
 
   Future<void> _syncSubscription() async {
+    _cancelHeartbeat();
     _posSub?.cancel();
     _posSub = null;
 
@@ -140,6 +146,55 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
           onError: (Object e, StackTrace st) =>
               debugPrint('[LocationPublish] position stream error: $e $st'),
         );
+
+    _heartbeat = Timer.periodic(heartbeatInterval, (_) => _heartbeatTick());
+    unawaited(_seedCurrentPosition(source));
+  }
+
+  void _cancelHeartbeat() {
+    _heartbeat?.cancel();
+    _heartbeat = null;
+  }
+
+  /// One-shot fix so a stationary user still publishes after subscribe (the
+  /// OS stream may not emit until movement exceeds [distanceFilterMeters]).
+  Future<void> _seedCurrentPosition(LocationSource source) async {
+    if (_disposed || !_foreground) return;
+    if (ref.read(authStateProvider).valueOrNull == null) return;
+    final snap = ref.read(meNotifierProvider).valueOrNull;
+    if (snap == null) return;
+    final me = snap.me;
+    if (!me.profile.locationSharingEnabled) return;
+    if (!_hasLocationPermission(me)) return;
+    try {
+      final fix = await source.getCurrentPosition(
+        accuracy: LocationAccuracyTier.high,
+      );
+      if (_disposed || !_foreground) return;
+      if (ref.read(authStateProvider).valueOrNull == null) return;
+      final snapAfter = ref.read(meNotifierProvider).valueOrNull;
+      if (snapAfter == null) return;
+      final meAfter = snapAfter.me;
+      if (!meAfter.profile.locationSharingEnabled) return;
+      if (!_hasLocationPermission(meAfter)) return;
+      _applyFix(fix);
+    } catch (e) {
+      debugPrint('[LocationPublish] seed position failed: $e');
+    }
+  }
+
+  void _heartbeatTick() {
+    if (_disposed || !_foreground) return;
+    if (ref.read(authStateProvider).valueOrNull == null) return;
+    final snap = ref.read(meNotifierProvider).valueOrNull;
+    if (snap == null) return;
+    final me = snap.me;
+    if (!me.profile.locationSharingEnabled) return;
+    if (!_hasLocationPermission(me)) return;
+
+    final fix = state;
+    if (fix == null) return;
+    _tryPostThrottled(fix);
   }
 
   static bool _hasLocationPermission(MeResponse me) {
@@ -157,8 +212,15 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
     if (!me.profile.locationSharingEnabled) return;
     if (!_hasLocationPermission(me)) return;
 
-    state = fix;
+    _applyFix(fix);
+  }
 
+  void _applyFix(LocationFix fix) {
+    state = fix;
+    _tryPostThrottled(fix);
+  }
+
+  void _tryPostThrottled(LocationFix fix) {
     final now = DateTime.now();
     if (_lastSentAt != null &&
         now.difference(_lastSentAt!) < minPostInterval) {
@@ -185,6 +247,7 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
   }
 
   void _stopPositionStream({required bool resetThrottle}) {
+    _cancelHeartbeat();
     _posSub?.cancel();
     _posSub = null;
     if (resetThrottle) {

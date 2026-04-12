@@ -91,9 +91,10 @@ class _MeNoLocationPerm extends MeNotifier {
 }
 
 class _FakeLocationSource implements LocationSource {
-  _FakeLocationSource(this._fixes);
+  _FakeLocationSource(this._fixes, {this.seedFix});
 
   final Stream<LocationFix> _fixes;
+  final LocationFix? seedFix;
 
   @override
   Future<bool> isLocationServiceEnabled() async => true;
@@ -116,8 +117,11 @@ class _FakeLocationSource implements LocationSource {
   @override
   Future<LocationFix> getCurrentPosition({
     LocationAccuracyTier accuracy = LocationAccuracyTier.high,
-  }) async =>
-      throw UnimplementedError();
+  }) async {
+    final s = seedFix;
+    if (s == null) throw StateError('no seedFix');
+    return s;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -203,7 +207,7 @@ void main() {
       await fixes.close();
     });
 
-    test('throttles to about one post per second', () async {
+    test('throttles stream bursts; heartbeat can post latest fix on interval', () async {
       final fixes = StreamController<LocationFix>.broadcast();
 
       final container = ProviderContainer(
@@ -228,12 +232,51 @@ void main() {
       await pumpEventQueue();
       expect(posts, hasLength(1));
 
+      // Heartbeat reposts last fix on [LocationPublishNotifier.heartbeatInterval].
+      await Future<void>.delayed(
+        Duration(
+          milliseconds:
+              LocationPublishNotifier.heartbeatInterval.inMilliseconds + 100,
+        ),
+      );
+      await pumpEventQueue();
+      expect(posts, hasLength(2));
+      expect(posts.last['latitude'], 6.0);
+
       await Future<void>.delayed(const Duration(milliseconds: 1100));
       fixes.add(const LocationFix(latitude: 7.0, longitude: -0.3));
       await pumpEventQueue();
 
-      expect(posts, hasLength(2));
+      expect(posts, hasLength(3));
       expect(posts.last['latitude'], 7.0);
+
+      await fixes.close();
+    });
+
+    test('seeds current position when stream is quiet', () async {
+      final fixes = StreamController<LocationFix>.broadcast();
+      const seed = LocationFix(latitude: 8.0, longitude: 1.0);
+
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          authStateProvider.overrideWith(_AuthWithToken.new),
+          meNotifierProvider.overrideWith(_MeSharingOn.new),
+          meRepositoryProvider.overrideWith(
+            (ref) => MeRepository(dio, ref.watch(sharedPreferencesProvider)),
+          ),
+          locationSourceProvider.overrideWithValue(
+            _FakeLocationSource(fixes.stream, seedFix: seed),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(locationPublishNotifierProvider);
+      await pumpEventQueue();
+
+      expect(posts, hasLength(1));
+      expect(posts.single['latitude'], 8.0);
 
       await fixes.close();
     });
