@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/analytics_provider.dart';
 import '../../../core/app_error.dart';
 import '../../../core/place_name_normalizer.dart';
 import '../../me/presentation/me_notifier.dart';
@@ -36,6 +39,12 @@ class _PlacesSearchScreenState extends ConsumerState<PlacesSearchScreen> {
   }
 
   void _tryAdd() {
+    unawaited(
+      ref.read(wolehAnalyticsProvider).logButtonTapped(
+            'add_place_to_list',
+            screenName: '/places/search',
+          ),
+    );
     final raw = _controller.text;
     final validation = validatePlaceName(raw);
     if (validation != null) {
@@ -151,6 +160,11 @@ class _PlacesSearchScreenState extends ConsumerState<PlacesSearchScreen> {
       ref.invalidate(broadcastNotifierProvider);
       if (!mounted) return;
       setState(() => _busy = false);
+      unawaited(
+        ref.read(wolehAnalyticsProvider).logEvent('place_watch_saved', {
+          'place_count': _names.length,
+        }),
+      );
       if (mounted) context.pop();
     } on DioException catch (e) {
       if (!mounted) return;
@@ -210,6 +224,11 @@ class _PlacesSearchScreenState extends ConsumerState<PlacesSearchScreen> {
       ref.invalidate(broadcastNotifierProvider);
       if (!mounted) return;
       setState(() => _busy = false);
+      unawaited(
+        ref.read(wolehAnalyticsProvider).logEvent('place_broadcast_saved', {
+          'place_count': _names.length,
+        }),
+      );
       if (mounted) context.pop();
     } on DioException catch (e) {
       if (!mounted) return;
@@ -326,13 +345,32 @@ class _PlacesSearchScreenState extends ConsumerState<PlacesSearchScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   FilledButton(
-                    onPressed: (_names.isEmpty || _busy) ? null : _saveWatchMode,
+                    onPressed: (_names.isEmpty || _busy)
+                        ? null
+                        : () {
+                            unawaited(
+                              ref.read(wolehAnalyticsProvider).logButtonTapped(
+                                    'save_watch_list',
+                                    screenName: '/places/search',
+                                  ),
+                            );
+                            _saveWatchMode();
+                          },
                     child: const Text('Show me buses'),
                   ),
                   const SizedBox(height: 8),
                   FilledButton(
-                    onPressed:
-                        (_names.isEmpty || _busy) ? null : _saveBroadcastMode,
+                    onPressed: (_names.isEmpty || _busy)
+                        ? null
+                        : () {
+                            unawaited(
+                              ref.read(wolehAnalyticsProvider).logButtonTapped(
+                                    'save_broadcast_list',
+                                    screenName: '/places/search',
+                                  ),
+                            );
+                            _saveBroadcastMode();
+                          },
                     child: const Text('Show me passengers'),
                   ),
                 ],

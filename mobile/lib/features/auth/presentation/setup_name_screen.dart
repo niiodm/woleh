@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/analytics_provider.dart';
 import '../../../core/app_error.dart';
 import '../../me/data/me_repository.dart';
 import '../../me/presentation/me_notifier.dart';
@@ -75,16 +78,49 @@ class _SetupNameScreenState extends ConsumerState<SetupNameScreen> {
   }
 
   Future<void> _save() async {
+    unawaited(
+      ref.read(wolehAnalyticsProvider).logButtonTapped(
+            'save_and_continue',
+            screenName: '/auth/setup-name',
+          ),
+    );
     final name = _controller.text.trim();
     if (name.isEmpty) {
-      _continue();
+      unawaited(
+        ref.read(wolehAnalyticsProvider).logEvent('setup_name_completed', {
+          'action': 'continue_empty',
+        }),
+      );
+      _continueToHome();
       return;
     }
     final ok = await ref.read(setupNameNotifierProvider.notifier).save(name);
-    if (ok && mounted) _continue();
+    if (ok && mounted) {
+      unawaited(
+        ref.read(wolehAnalyticsProvider).logEvent('setup_name_completed', {
+          'action': 'save',
+        }),
+      );
+      _continueToHome();
+    }
   }
 
-  void _continue() => context.go('/home');
+  void _skip() {
+    unawaited(
+      ref.read(wolehAnalyticsProvider).logButtonTapped(
+            'skip_setup_name',
+            screenName: '/auth/setup-name',
+          ),
+    );
+    unawaited(
+      ref.read(wolehAnalyticsProvider).logEvent('setup_name_completed', {
+        'action': 'skip',
+      }),
+    );
+    _continueToHome();
+  }
+
+  void _continueToHome() => context.go('/home');
 
   @override
   Widget build(BuildContext context) {
@@ -145,7 +181,7 @@ class _SetupNameScreenState extends ConsumerState<SetupNameScreen> {
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed: state.isLoading ? null : _continue,
+                onPressed: state.isLoading ? null : _skip,
                 child: const Text('Skip for now'),
               ),
             ],

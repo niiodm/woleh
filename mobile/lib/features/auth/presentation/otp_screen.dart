@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/analytics_provider.dart';
 import '../../../core/auth_state.dart';
 import 'otp_notifier.dart';
 
@@ -59,6 +62,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     await ref
         .read(authStateProvider.notifier)
         .setTokens(result.accessToken, result.refreshToken);
+
+    unawaited(
+      ref.read(wolehAnalyticsProvider).logEvent('auth_completed', {
+        'is_signup': result.isSignup ? 1 : 0,
+      }),
+    );
 
     if (!mounted) return;
     if (result.isSignup) {
@@ -124,7 +133,17 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                   _ErrorBanner(state.errorMessage!),
                 const SizedBox(height: 16),
                 FilledButton(
-                  onPressed: state.isLoading ? null : _submit,
+                  onPressed: state.isLoading
+                      ? null
+                      : () {
+                          unawaited(
+                            ref.read(wolehAnalyticsProvider).logButtonTapped(
+                                  'verify_otp',
+                                  screenName: '/auth/otp',
+                                ),
+                          );
+                          _submit();
+                        },
                   child: state.status == OtpActionStatus.verifying
                       ? const SizedBox(
                           height: 20,
@@ -179,8 +198,17 @@ class _ResendRow extends ConsumerWidget {
 
     return Center(
       child: TextButton(
-        onPressed:
-            state.isLoading ? null : () => ref.read(otpNotifierProvider(phone).notifier).resend(),
+        onPressed: state.isLoading
+            ? null
+            : () {
+                unawaited(
+                  ref.read(wolehAnalyticsProvider).logButtonTapped(
+                        'resend_otp',
+                        screenName: '/auth/otp',
+                      ),
+                );
+                ref.read(otpNotifierProvider(phone).notifier).resend();
+              },
         child: const Text('Resend code'),
       ),
     );

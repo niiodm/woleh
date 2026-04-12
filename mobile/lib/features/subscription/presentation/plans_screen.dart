@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/analytics_provider.dart';
 import '../../me/presentation/me_notifier.dart';
 import '../data/plans_dto.dart';
 import 'plans_notifier.dart';
@@ -261,14 +264,14 @@ class _LimitsRow extends StatelessWidget {
   }
 }
 
-class _PlanCta extends StatelessWidget {
+class _PlanCta extends ConsumerWidget {
   const _PlanCta({required this.plan, required this.isCurrent});
 
   final PlanDto plan;
   final bool isCurrent;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (isCurrent) {
       return SizedBox(
         width: double.infinity,
@@ -291,7 +294,15 @@ class _PlanCta extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: FilledButton(
-        onPressed: () => context.push('/checkout/${plan.planId}'),
+        onPressed: () {
+          unawaited(
+            ref.read(wolehAnalyticsProvider).logEvent(
+                  'subscription_checkout_started',
+                  {'plan_id': plan.planId},
+                ),
+          );
+          context.push('/checkout/${plan.planId}');
+        },
         child: const Text('Subscribe'),
       ),
     );

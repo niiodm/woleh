@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/analytics_provider.dart';
 import '../../../core/app_error.dart';
 import '../../../core/firebase_monitoring.dart';
 import '../../../core/ws_message.dart';
@@ -169,7 +170,13 @@ class _MapHomeScreenState extends ConsumerState<MapHomeScreen> {
                           color: scheme.surfaceContainerHigh,
                           child: InkWell(
                             borderRadius: BorderRadius.circular(28),
-                            onTap: () => context.push('/places/search'),
+                            onTap: () {
+                              ref.read(wolehAnalyticsProvider).logButtonTapped(
+                                    'open_places_search',
+                                    screenName: '/home',
+                                  );
+                              context.push('/places/search');
+                            },
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 18,
@@ -207,7 +214,15 @@ class _MapHomeScreenState extends ConsumerState<MapHomeScreen> {
                             tooltip: _stopTooltip(stopMode),
                             onPressed: _stopping
                                 ? null
-                                : () => _stopActive(stopMode),
+                                : () {
+                                    ref.read(wolehAnalyticsProvider).logButtonTapped(
+                                          stopMode == _ActivePlaceMode.broadcast
+                                              ? 'stop_broadcast'
+                                              : 'stop_watch',
+                                          screenName: '/home',
+                                        );
+                                    _stopActive(stopMode);
+                                  },
                             icon: _stopping
                                 ? const SizedBox(
                                     width: 24,
@@ -236,7 +251,13 @@ class _MapHomeScreenState extends ConsumerState<MapHomeScreen> {
                             Icons.person_outline,
                             color: scheme.primary,
                           ),
-                          onPressed: () => context.push('/profile'),
+                          onPressed: () {
+                            ref.read(wolehAnalyticsProvider).logButtonTapped(
+                                  'open_profile',
+                                  screenName: '/home',
+                                );
+                            context.push('/profile');
+                          },
                         ),
                       ),
                     ],

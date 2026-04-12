@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/router.dart';
+import 'core/analytics_identity_sync.dart';
 import 'core/app_colors.dart';
 import 'core/firebase_monitoring.dart';
 import 'core/push_bootstrap.dart';
@@ -25,7 +26,9 @@ Future<void> main() async {
         ),
       ],
       child: PushBootstrap(
-        child: const WolehApp(),
+        child: AnalyticsIdentitySync(
+          child: const WolehApp(),
+        ),
       ),
     ),
   );

@@ -61,12 +61,12 @@ Requires a configured **Firebase** project and platform files (e.g. Android `goo
 
 ## Crashlytics and Performance (Phase 2)
 
-By default the app initializes **Firebase** when **push** is enabled **or** when **Firebase monitoring** is enabled (see [`lib/core/firebase_monitoring.dart`](lib/core/firebase_monitoring.dart)). That enables **Crashlytics** (fatal Flutter/async errors) and **Performance Monitoring**:
+By default the app initializes **Firebase** when **push** is enabled, when **Firebase monitoring** is enabled, or when **product analytics** is enabled (see [`lib/core/firebase_monitoring.dart`](lib/core/firebase_monitoring.dart)). That enables **Crashlytics** (fatal Flutter/async errors) and **Performance Monitoring**:
 
 - **HTTP:** [`FirebasePerformanceInterceptor`](lib/core/firebase_performance_dio.dart) on the API `Dio` clients (including token refresh).
 - **Custom traces:** `ws_transit_connect` (WebSocket until first frame/message), `map_home_first_frame` (map screen first frame).
 
-**Opt out** of monitoring (no Crashlytics/Performance, and Firebase is not initialized unless push is enabled):
+**Opt out** of monitoring (no Crashlytics/Performance; Firebase still initializes if push or analytics need it):
 
 ```bash
 flutter run --dart-define=WOLEH_FIREBASE_MONITORING=false
@@ -75,6 +75,20 @@ flutter run --dart-define=WOLEH_FIREBASE_MONITORING=false
 If **`WOLEH_FIREBASE_MONITORING`** is true but **`google-services`** / **`GoogleService-Info.plist`** are missing or invalid, `Firebase.initializeApp` fails gracefully and the app still runs.
 
 **Release health** in the Firebase console uses the app **version** and **build** from [`pubspec.yaml`](pubspec.yaml) (`version:` / `+` build number) and standard Android/iOS build metadata.
+
+## Product analytics (Phase 3)
+
+**Firebase Analytics** is wired through [`WolehAnalytics`](lib/core/analytics.dart) ([`wolehAnalyticsProvider`](lib/core/analytics_provider.dart)). **Screen views** use [`FirebaseAnalyticsObserver`](https://pub.dev/documentation/firebase_analytics/latest/firebase_analytics/FirebaseAnalyticsObserver-class.html) on [`GoRouter`](lib/app/router.dart). **User id** is set from `me.profile.userId` after `GET /me` and cleared on sign-out ([`AnalyticsIdentitySync`](lib/core/analytics_identity_sync.dart)).
+
+**Opt out** of Analytics only (Crashlytics/Performance unchanged; if push and monitoring are both off, Firebase is not initialized and analytics is a no-op):
+
+```bash
+flutter run --dart-define=WOLEH_FIREBASE_ANALYTICS=false
+```
+
+Event names and parameters: [`docs/ANALYTICS_EVENTS.md`](../docs/ANALYTICS_EVENTS.md). For local validation, use **Firebase DebugView** with a debug build.
+
+**Privacy:** For GDPR/CCPA regions, add consent before non-essential analytics when you ship broadly; on iOS, review **App Tracking Transparency** if you enable ad-related features. See Phase 4 in [`docs/MONITORING_AND_ANALYTICS_PLAN.md`](../docs/MONITORING_AND_ANALYTICS_PLAN.md).
 
 ## Checks (CI-aligned)
 

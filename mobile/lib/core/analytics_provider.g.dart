@@ -1,27 +1,27 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'router.dart';
+part of 'analytics_provider.dart';
 
 // **************************************************************************
 // RiverpodGenerator
 // **************************************************************************
 
-String _$routerHash() => r'f060824dad64568e4b64dc7d8699d20511721243';
+String _$wolehAnalyticsHash() => r'fbbfdf8672007199a7f4546b55f8bdfa3de76931';
 
-/// See also [router].
-@ProviderFor(router)
-final routerProvider = Provider<GoRouter>.internal(
-  router,
-  name: r'routerProvider',
+/// See also [wolehAnalytics].
+@ProviderFor(wolehAnalytics)
+final wolehAnalyticsProvider = Provider<WolehAnalytics>.internal(
+  wolehAnalytics,
+  name: r'wolehAnalyticsProvider',
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
       ? null
-      : _$routerHash,
+      : _$wolehAnalyticsHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef RouterRef = ProviderRef<GoRouter>;
+typedef WolehAnalyticsRef = ProviderRef<WolehAnalytics>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

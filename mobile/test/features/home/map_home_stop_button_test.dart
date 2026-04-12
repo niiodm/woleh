@@ -15,8 +15,7 @@ import 'package:odm_clarity_woleh_mobile/main.dart';
 import '../../support/pump_map_home.dart';
 
 class _RecordingPlaceListRepository extends PlaceListRepository {
-  _RecordingPlaceListRepository(Dio dio, SharedPreferences prefs)
-      : super(dio, prefs);
+  _RecordingPlaceListRepository(super.dio, super.prefs);
 
   final List<List<String>> watchPuts = [];
   final List<List<String>> broadcastPuts = [];

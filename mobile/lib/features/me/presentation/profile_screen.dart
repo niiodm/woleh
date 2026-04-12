@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:dio/dio.dart';
 
+import '../../../core/analytics_provider.dart';
 import '../../../core/app_error.dart';
 import '../../../core/auth_state.dart';
 import '../../../shared/offline_read_only_hint.dart';
@@ -36,17 +39,41 @@ class ProfileScreen extends ConsumerWidget {
           IconButton(
             tooltip: 'Plans',
             icon: const Icon(Icons.workspace_premium_outlined),
-            onPressed: () => context.push('/plans'),
+            onPressed: () {
+              unawaited(
+                ref.read(wolehAnalyticsProvider).logButtonTapped(
+                      'open_plans',
+                      screenName: '/profile',
+                    ),
+              );
+              context.push('/plans');
+            },
           ),
           IconButton(
             tooltip: 'Edit profile',
             icon: const Icon(Icons.edit_outlined),
-            onPressed: () => context.push('/me/edit'),
+            onPressed: () {
+              unawaited(
+                ref.read(wolehAnalyticsProvider).logButtonTapped(
+                      'edit_profile',
+                      screenName: '/profile',
+                    ),
+              );
+              context.push('/me/edit');
+            },
           ),
           IconButton(
             tooltip: 'Sign out',
             icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(authStateProvider.notifier).signOut(),
+            onPressed: () {
+              unawaited(
+                ref.read(wolehAnalyticsProvider).logButtonTapped(
+                      'sign_out',
+                      screenName: '/profile',
+                    ),
+              );
+              ref.read(authStateProvider.notifier).signOut();
+            },
           ),
         ],
       ),

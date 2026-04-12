@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../core/analytics.dart';
 import '../core/auth_state.dart';
 import 'splash_screen.dart';
 import '../features/auth/presentation/otp_screen.dart';
@@ -46,11 +47,21 @@ GoRouter router(Ref ref) {
     initialLocation: '/splash',
     refreshListenable: notifier,
     redirect: notifier.redirect,
+    observers: firebaseAnalyticsNavigatorObservers(),
     routes: [
-      GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
-      GoRoute(path: '/auth/phone', builder: (_, __) => const PhoneScreen()),
+      GoRoute(
+        path: '/splash',
+        name: '/splash',
+        builder: (_, __) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/auth/phone',
+        name: '/auth/phone',
+        builder: (_, __) => const PhoneScreen(),
+      ),
       GoRoute(
         path: '/auth/otp',
+        name: '/auth/otp',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>;
           return OtpScreen(
@@ -61,21 +72,48 @@ GoRouter router(Ref ref) {
       ),
       GoRoute(
         path: '/auth/setup-name',
+        name: '/auth/setup-name',
         builder: (_, __) => const SetupNameScreen(),
       ),
-      GoRoute(path: '/home', builder: (_, __) => const MapHomeScreen()),
-      GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+      GoRoute(
+        path: '/home',
+        name: '/home',
+        builder: (_, __) => const MapHomeScreen(),
+      ),
+      GoRoute(
+        path: '/profile',
+        name: '/profile',
+        builder: (_, __) => const ProfileScreen(),
+      ),
       GoRoute(
         path: '/places/search',
+        name: '/places/search',
         builder: (_, __) => const PlacesSearchScreen(),
       ),
       GoRoute(path: '/map', redirect: (_, __) => '/home'),
-      GoRoute(path: '/me/edit', builder: (_, __) => const ProfileEditScreen()),
-      GoRoute(path: '/plans', builder: (_, __) => const PlansScreen()),
-      GoRoute(path: '/watch', builder: (_, __) => const WatchScreen()),
-      GoRoute(path: '/broadcast', builder: (_, __) => const BroadcastScreen()),
+      GoRoute(
+        path: '/me/edit',
+        name: '/me/edit',
+        builder: (_, __) => const ProfileEditScreen(),
+      ),
+      GoRoute(
+        path: '/plans',
+        name: '/plans',
+        builder: (_, __) => const PlansScreen(),
+      ),
+      GoRoute(
+        path: '/watch',
+        name: '/watch',
+        builder: (_, __) => const WatchScreen(),
+      ),
+      GoRoute(
+        path: '/broadcast',
+        name: '/broadcast',
+        builder: (_, __) => const BroadcastScreen(),
+      ),
       GoRoute(
         path: '/checkout/:planId',
+        name: 'checkout',
         builder: (_, state) =>
             CheckoutWebViewScreen(planId: state.pathParameters['planId']!),
       ),

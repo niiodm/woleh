@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/analytics_provider.dart';
 import '../../../core/phone_utils.dart';
 import 'phone_notifier.dart';
 
@@ -31,6 +34,12 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    unawaited(
+      ref.read(wolehAnalyticsProvider).logButtonTapped(
+            'send_otp',
+            screenName: '/auth/phone',
+          ),
+    );
     final phone = normalizePhone(_controller.text);
     final result = await ref.read(phoneNotifierProvider.notifier).sendOtp(phone);
     if (result != null && mounted) {

@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 
+import 'analytics.dart';
 import 'push_bootstrap.dart';
 
 /// Opt out of Crashlytics / Performance custom traces with:
@@ -18,7 +19,7 @@ const kFirebaseMonitoringEnabled = bool.fromEnvironment(
 /// Call from [main] after [WidgetsFlutterBinding.ensureInitialized]. Safe to call when
 /// `google-services` is missing (catch and log).
 Future<void> bootstrapFirebaseObservability() async {
-  if (!kPushEnabled && !kFirebaseMonitoringEnabled) {
+  if (!kPushEnabled && !kFirebaseMonitoringEnabled && !kFirebaseAnalyticsEnabled) {
     return;
   }
   try {
