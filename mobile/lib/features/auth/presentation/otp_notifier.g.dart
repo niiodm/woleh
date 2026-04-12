@@ -6,7 +6,7 @@ part of 'otp_notifier.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$otpNotifierHash() => r'85e28234db3b9eb3b728a9cfcafb2b3eb776bfec';
+String _$otpNotifierHash() => r'f292d7ab1b640d02e5fc3f7b4f55e4182de3fa7b';
 
 /// Copied from Dart SDK
 class _SystemHash {

@@ -14,6 +14,7 @@ import '../../../core/ws_message.dart';
 import '../../../shared/ws_status_banner.dart';
 import '../../location/presentation/live_map_stack.dart';
 import '../../location/presentation/peer_locations_notifier.dart';
+import '../../places/active_place_session.dart';
 import '../../me/presentation/me_notifier.dart';
 import '../../places/data/place_list_repository.dart';
 import '../../places/presentation/broadcast_notifier.dart';
@@ -60,19 +61,14 @@ class _MapHomeScreenState extends ConsumerState<MapHomeScreen> {
   String _dioMessage(DioException e) => _toAppError(e.error).message;
 
   _ActivePlaceMode? _activeStopMode(WatchState watch, BroadcastState broadcast) {
+    if (!hasActivePlaceSession(watch, broadcast)) return null;
     final br = broadcast is BroadcastReady ? broadcast : null;
     if (br != null &&
         br.names.isNotEmpty &&
         !br.readOnlyOffline) {
       return _ActivePlaceMode.broadcast;
     }
-    final wr = watch is WatchReady ? watch : null;
-    if (wr != null &&
-        wr.names.isNotEmpty &&
-        !wr.readOnlyOffline) {
-      return _ActivePlaceMode.watch;
-    }
-    return null;
+    return _ActivePlaceMode.watch;
   }
 
   String _stopTooltip(_ActivePlaceMode mode) => switch (mode) {

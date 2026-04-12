@@ -26,7 +26,7 @@ final productAnalyticsConsentGrantedProvider = Provider<bool>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef ProductAnalyticsConsentGrantedRef = ProviderRef<bool>;
-String _$telemetryConsentHash() => r'5457b68fa159e90091987114b7bdd6650e8e230b';
+String _$telemetryConsentHash() => r'bac7b06f43862cea0182f3ed18bf905ed43dcc13';
 
 /// Stored user choice: `null` = not asked, `true` = allowed, `false` = declined.
 ///

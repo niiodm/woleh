@@ -11,6 +11,9 @@ import '../../../core/location/location_source_provider.dart';
 import '../../me/data/me_dto.dart';
 import '../../me/data/me_repository.dart';
 import '../../me/presentation/me_notifier.dart';
+import '../../places/active_place_session.dart';
+import '../../places/presentation/broadcast_notifier.dart';
+import '../../places/presentation/watch_notifier.dart';
 
 part 'location_publish_notifier.g.dart';
 
@@ -34,8 +37,9 @@ bool locationPublishLifecycleAllowsStream(AppLifecycleState? state) {
 /// Foreground GPS → throttled `POST /api/v1/me/location` ([`MAP_LIVE_LOCATION_PLAN.md`](../../../../../docs/MAP_LIVE_LOCATION_PLAN.md) §4.3).
 ///
 /// Subscribes only when the user is signed in, has watch or broadcast permission,
-/// and `locationSharingEnabled` is true. Pauses when the app is not in a
-/// foreground-eligible lifecycle state.
+/// `locationSharingEnabled` is true, and at least one **active** watch or
+/// broadcast session (non-empty list, not read-only offline). Pauses when the
+/// app is not in a foreground-eligible lifecycle state.
 ///
 /// [state] is the latest device fix for map UI (§4.4); cleared when not publishing.
 @Riverpod(keepAlive: true)
@@ -67,6 +71,15 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
 
     ref.listen<AsyncValue<MeLoadSnapshot?>>(
       meNotifierProvider,
+      (_, __) => unawaited(_syncSubscription()),
+    );
+
+    ref.listen<WatchState>(
+      watchNotifierProvider,
+      (_, __) => unawaited(_syncSubscription()),
+    );
+    ref.listen<BroadcastState>(
+      broadcastNotifierProvider,
       (_, __) => unawaited(_syncSubscription()),
     );
 
@@ -127,6 +140,12 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
       return;
     }
 
+    if (!_activePlaceSession()) {
+      _lastSentAt = null;
+      state = null;
+      return;
+    }
+
     final source = ref.read(locationSourceProvider);
     final authz = await source.checkAuthorization();
     if (authz != LocationAuthorization.whileInUse &&
@@ -167,6 +186,7 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
     final me = snap.me;
     if (!me.profile.locationSharingEnabled) return;
     if (!_hasLocationPermission(me)) return;
+    if (!_activePlaceSession()) return;
     try {
       final fix = await source.getCurrentPosition(
         accuracy: LocationAccuracyTier.high,
@@ -192,6 +212,7 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
     final me = snap.me;
     if (!me.profile.locationSharingEnabled) return;
     if (!_hasLocationPermission(me)) return;
+    if (!_activePlaceSession()) return;
 
     final fix = state;
     if (fix == null) {
@@ -217,6 +238,11 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
         me.hasPermission('woleh.place.broadcast');
   }
 
+  bool _activePlaceSession() => hasActivePlaceSession(
+        ref.read(watchNotifierProvider),
+        ref.read(broadcastNotifierProvider),
+      );
+
   void _onPositionFix(LocationFix fix) {
     if (_disposed || !_foreground) return;
     if (ref.read(authStateProvider).valueOrNull == null) return;
@@ -226,6 +252,7 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
     final me = snap.me;
     if (!me.profile.locationSharingEnabled) return;
     if (!_hasLocationPermission(me)) return;
+    if (!_activePlaceSession()) return;
 
     _applyFix(fix);
   }
@@ -236,6 +263,7 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
   }
 
   void _tryPostThrottled(LocationFix fix) {
+    if (!_activePlaceSession()) return;
     final now = DateTime.now();
     if (_lastSentAt != null &&
         now.difference(_lastSentAt!) < minPostInterval) {
@@ -247,6 +275,7 @@ class LocationPublishNotifier extends _$LocationPublishNotifier {
 
   Future<void> _postFix(LocationFix fix) async {
     if (_disposed) return;
+    if (!_activePlaceSession()) return;
     try {
       await ref.read(meRepositoryProvider).postLocation(
             latitude: fix.latitude,

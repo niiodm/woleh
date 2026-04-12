@@ -7,14 +7,15 @@ part of 'peer_locations_notifier.dart';
 // **************************************************************************
 
 String _$peerLocationsNotifierHash() =>
-    r'0568ab6f6d78e3ff4af358b9c003bd261647230a';
+    r'0f973a7358927128aae4fce383fc42e8cb6c53fd';
 
 /// Last-known [PeerLocation] per peer user id from WebSocket `peer_location`.
 ///
 /// - Updates on [PeerLocationMessage]; removes a key on [PeerLocationRevokedMessage].
-/// - Clears when the signed-in user turns off [MeProfile.locationSharingEnabled]
-///   or signs out ([MAP_LIVE_LOCATION_PLAN.md](../../../../../docs/MAP_LIVE_LOCATION_PLAN.md) §4.2).
-/// - Ignores incoming peer fixes while local sharing is off (no stale pins after toggle).
+/// - Incoming peer fixes are shown whenever received; **local** [MeProfile.locationSharingEnabled]
+///   only controls publishing (`POST /me/location`), not whether you can see matched peers.
+/// - Clears all pins when the signed-in user **turns off** sharing (true → false) or signs out
+///   ([MAP_LIVE_LOCATION_PLAN.md](../../../../../docs/MAP_LIVE_LOCATION_PLAN.md) §4.2).
 ///
 /// Copied from [PeerLocationsNotifier].
 @ProviderFor(PeerLocationsNotifier)

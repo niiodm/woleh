@@ -7,13 +7,14 @@ part of 'location_publish_notifier.dart';
 // **************************************************************************
 
 String _$locationPublishNotifierHash() =>
-    r'4dc7d9133dc779ea64ecbe028121eaf65491bb61';
+    r'66c78155194101a195bc3d19369691f6077440d6';
 
 /// Foreground GPS → throttled `POST /api/v1/me/location` ([`MAP_LIVE_LOCATION_PLAN.md`](../../../../../docs/MAP_LIVE_LOCATION_PLAN.md) §4.3).
 ///
 /// Subscribes only when the user is signed in, has watch or broadcast permission,
-/// and `locationSharingEnabled` is true. Pauses when the app is not in a
-/// foreground-eligible lifecycle state.
+/// `locationSharingEnabled` is true, and at least one **active** watch or
+/// broadcast session (non-empty list, not read-only offline). Pauses when the
+/// app is not in a foreground-eligible lifecycle state.
 ///
 /// [state] is the latest device fix for map UI (§4.4); cleared when not publishing.
 ///

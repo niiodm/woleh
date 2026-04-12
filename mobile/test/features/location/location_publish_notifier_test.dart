@@ -13,12 +13,35 @@ import 'package:odm_clarity_woleh_mobile/core/location/location_source_provider.
 import 'package:odm_clarity_woleh_mobile/core/shared_preferences_provider.dart';
 import 'package:odm_clarity_woleh_mobile/features/location/presentation/location_publish_notifier.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/data/me_dto.dart';
+import 'package:odm_clarity_woleh_mobile/features/places/active_place_session.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/data/me_repository.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/presentation/me_notifier.dart';
+import 'package:odm_clarity_woleh_mobile/features/places/presentation/broadcast_notifier.dart';
+import 'package:odm_clarity_woleh_mobile/features/places/presentation/watch_notifier.dart';
 
 // ---------------------------------------------------------------------------
 // Fakes
 // ---------------------------------------------------------------------------
+
+class _WatchEmpty extends WatchNotifier {
+  @override
+  WatchState build() => const WatchReady(names: []);
+}
+
+class _WatchActive extends WatchNotifier {
+  @override
+  WatchState build() => const WatchReady(names: ['Madina']);
+}
+
+class _BroadcastEmpty extends BroadcastNotifier {
+  @override
+  BroadcastState build() => const BroadcastReady(names: []);
+}
+
+class _BroadcastActive extends BroadcastNotifier {
+  @override
+  BroadcastState build() => const BroadcastReady(names: ['Lapaz']);
+}
 
 class _AuthWithToken extends AuthState {
   @override
@@ -145,6 +168,48 @@ void main() {
     });
   });
 
+  group('hasActivePlaceSession', () {
+    test('false when both lists empty', () {
+      expect(
+        hasActivePlaceSession(
+          const WatchReady(names: []),
+          const BroadcastReady(names: []),
+        ),
+        isFalse,
+      );
+    });
+
+    test('true when watch has names', () {
+      expect(
+        hasActivePlaceSession(
+          const WatchReady(names: ['a']),
+          const BroadcastReady(names: []),
+        ),
+        isTrue,
+      );
+    });
+
+    test('true when broadcast has names', () {
+      expect(
+        hasActivePlaceSession(
+          const WatchReady(names: []),
+          const BroadcastReady(names: ['b']),
+        ),
+        isTrue,
+      );
+    });
+
+    test('false when only offline read-only lists', () {
+      expect(
+        hasActivePlaceSession(
+          const WatchReady(names: ['a'], readOnlyOffline: true),
+          const BroadcastReady(names: []),
+        ),
+        isFalse,
+      );
+    });
+  });
+
   group('LocationPublishNotifier', () {
     late SharedPreferences prefs;
     late List<Map<String, dynamic>> posts;
@@ -190,6 +255,8 @@ void main() {
             (ref) => MeRepository(dio, ref.watch(sharedPreferencesProvider)),
           ),
           locationSourceProvider.overrideWithValue(_FakeLocationSource(fixes.stream)),
+          watchNotifierProvider.overrideWith(_WatchActive.new),
+          broadcastNotifierProvider.overrideWith(_BroadcastEmpty.new),
         ],
       );
       addTearDown(container.dispose);
@@ -219,6 +286,8 @@ void main() {
             (ref) => MeRepository(dio, ref.watch(sharedPreferencesProvider)),
           ),
           locationSourceProvider.overrideWithValue(_FakeLocationSource(fixes.stream)),
+          watchNotifierProvider.overrideWith(_WatchActive.new),
+          broadcastNotifierProvider.overrideWith(_BroadcastEmpty.new),
         ],
       );
       addTearDown(container.dispose);
@@ -268,6 +337,8 @@ void main() {
           locationSourceProvider.overrideWithValue(
             _FakeLocationSource(fixes.stream, seedFix: seed),
           ),
+          watchNotifierProvider.overrideWith(_WatchActive.new),
+          broadcastNotifierProvider.overrideWith(_BroadcastEmpty.new),
         ],
       );
       addTearDown(container.dispose);
@@ -293,6 +364,8 @@ void main() {
             (ref) => MeRepository(dio, ref.watch(sharedPreferencesProvider)),
           ),
           locationSourceProvider.overrideWithValue(_FakeLocationSource(fixes.stream)),
+          watchNotifierProvider.overrideWith(_WatchActive.new),
+          broadcastNotifierProvider.overrideWith(_BroadcastEmpty.new),
         ],
       );
       addTearDown(container.dispose);
@@ -319,6 +392,8 @@ void main() {
             (ref) => MeRepository(dio, ref.watch(sharedPreferencesProvider)),
           ),
           locationSourceProvider.overrideWithValue(_FakeLocationSource(fixes.stream)),
+          watchNotifierProvider.overrideWith(_WatchActive.new),
+          broadcastNotifierProvider.overrideWith(_BroadcastEmpty.new),
         ],
       );
       addTearDown(container.dispose);
@@ -330,6 +405,63 @@ void main() {
       await pumpEventQueue();
 
       expect(posts, isEmpty);
+      await fixes.close();
+    });
+
+    test('does not post when sharing on but no active watch/broadcast session',
+        () async {
+      final fixes = StreamController<LocationFix>.broadcast();
+
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          authStateProvider.overrideWith(_AuthWithToken.new),
+          meNotifierProvider.overrideWith(_MeSharingOn.new),
+          meRepositoryProvider.overrideWith(
+            (ref) => MeRepository(dio, ref.watch(sharedPreferencesProvider)),
+          ),
+          locationSourceProvider.overrideWithValue(_FakeLocationSource(fixes.stream)),
+          watchNotifierProvider.overrideWith(_WatchEmpty.new),
+          broadcastNotifierProvider.overrideWith(_BroadcastEmpty.new),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(locationPublishNotifierProvider);
+      await pumpEventQueue();
+
+      fixes.add(const LocationFix(latitude: 5.0, longitude: -0.1));
+      await pumpEventQueue();
+
+      expect(posts, isEmpty);
+      await fixes.close();
+    });
+
+    test('posts when only broadcast list is active', () async {
+      final fixes = StreamController<LocationFix>.broadcast();
+
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          authStateProvider.overrideWith(_AuthWithToken.new),
+          meNotifierProvider.overrideWith(_MeSharingOn.new),
+          meRepositoryProvider.overrideWith(
+            (ref) => MeRepository(dio, ref.watch(sharedPreferencesProvider)),
+          ),
+          locationSourceProvider.overrideWithValue(_FakeLocationSource(fixes.stream)),
+          watchNotifierProvider.overrideWith(_WatchEmpty.new),
+          broadcastNotifierProvider.overrideWith(_BroadcastActive.new),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(locationPublishNotifierProvider);
+      await pumpEventQueue();
+
+      fixes.add(const LocationFix(latitude: 5.0, longitude: -0.1));
+      await pumpEventQueue();
+
+      expect(posts, hasLength(1));
       await fixes.close();
     });
   });
