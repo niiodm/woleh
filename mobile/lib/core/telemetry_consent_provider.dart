@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -23,8 +25,10 @@ class TelemetryConsent extends _$TelemetryConsent {
     await ref
         .read(sharedPreferencesProvider)
         .setBool(kTelemetryProductAnalyticsConsentKey, allowed);
-    await applyFirebaseProductAnalyticsConsent(allowed);
     ref.invalidateSelf();
+    // Do not await: Firebase Analytics native calls can stall on some devices and
+    // would block sign-in (e.g. phone → OTP) until consent mode completes.
+    unawaited(applyFirebaseProductAnalyticsConsent(allowed));
   }
 }
 
