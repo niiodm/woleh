@@ -186,8 +186,9 @@ class _EmbeddedGrantedBody extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: Text(
-            'Peer positions appear only when you share location and place '
-            'names match another user who is also sharing.',
+            'Peer positions appear when place names match a user who is '
+            'sharing their location. Turn on sharing in Profile to publish '
+            'your own position to matched peers.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -208,8 +209,8 @@ class _EmbeddedGrantedBody extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Text(
-              'No matched peers on the map yet — waiting for overlapping '
-              'watch and broadcast names.',
+              'No matched peers on the map yet — check overlapping watch '
+              'and broadcast place names, or wait for their next location update.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),

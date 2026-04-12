@@ -14,9 +14,10 @@ part 'peer_locations_notifier.g.dart';
 /// Last-known [PeerLocation] per peer user id from WebSocket `peer_location`.
 ///
 /// - Updates on [PeerLocationMessage]; removes a key on [PeerLocationRevokedMessage].
-/// - Clears when the signed-in user turns off [MeProfile.locationSharingEnabled]
-///   or signs out ([MAP_LIVE_LOCATION_PLAN.md](../../../../../docs/MAP_LIVE_LOCATION_PLAN.md) §4.2).
-/// - Ignores incoming peer fixes while local sharing is off (no stale pins after toggle).
+/// - Incoming peer fixes are shown whenever received; **local** [MeProfile.locationSharingEnabled]
+///   only controls publishing (`POST /me/location`), not whether you can see matched peers.
+/// - Clears all pins when the signed-in user **turns off** sharing (true → false) or signs out
+///   ([MAP_LIVE_LOCATION_PLAN.md](../../../../../docs/MAP_LIVE_LOCATION_PLAN.md) §4.2).
 @Riverpod(keepAlive: true)
 class PeerLocationsNotifier extends _$PeerLocationsNotifier {
   StreamSubscription<WsMessage>? _sub;
@@ -28,9 +29,12 @@ class PeerLocationsNotifier extends _$PeerLocationsNotifier {
 
     ref.listen<AsyncValue<MeLoadSnapshot?>>(
       meNotifierProvider,
-      (_, next) {
-        final snap = next.valueOrNull;
-        if (snap != null && !snap.me.profile.locationSharingEnabled) {
+      (prev, next) {
+        final wasOn =
+            prev?.valueOrNull?.me.profile.locationSharingEnabled ?? false;
+        final nowOn =
+            next.valueOrNull?.me.profile.locationSharingEnabled ?? false;
+        if (wasOn && !nowOn) {
           state = const {};
         }
       },
@@ -50,7 +54,6 @@ class PeerLocationsNotifier extends _$PeerLocationsNotifier {
 
   void _onMessage(WsMessage msg) {
     if (msg is PeerLocationMessage) {
-      if (!_localSharingEnabled) return;
       state = {...state, msg.userId: PeerLocation.fromMessage(msg)};
       return;
     }
@@ -60,8 +63,4 @@ class PeerLocationsNotifier extends _$PeerLocationsNotifier {
       state = next;
     }
   }
-
-  bool get _localSharingEnabled =>
-      ref.read(meNotifierProvider).valueOrNull?.me.profile.locationSharingEnabled ??
-      false;
 }

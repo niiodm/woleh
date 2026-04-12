@@ -153,7 +153,7 @@ void main() {
       expect(container.read(peerLocationsNotifierProvider), isEmpty);
     });
 
-    test('ignores PeerLocationMessage while local sharing is off', () async {
+    test('stores PeerLocationMessage when local sharing is off', () async {
       final sc = StreamController<WsMessage>.broadcast();
       final auth = _ControllableAuth();
 
@@ -170,7 +170,9 @@ void main() {
       sc.add(_peer());
       await pumpEventQueue();
 
-      expect(container.read(peerLocationsNotifierProvider), isEmpty);
+      final map = container.read(peerLocationsNotifierProvider);
+      expect(map, hasLength(1));
+      expect(map['42']!.latitude, 5.6037);
     });
 
     test('clears all when local sharing turns off', () async {
