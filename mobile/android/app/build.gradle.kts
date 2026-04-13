@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,6 +7,36 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
     id("com.google.firebase.crashlytics")
+}
+
+// Upload keystore: android/key.properties (see key.properties.example) or CI env vars below.
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+}
+
+fun keystoreProp(name: String, env: String): String? =
+    keystoreProperties.getProperty(name)?.takeIf { it.isNotBlank() }
+        ?: System.getenv(env)?.takeIf { it.isNotBlank() }
+
+val resolvedStorePath = keystoreProp("storeFile", "WOLEH_KEYSTORE_PATH")
+val resolvedStorePassword = keystoreProp("storePassword", "WOLEH_KEYSTORE_PASSWORD")
+val resolvedKeyAlias = keystoreProp("keyAlias", "WOLEH_KEY_ALIAS")
+val resolvedKeyPassword = keystoreProp("keyPassword", "WOLEH_KEY_PASSWORD")
+
+val releaseSigningEnabled =
+    listOf(resolvedStorePath, resolvedStorePassword, resolvedKeyAlias, resolvedKeyPassword).all { it != null }
+
+val resolvedStoreFile = resolvedStorePath?.let { path ->
+    val f = rootProject.file(path)
+    if (!f.isFile) {
+        error(
+            "Release keystore not found: ${f.absolutePath}. " +
+                "Fix storeFile in key.properties or WOLEH_KEYSTORE_PATH.",
+        )
+    }
+    f
 }
 
 android {
@@ -32,11 +64,31 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (releaseSigningEnabled) {
+            create("release") {
+                storeFile = resolvedStoreFile!!
+                storePassword = resolvedStorePassword!!
+                keyAlias = resolvedKeyAlias!!
+                keyPassword = resolvedKeyPassword!!
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig =
+                if (releaseSigningEnabled) {
+                    signingConfigs.getByName("release")
+                } else {
+                    signingConfigs.getByName("debug").also {
+                        logger.warn(
+                            "Release APK/AAB uses debug signing. " +
+                                "Add android/key.properties (see key.properties.example) " +
+                                "or set WOLEH_KEYSTORE_PATH, WOLEH_KEYSTORE_PASSWORD, WOLEH_KEY_ALIAS, WOLEH_KEY_PASSWORD.",
+                        )
+                    }
+                }
         }
     }
 }

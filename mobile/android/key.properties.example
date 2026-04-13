@@ -1,0 +1,6 @@
+# Copy to key.properties (gitignored). Paths are relative to android/ unless absolute.
+# https://docs.flutter.dev/deployment/android#signing-the-app
+storeFile=~/release-upload.jks
+storePassword=your-keystore-password
+keyAlias=upload
+keyPassword=your-key-password

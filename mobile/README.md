@@ -45,6 +45,10 @@ flutter run \
   --dart-define=OSM_TILE_URL_TEMPLATE=https://tile.openstreetmap.org/{z}/{x}/{y}.png
 ```
 
+**Release to testers:** [`scripts/bump_version.sh`](scripts/bump_version.sh) bumps `pubspec.yaml` `+build`; [`scripts/deploy_staging_fad.sh`](scripts/deploy_staging_fad.sh) builds with the same defines and uploads to **Firebase App Distribution** (`FAD_GROUPS` and `firebase-tools` required; see script header for iOS signing).
+
+**Android release signing:** add `android/key.properties` from [`android/key.properties.example`](android/key.properties.example) and a `.jks` / `.keystore` next to it (or set an absolute `storeFile`). CI can use the same four values via `WOLEH_KEYSTORE_PATH`, `WOLEH_KEYSTORE_PASSWORD`, `WOLEH_KEY_ALIAS`, and `WOLEH_KEY_PASSWORD`. Without them, release builds still succeed but use **debug** signing (Gradle warns).
+
 ### Map tiles
 
 Default tiles use the public OSM template. For the optional local tile server in [`server/docker-compose.yml`](../server/docker-compose.yml) (port **8088** on the host), pass **`OSM_TILE_URL_TEMPLATE`** — see comments in [`lib/shared/location_map.dart`](lib/shared/location_map.dart).
