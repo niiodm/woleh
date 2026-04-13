@@ -7,9 +7,10 @@ part of 'product_analytics_nav_observers.dart';
 // **************************************************************************
 
 String _$productAnalyticsNavigatorObserversHash() =>
-    r'c8bd03c792a54186c3c6b0cba1df89d3df91c119';
+    r'160b4d31702ef77b3d3b4ed7017e10f1dcede823';
 
-/// [NavigatorObserver]s for automatic `screen_view` events when product analytics consent is granted.
+/// [NavigatorObserver]s for automatic `screen_view` events when product analytics
+/// consent is granted (checked at navigation time, not when this provider runs).
 ///
 /// Copied from [productAnalyticsNavigatorObservers].
 @ProviderFor(productAnalyticsNavigatorObservers)

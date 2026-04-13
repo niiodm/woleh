@@ -7,7 +7,7 @@ part of 'location_publish_notifier.dart';
 // **************************************************************************
 
 String _$locationPublishNotifierHash() =>
-    r'66c78155194101a195bc3d19369691f6077440d6';
+    r'92f4c9f6e8357e3d6b8539a7fec3a3fda14c5b7b';
 
 /// Foreground GPS → throttled `POST /api/v1/me/location` ([`MAP_LIVE_LOCATION_PLAN.md`](../../../../../docs/MAP_LIVE_LOCATION_PLAN.md) §4.3).
 ///
