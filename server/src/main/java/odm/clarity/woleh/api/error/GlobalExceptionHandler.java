@@ -2,6 +2,7 @@ package odm.clarity.woleh.api.error;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.sentry.Sentry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -162,6 +163,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		if (ex.getStatusCode() >= 500) {
 			counter5xx.increment();
 			log.error("Payment provider error (5xx): {}", ex.getMessage(), ex);
+			Sentry.captureException(ex);
 		}
 		else {
 			counter4xx.increment();
@@ -175,6 +177,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	ResponseEntity<ApiEnvelope<Void>> fallback(Exception ex) {
 		counter5xx.increment();
 		log.error("Unhandled exception", ex);
+		Sentry.captureException(ex);
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 				.body(ApiEnvelope.error("Unexpected error", "INTERNAL_ERROR"));
 	}

@@ -108,3 +108,12 @@ sms:
   http:
     connect-timeout: ${SMS_HTTP_CONNECT_TIMEOUT_MS:5000}
     read-timeout: ${SMS_HTTP_READ_TIMEOUT_MS:10000}
+
+# Error monitoring (optional). Omit SENTRY_DSN locally; set DSN + environment in staging/prod.
+# https://docs.sentry.io/platforms/java/guides/spring-boot/
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:development}
+  # Performance tracing: 0 disables; raise in staging if you want transaction data (e.g. 0.2).
+  traces-sample-rate: ${SENTRY_TRACES_SAMPLE_RATE:0}
+  send-default-pii: false

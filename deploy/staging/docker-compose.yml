@@ -51,6 +51,10 @@ services:
       NALO_SMS_API_KEY: ${NALO_SMS_API_KEY:-}
       NALO_SMS_API_URL: ${NALO_SMS_API_URL:-https://sms.nalosolutions.com/smsbackend/Resl_Nalo/send-message/}
       NALO_SMS_SENDER_ID: ${NALO_SMS_SENDER_ID:-Woleh}
+      # Optional Sentry — set in .env (see .env.example).
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-staging}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0}
       # Actuator on 8081 (see application-staging.yml). Main API + WS stay on 8080.
       MANAGEMENT_SERVER_PORT: ${MANAGEMENT_SERVER_PORT:-8081}
       # HTTP Basic for /actuator/prometheus (must match deploy/staging/prometheus.yml basic_auth).

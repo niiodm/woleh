@@ -20,8 +20,11 @@ Mono-repo for the **Woleh** transit app: Flutter client and Spring Boot API.
 | `JWT_ISSUER` | Optional (default `woleh`). |
 | `JWT_ACCESS_TOKEN_TTL` | Optional ISO-8601 duration (default `PT24H`). |
 | `CORS_ALLOWED_ORIGIN_PATTERNS` | Comma-separated patterns for browser clients (default local `http://localhost:*`, `http://127.0.0.1:*`). |
+| `SENTRY_DSN` | Optional — enables Sentry error reporting for the API when set. |
+| `SENTRY_ENVIRONMENT` | Optional (default `development` in `application.yml`). |
+| `SENTRY_TRACES_SAMPLE_RATE` | Optional — performance trace sampling; default `0` (errors only). |
 
-See `server/src/main/resources/application.yml` (`woleh.jwt.*`, `woleh.cors.*`).
+See `server/src/main/resources/application.yml` (`woleh.jwt.*`, `woleh.cors.*`, `sentry.*`).
 
 ## Staging (Docker Compose)
 

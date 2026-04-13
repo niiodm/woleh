@@ -60,6 +60,8 @@ Most settings are in **`src/main/resources/application.yml`** (JWT under `woleh.
 
 Health and metrics: **`/actuator/health`**, **`/actuator/health/readiness`**, **`/actuator/prometheus`**, etc. (see `management.*` in `application.yml`).
 
+**Sentry (errors):** Optional. Set **`SENTRY_DSN`** to enable reporting; **`SENTRY_ENVIRONMENT`** defaults to `development` (use `staging` / `production` in deploy). **`SENTRY_TRACES_SAMPLE_RATE`** defaults to `0` (no performance transactions); increase in staging if needed. Handled500 responses from [`GlobalExceptionHandler`](src/main/java/odm/clarity/woleh/api/error/GlobalExceptionHandler.java) and payment-provider 5xx are sent explicitly so they are not lost behind MVC advice.
+
 **Separate management port (staging / production):** With profile **`staging`**, [`application-staging.yml`](src/main/resources/application-staging.yml) sets **`management.server.port=8081`** so the public API port (behind Caddy) serves only REST/WebSocket; metrics and Prometheus live on **8081** and are not proxied. Prometheus in [`deploy/staging/docker-compose.yml`](../deploy/staging/docker-compose.yml) scrapes `api:8081` using HTTP Basic; credentials default to **`prometheus` / `changeme`** (override via `PROMETHEUS_SCRAPE_*` in `.env` and the same values in [`deploy/staging/prometheus.yml`](../deploy/staging/prometheus.yml)). Grafana is optional on **`127.0.0.1:3000`**. Locally, omit the management port so actuator stays on **8080** with the API.
 
 ## Layout

@@ -18,6 +18,9 @@ repositories {
 }
 
 dependencies {
+	implementation platform('io.sentry:sentry-bom:8.37.1')
+	implementation 'io.sentry:sentry-spring-boot-starter-jakarta'
+
 	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'io.micrometer:micrometer-registry-prometheus'
