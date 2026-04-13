@@ -1,6 +1,6 @@
 {
-    "name": "woleh_mobile",
-    "short_name": "woleh_mobile",
+    "name": "Woleh",
+    "short_name": "Woleh",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
