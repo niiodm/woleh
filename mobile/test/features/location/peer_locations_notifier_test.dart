@@ -10,6 +10,8 @@ import 'package:odm_clarity_woleh_mobile/features/location/data/peer_location.da
 import 'package:odm_clarity_woleh_mobile/features/location/presentation/peer_locations_notifier.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/data/me_dto.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/presentation/me_notifier.dart';
+import 'package:odm_clarity_woleh_mobile/features/places/presentation/broadcast_notifier.dart';
+import 'package:odm_clarity_woleh_mobile/features/places/presentation/watch_notifier.dart';
 
 // ---------------------------------------------------------------------------
 // Stubs
@@ -58,6 +60,21 @@ class _MeSharingToggle extends MeNotifier {
   }
 }
 
+class _StubWatchActive extends WatchNotifier {
+  @override
+  WatchState build() => const WatchReady(names: ['Accra']);
+}
+
+class _StubBroadcastEmpty extends BroadcastNotifier {
+  @override
+  BroadcastState build() => const BroadcastReady(names: []);
+}
+
+class _StubWatchEmpty extends WatchNotifier {
+  @override
+  WatchState build() => const WatchReady(names: []);
+}
+
 class _MeSharingOff extends MeNotifier {
   @override
   Future<MeLoadSnapshot?> build() async => MeLoadSnapshot(
@@ -74,6 +91,19 @@ class _MeSharingOff extends MeNotifier {
         ),
       );
 }
+
+List<Override> _peerTestOverrides({
+  required _ControllableAuth auth,
+  required Stream<WsMessage> wsStream,
+  MeNotifier Function()? me,
+}) =>
+    [
+      authStateProvider.overrideWith(() => auth),
+      meNotifierProvider.overrideWith(me ?? _MeSharingToggle.new),
+      watchNotifierProvider.overrideWith(_StubWatchActive.new),
+      broadcastNotifierProvider.overrideWith(_StubBroadcastEmpty.new),
+      wsClientProvider.overrideWith(() => _StubWsClient(wsStream)),
+    ];
 
 PeerLocationMessage _peer({
   String userId = '42',
@@ -93,9 +123,7 @@ void main() {
       final auth = _ControllableAuth();
 
       final container = ProviderContainer(overrides: [
-        authStateProvider.overrideWith(() => auth),
-        meNotifierProvider.overrideWith(_MeSharingToggle.new),
-        wsClientProvider.overrideWith(() => _StubWsClient(sc.stream)),
+        ..._peerTestOverrides(auth: auth, wsStream: sc.stream),
       ]);
       addTearDown(container.dispose);
 
@@ -116,9 +144,7 @@ void main() {
       final auth = _ControllableAuth();
 
       final container = ProviderContainer(overrides: [
-        authStateProvider.overrideWith(() => auth),
-        meNotifierProvider.overrideWith(_MeSharingToggle.new),
-        wsClientProvider.overrideWith(() => _StubWsClient(sc.stream)),
+        ..._peerTestOverrides(auth: auth, wsStream: sc.stream),
       ]);
       addTearDown(container.dispose);
 
@@ -137,9 +163,7 @@ void main() {
       final auth = _ControllableAuth();
 
       final container = ProviderContainer(overrides: [
-        authStateProvider.overrideWith(() => auth),
-        meNotifierProvider.overrideWith(_MeSharingToggle.new),
-        wsClientProvider.overrideWith(() => _StubWsClient(sc.stream)),
+        ..._peerTestOverrides(auth: auth, wsStream: sc.stream),
       ]);
       addTearDown(container.dispose);
 
@@ -158,9 +182,11 @@ void main() {
       final auth = _ControllableAuth();
 
       final container = ProviderContainer(overrides: [
-        authStateProvider.overrideWith(() => auth),
-        meNotifierProvider.overrideWith(_MeSharingOff.new),
-        wsClientProvider.overrideWith(() => _StubWsClient(sc.stream)),
+        ..._peerTestOverrides(
+          auth: auth,
+          wsStream: sc.stream,
+          me: _MeSharingOff.new,
+        ),
       ]);
       addTearDown(container.dispose);
 
@@ -180,9 +206,7 @@ void main() {
       final auth = _ControllableAuth();
 
       final container = ProviderContainer(overrides: [
-        authStateProvider.overrideWith(() => auth),
-        meNotifierProvider.overrideWith(_MeSharingToggle.new),
-        wsClientProvider.overrideWith(() => _StubWsClient(sc.stream)),
+        ..._peerTestOverrides(auth: auth, wsStream: sc.stream),
       ]);
       addTearDown(container.dispose);
 
@@ -204,9 +228,7 @@ void main() {
       final auth = _ControllableAuth();
 
       final container = ProviderContainer(overrides: [
-        authStateProvider.overrideWith(() => auth),
-        meNotifierProvider.overrideWith(_MeSharingToggle.new),
-        wsClientProvider.overrideWith(() => _StubWsClient(sc.stream)),
+        ..._peerTestOverrides(auth: auth, wsStream: sc.stream),
       ]);
       addTearDown(container.dispose);
 
@@ -228,9 +250,7 @@ void main() {
       final auth = _ControllableAuth();
 
       final container = ProviderContainer(overrides: [
-        authStateProvider.overrideWith(() => auth),
-        meNotifierProvider.overrideWith(_MeSharingToggle.new),
-        wsClientProvider.overrideWith(() => _StubWsClient(sc.stream)),
+        ..._peerTestOverrides(auth: auth, wsStream: sc.stream),
       ]);
       addTearDown(container.dispose);
 
@@ -243,5 +263,68 @@ void main() {
 
       expect(container.read(peerLocationsNotifierProvider), hasLength(1));
     });
+
+    test('ignores PeerLocationMessage when place session is inactive', () async {
+      final sc = StreamController<WsMessage>.broadcast();
+      final auth = _ControllableAuth();
+
+      final container = ProviderContainer(overrides: [
+        authStateProvider.overrideWith(() => auth),
+        meNotifierProvider.overrideWith(_MeSharingToggle.new),
+        watchNotifierProvider.overrideWith(_StubWatchEmpty.new),
+        broadcastNotifierProvider.overrideWith(_StubBroadcastEmpty.new),
+        wsClientProvider.overrideWith(() => _StubWsClient(sc.stream)),
+      ]);
+      addTearDown(container.dispose);
+
+      container.read(peerLocationsNotifierProvider);
+      await pumpEventQueue();
+
+      sc.add(_peer());
+      await pumpEventQueue();
+
+      expect(container.read(peerLocationsNotifierProvider), isEmpty);
+    });
+
+    test('clears pins when place session becomes inactive', () async {
+      final sc = StreamController<WsMessage>.broadcast();
+      final auth = _ControllableAuth();
+
+      final watchState = StateProvider<WatchState>(
+        (ref) => const WatchReady(names: ['Accra']),
+      );
+
+      final container = ProviderContainer(overrides: [
+        authStateProvider.overrideWith(() => auth),
+        meNotifierProvider.overrideWith(_MeSharingToggle.new),
+        broadcastNotifierProvider.overrideWith(_StubBroadcastEmpty.new),
+        watchNotifierProvider.overrideWith(
+          () => _WatchFromProvider(watchState),
+        ),
+        wsClientProvider.overrideWith(() => _StubWsClient(sc.stream)),
+      ]);
+      addTearDown(container.dispose);
+
+      container.read(peerLocationsNotifierProvider);
+      await pumpEventQueue();
+
+      sc.add(_peer());
+      await pumpEventQueue();
+      expect(container.read(peerLocationsNotifierProvider), isNotEmpty);
+
+      container.read(watchState.notifier).state = const WatchReady(names: []);
+      await pumpEventQueue();
+
+      expect(container.read(peerLocationsNotifierProvider), isEmpty);
+    });
   });
+}
+
+class _WatchFromProvider extends WatchNotifier {
+  _WatchFromProvider(this._stateProvider);
+
+  final StateProvider<WatchState> _stateProvider;
+
+  @override
+  WatchState build() => ref.watch(_stateProvider);
 }
