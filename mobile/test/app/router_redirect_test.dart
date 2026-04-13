@@ -18,6 +18,27 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/pump_map_home.dart';
 
+/// No network — for tests where [WolehApp] mounts [LocationPublishNotifier]
+/// (which listens to watch/broadcast notifiers) but the case must not leave
+/// pending Dio timers (e.g. auth stuck in loading).
+class _StubPlaceListRepo implements PlaceListRepository {
+  const _StubPlaceListRepo();
+
+  @override
+  Future<PlaceListSnapshot> getWatchList() async =>
+      const PlaceListSnapshot(names: []);
+
+  @override
+  Future<PlaceListSnapshot> getBroadcastList() async =>
+      const PlaceListSnapshot(names: []);
+
+  @override
+  Future<List<String>> putWatchList(List<String> names) async => names;
+
+  @override
+  Future<List<String>> putBroadcastList(List<String> names) async => names;
+}
+
 // ---------------------------------------------------------------------------
 // Stub auth states
 // ---------------------------------------------------------------------------
@@ -247,6 +268,8 @@ void main() {
             overrides: [
               sharedPreferencesProvider.overrideWithValue(routerTestPrefs),
               authStateProvider.overrideWith(_AuthLoading.new),
+              placeListRepositoryProvider
+                  .overrideWithValue(const _StubPlaceListRepo()),
             ],
             child: const WolehApp(),
           ),

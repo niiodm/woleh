@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Mobile — staging" type="FlutterRunConfigurationType" factoryName="Flutter">
-    <option name="additionalArgs" value="--dart-define=API_BASE_URL=https://woleh.okaidarkomorgan.com --dart-define=OSM_TILE_URL_TEMPLATE=https://tile.openstreetmap.org/{z}/{x}/{y}.png --dart-define=WOLEH_PUSH_ENABLED=true --dart-define=WOLEH_FIREBASE_MONITORING=true" />
+    <option name="additionalArgs" value="--dart-define=API_BASE_URL=https://woleh.okaidarkomorgan.com --dart-define=OSM_TILE_URL_TEMPLATE=https://tile.openstreetmap.org/{z}/{x}/{y}.png --dart-define=WOLEH_PUSH_ENABLED=true --dart-define=WOLEH_FIREBASE_MONITORING=true--dart-define=SENTRY_DSN=https://8089326f3cb4dc8fdaf9ddfaaf69c060@o4510374981795840.ingest.de.sentry.io/4511213396623440" />
     <option name="filePath" value="$PROJECT_DIR$/lib/main.dart" />
     <method v="2" />
   </configuration>

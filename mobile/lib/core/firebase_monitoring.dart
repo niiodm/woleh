@@ -36,10 +36,14 @@ Future<void> bootstrapFirebaseObservability() async {
   try {
     await FirebaseCrashlytics.instance
         .setCrashlyticsCollectionEnabled(!kDebugMode);
+    final prevFlutterOnError = FlutterError.onError;
     FlutterError.onError = (details) {
+      prevFlutterOnError?.call(details);
       FirebaseCrashlytics.instance.recordFlutterFatalError(details);
     };
+    final prevPlatformOnError = PlatformDispatcher.instance.onError;
     PlatformDispatcher.instance.onError = (error, stack) {
+      prevPlatformOnError?.call(error, stack);
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       return true;
     };

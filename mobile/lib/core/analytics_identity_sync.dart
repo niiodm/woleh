@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'analytics_provider.dart';
 import 'auth_state.dart';
+import 'sentry_config.dart';
 import 'telemetry_consent_provider.dart';
 import '../features/me/presentation/me_notifier.dart';
 
@@ -20,6 +21,7 @@ class AnalyticsIdentitySync extends ConsumerWidget {
     ref.listen(authStateProvider, (_, next) {
       if (next.valueOrNull == null) {
         unawaited(ref.read(wolehAnalyticsProvider).setUserId(null));
+        unawaited(clearSentryUser());
       }
     });
     ref.listen(meNotifierProvider, (_, next) {
@@ -27,6 +29,7 @@ class AnalyticsIdentitySync extends ConsumerWidget {
       if (snap == null) return;
       final uid = snap.me.profile.userId;
       unawaited(ref.read(wolehAnalyticsProvider).setUserId(uid));
+      unawaited(setSentryUserId(uid));
       unawaited(
         ref.read(telemetryConsentProvider.notifier).setProductAnalyticsAllowed(
               snap.me.profile.productAnalyticsConsent,

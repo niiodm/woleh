@@ -80,6 +80,27 @@ If **`WOLEH_FIREBASE_MONITORING`** is true but **`google-services`** / **`Google
 
 **Release health** in the Firebase console uses the app **version** and **build** from [`pubspec.yaml`](pubspec.yaml) (`version:` / `+` build number) and standard Android/iOS build metadata.
 
+## Sentry (errors and HTTP performance)
+
+Optional second channel for crashes and API spans. Configuration lives in [`lib/core/sentry_config.dart`](lib/core/sentry_config.dart); [`main.dart`](lib/main.dart) wraps startup with [`runWithSentryIfConfigured`](lib/core/sentry_config.dart). **Dio** uses [`sentry_dio`](https://pub.dev/packages/sentry_dio) when Sentry is on. **Crashlytics** still receives the same fatals when Firebase monitoring is enabled — error handlers are **chained** in [`firebase_monitoring.dart`](lib/core/firebase_monitoring.dart).
+
+Enable by passing a **DSN** at compile time (same project as the server or a separate mobile project in Sentry):
+
+```bash
+flutter run \
+  --dart-define=SENTRY_DSN=https://examplePublicKey@o0.ingest.sentry.io/0 \
+  --dart-define=SENTRY_ENVIRONMENT=staging \
+  --dart-define=SENTRY_TRACES_SAMPLE_RATE=0.2
+```
+
+Omit **`SENTRY_DSN`** (default) so the SDK does not start — local dev and CI behave as before.
+
+**Disable** Sentry even if a DSN is baked into a script: `--dart-define=WOLEH_SENTRY=false`.
+
+**User id** in Sentry is set/cleared with the same timing as Firebase Analytics user id ([`AnalyticsIdentitySync`](lib/core/analytics_identity_sync.dart)).
+
+Staging FAD builds: set **`SENTRY_DSN`** (and optionally **`SENTRY_ENVIRONMENT`**, **`SENTRY_TRACES_SAMPLE_RATE`**) in the environment; [`scripts/deploy_staging_fad.sh`](scripts/deploy_staging_fad.sh) forwards them into **`--dart-define`** when present.
+
 ## Product analytics (Phase 3)
 
 **Firebase Analytics** is wired through [`WolehAnalytics`](lib/core/analytics.dart) ([`wolehAnalyticsProvider`](lib/core/analytics_provider.dart)). **Screen views** use [`FirebaseAnalyticsObserver`](https://pub.dev/documentation/firebase_analytics/latest/firebase_analytics/FirebaseAnalyticsObserver-class.html) on [`GoRouter`](lib/app/router.dart). **User id** is set from `me.profile.userId` after `GET /me` and cleared on sign-out ([`AnalyticsIdentitySync`](lib/core/analytics_identity_sync.dart)).
@@ -96,7 +117,7 @@ Event names and parameters: [`docs/ANALYTICS_EVENTS.md`](../docs/ANALYTICS_EVENT
 
 **Product analytics** (events, screen views, optional Analytics user id) is **opt-in** when Firebase is available and **`WOLEH_FIREBASE_ANALYTICS`** is true: users choose on the **phone sign-in** screen (pre-checked box) and the value is stored **on the server** and on-device; it can be changed under **Profile → Privacy** (Product analytics switch). Internally this uses Firebase **Consent Mode** (`analyticsStorageConsentGranted`).
 
-**Crashlytics** and **Performance** are **not** gated by that choice; they follow **`WOLEH_FIREBASE_MONITORING`** only. Describe both in your public privacy policy for regulated regions.
+**Crashlytics**, **Performance**, and **Sentry** (when enabled) are **not** gated by product-analytics consent; they follow compile-time flags (**`WOLEH_FIREBASE_MONITORING`**, **`SENTRY_DSN`** / **`WOLEH_SENTRY`**). Describe them in your public privacy policy for regulated regions.
 
 **Tests / CI:** Pre-seed consent or skip telemetry UI:
 

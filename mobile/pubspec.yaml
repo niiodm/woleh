@@ -52,6 +52,9 @@ dependencies:
   firebase_performance: ^0.10.1+10
   firebase_analytics: ^11.6.0
   wakelock_plus: ^1.4.0
+  sentry_flutter: ^9.16.1
+  sentry_dio: ^9.16.1
+  package_info_plus: ^9.0.1
 
 dev_dependencies:
   flutter_test:

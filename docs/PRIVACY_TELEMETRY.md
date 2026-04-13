@@ -9,12 +9,13 @@ This document complements [`docs/MONITORING_AND_ANALYTICS_PLAN.md`](MONITORING_A
 | **Product analytics** (Firebase Analytics / GA4: events, screen views, optional user id) | In-app consent + `WOLEH_FIREBASE_ANALYTICS` | [Consent Mode](https://firebase.google.com/docs/analytics/configure-data-collection) via `setConsent`. |
 | **Crash reports** (Crashlytics) | `WOLEH_FIREBASE_MONITORING` | Separate from product analytics; align with your privacy policy. |
 | **Performance traces** (HTTP, custom) | `WOLEH_FIREBASE_MONITORING` | Same Firebase project as Crashlytics. |
+| **Sentry** (crashes, HTTP spans; optional) | `SENTRY_DSN` + `WOLEH_SENTRY` | Separate vendor; user id mirrors Analytics when Sentry is on ([`AnalyticsIdentitySync`](../mobile/lib/core/analytics_identity_sync.dart)). |
 | **Push (FCM)** | `WOLEH_PUSH_ENABLED` | Device token registration; separate from GA4. |
 
 ## GDPR / CCPA
 
 - **Product analytics** uses an **opt-in** pre-checked checkbox on the **phone sign-in** screen when `WOLEH_FIREBASE_ANALYTICS` is true (and a switch in **Profile → Privacy**). The choice is stored under `telemetry.product_analytics_consent_v1` on-device and as `productAnalyticsConsent` on the user record (`POST /auth/verify-otp` optional field, `GET/PATCH /me`).
-- **Crashlytics / Performance** remain **compile-time** toggles for engineering; document their use in your public privacy policy if you ship to regulated regions.
+- **Crashlytics / Performance / Sentry** remain **compile-time** toggles for engineering (Sentry via `SENTRY_DSN` and `WOLEH_SENTRY`); document their use in your public privacy policy if you ship to regulated regions.
 - For broad EU/US launches, add or extend a **privacy policy** and, if required, a **Data Processing Agreement** with Google (Firebase).
 
 ## iOS: App Tracking Transparency (ATT)

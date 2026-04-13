@@ -6,6 +6,7 @@ import 'app/router.dart';
 import 'core/analytics_identity_sync.dart';
 import 'core/app_colors.dart';
 import 'core/firebase_monitoring.dart';
+import 'core/sentry_config.dart';
 import 'core/push_bootstrap.dart';
 import 'core/push_hook.dart';
 import 'core/shared_preferences_provider.dart';
@@ -17,26 +18,28 @@ import 'features/location/presentation/peer_locations_notifier.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await bootstrapFirebaseObservability();
-  final prefs = await SharedPreferences.getInstance();
-  await syncFirebaseProductAnalyticsConsentFromPrefs(prefs);
-  runApp(
-    ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-        pushBeforeSignOutProvider.overrideWith(
-          (ref) => unregisterPushDevices,
-        ),
-      ],
-      child: PushBootstrap(
-        child: AnalyticsIdentitySync(
-          child: TelemetryConsentGate(
-            child: const WolehApp(),
+  await runWithSentryIfConfigured(() async {
+    await bootstrapFirebaseObservability();
+    final prefs = await SharedPreferences.getInstance();
+    await syncFirebaseProductAnalyticsConsentFromPrefs(prefs);
+    runApp(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          pushBeforeSignOutProvider.overrideWith(
+            (ref) => unregisterPushDevices,
+          ),
+        ],
+        child: PushBootstrap(
+          child: AnalyticsIdentitySync(
+            child: TelemetryConsentGate(
+              child: const WolehApp(),
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  });
 }
 
 class WolehApp extends ConsumerWidget {

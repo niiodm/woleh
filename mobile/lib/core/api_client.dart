@@ -2,12 +2,14 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:sentry_dio/sentry_dio.dart';
 
 import 'app_error.dart';
 import 'auth_state.dart';
 import 'auth_token_storage.dart';
 import 'firebase_monitoring.dart';
 import 'firebase_performance_dio.dart';
+import 'sentry_config.dart';
 
 part 'api_client.g.dart';
 
@@ -88,6 +90,11 @@ ApiClient apiClient(Ref ref) {
     // are called in reverse-add order for onError).
     tokenRefreshInterceptor,
   ]);
+
+  if (isSentryConfigured) {
+    refreshDio.addSentry();
+    dio.addSentry();
+  }
 
   return ApiClient(dio);
 }

@@ -19,6 +19,9 @@
 #                                 beta-testers), not the display name — wrong alias → HTTP 404 on distribute.
 #                                 Must be exported or passed on the same line as the script (see Usage).
 #   FIREBASE_TOKEN                CI token when not using interactive login
+#   SENTRY_DSN                    optional — forwarded to --dart-define when set
+#   SENTRY_ENVIRONMENT            optional — default staging for this script
+#   SENTRY_TRACES_SAMPLE_RATE     optional — e.g. 0.2; omit for 0 (errors only)
 #   EXTRA_DART_DEFINES            space-separated extra --dart-define=key=value pairs
 #
 # Usage:
@@ -55,6 +58,15 @@ DART_DEFINES=(
   "--dart-define=API_BASE_URL=${API_BASE_URL}"
   "--dart-define=OSM_TILE_URL_TEMPLATE=${OSM_TILE_URL_TEMPLATE}"
 )
+
+SENTRY_ENVIRONMENT="${SENTRY_ENVIRONMENT:-staging}"
+DART_DEFINES+=("--dart-define=SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT}")
+if [[ -n "${SENTRY_DSN:-}" ]]; then
+  DART_DEFINES+=("--dart-define=SENTRY_DSN=${SENTRY_DSN}")
+fi
+if [[ -n "${SENTRY_TRACES_SAMPLE_RATE:-}" ]]; then
+  DART_DEFINES+=("--dart-define=SENTRY_TRACES_SAMPLE_RATE=${SENTRY_TRACES_SAMPLE_RATE}")
+fi
 
 if [[ -n "${EXTRA_DART_DEFINES:-}" ]]; then
   # shellcheck disable=2206
