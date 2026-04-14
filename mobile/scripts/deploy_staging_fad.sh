@@ -18,6 +18,14 @@
 #                                 Use the alias from App Distribution → Testers & groups (often e.g.
 #                                 beta-testers), not the display name — wrong alias → HTTP 404 on distribute.
 #                                 Must be exported or passed on the same line as the script (see Usage).
+#   IOS_EXPORT_METHOD             default development — uses Apple Development + dev provisioning (same as
+#                                 "device deployment" / automatic signing when you have no Distribution cert).
+#                                 ad-hoc and app-store need "Apple Distribution" (shown as iOS Distribution in
+#                                 errors) and portal permission to create Ad Hoc or App Store profiles; without
+#                                 that, export fails. development IPAs install only on devices registered on
+#                                 your Apple Developer team; for wider FAD testing set IOS_EXPORT_METHOD=ad-hoc
+#                                 once the account has Distribution + Ad Hoc profiles (device UDIDs).
+#                                 Values: development | ad-hoc | app-store | enterprise
 #   FIREBASE_TOKEN                CI token when not using interactive login
 #   SENTRY_DSN                    optional — forwarded to --dart-define when set
 #   SENTRY_ENVIRONMENT            optional — default staging for this script
@@ -105,7 +113,11 @@ if [[ "${TARGET}" == "android" || "${TARGET}" == "all" ]]; then
 fi
 
 if [[ "${TARGET}" == "ios" || "${TARGET}" == "all" ]]; then
-  flutter build ipa --release "${DART_DEFINES[@]}"
+  IOS_EXPORT_METHOD="${IOS_EXPORT_METHOD:-development}"
+  echo "iOS IPA export method: ${IOS_EXPORT_METHOD}" >&2
+  flutter build ipa --release \
+    --export-method "${IOS_EXPORT_METHOD}" \
+    "${DART_DEFINES[@]}"
   shopt -s nullglob
   ipa_files=("${MOBILE_DIR}/build/ios/ipa"/*.ipa)
   shopt -u nullglob
