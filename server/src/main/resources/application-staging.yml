@@ -13,6 +13,12 @@ management:
       show-details: ${HEALTH_SHOW_DETAILS:when-authorized}
       show-components: ${HEALTH_SHOW_COMPONENTS:always}
 
+# Stub checkout (StubPaymentProviderAdapter) prefixes this when building the WebView URL.
+# Without it, the default from application.yml is http://localhost:8080 — unusable from a real device.
+woleh:
+  payment:
+    base-url: ${PAYMENT_BASE_URL:https://woleh.okaidarkomorgan.com}
+
 logging:
   level:
     root: INFO

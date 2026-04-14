@@ -43,6 +43,8 @@ services:
       DATABASE_USER: ${POSTGRES_USER:-woleh}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      # Stub payment checkout URL host — must be reachable from the mobile app (not localhost).
+      PAYMENT_BASE_URL: ${PAYMENT_BASE_URL:-https://woleh.okaidarkomorgan.com}
       CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGIN_PATTERNS:-https://woleh.okaidarkomorgan.com,http://localhost:*,http://127.0.0.1:*}
       HEALTH_SHOW_DETAILS: ${HEALTH_SHOW_DETAILS:-when-authorized}
       HEALTH_SHOW_COMPONENTS: ${HEALTH_SHOW_COMPONENTS:-always}
