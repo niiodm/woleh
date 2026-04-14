@@ -172,6 +172,11 @@ class _ProfileBody extends StatelessWidget {
             label: 'Broadcast places',
             value: me.limits.placeBroadcastMax,
           ),
+          _LimitRow(
+            icon: Icons.bookmarks_outlined,
+            label: 'Saved place lists',
+            value: me.limits.savedPlaceListMax,
+          ),
           if (me.permissions.contains('woleh.place.watch') ||
               me.permissions.contains('woleh.place.broadcast')) ...[
             const SizedBox(height: 24),
@@ -217,6 +222,16 @@ class _ProfileBody extends StatelessWidget {
                 me.permissions.contains('woleh.place.watch') ||
                 me.permissions.contains('woleh.place.broadcast'),
             onTap: () => context.go('/home'),
+            onLockedTap: () => context.push('/plans'),
+          ),
+          const SizedBox(height: 8),
+          PermissionGatedButton(
+            icon: Icons.bookmarks_outlined,
+            label: 'Saved lists',
+            hasPermission:
+                me.permissions.contains('woleh.place.watch') ||
+                me.permissions.contains('woleh.place.broadcast'),
+            onTap: () => context.push('/saved-lists'),
             onLockedTap: () => context.push('/plans'),
           ),
         ],

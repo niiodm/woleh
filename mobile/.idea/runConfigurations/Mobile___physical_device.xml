@@ -1,7 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Mobile — physical device" type="FlutterRunConfigurationType" factoryName="Flutter">
-    <!-- Replace 172.16.0.100 with your Mac’s Wi-Fi IP if needed (`ipconfig getifaddr en0`). Same host: API :8080, OSM tiles :8088. -->
-    <option name="additionalArgs" value="--dart-define=API_BASE_URL=http://172.16.0.100:8080 --dart-define=OSM_TILE_URL_TEMPLATE=http://172.16.0.100:8088/tile/{z}/{x}/{y}.png" />
+    <option name="additionalArgs" value="--dart-define=API_BASE_URL=http://172.16.0.108:8080 --dart-define=OSM_TILE_URL_TEMPLATE=http://172.16.0.108:8088/tile/{z}/{x}/{y}.png" />
     <option name="filePath" value="$PROJECT_DIR$/lib/main.dart" />
     <method v="2" />
   </configuration>

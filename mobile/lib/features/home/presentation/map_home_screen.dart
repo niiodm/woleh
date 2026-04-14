@@ -222,6 +222,27 @@ class _MapHomeScreenState extends ConsumerState<MapHomeScreen> {
                           ),
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      Material(
+                        elevation: 2,
+                        shadowColor: Colors.black26,
+                        shape: const CircleBorder(),
+                        color: scheme.surfaceContainerHigh,
+                        child: IconButton(
+                          tooltip: 'Saved lists',
+                          icon: Icon(
+                            Icons.bookmarks_outlined,
+                            color: scheme.primary,
+                          ),
+                          onPressed: () {
+                            ref.read(wolehAnalyticsProvider).logButtonTapped(
+                                  'open_saved_lists',
+                                  screenName: '/home',
+                                );
+                            context.push('/saved-lists');
+                          },
+                        ),
+                      ),
                       if (stopMode != null) ...[
                         const SizedBox(width: 8),
                         Material(

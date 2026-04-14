@@ -22,6 +22,10 @@ import '../features/places/presentation/broadcast_screen.dart';
 import '../features/places/presentation/watch_screen.dart';
 import '../features/subscription/presentation/checkout_webview_screen.dart';
 import '../features/subscription/presentation/plans_screen.dart';
+import '../features/saved_lists/presentation/saved_list_editor_screen.dart';
+import '../features/saved_lists/presentation/saved_list_import_screen.dart';
+import '../features/saved_lists/presentation/saved_list_scan_screen.dart';
+import '../features/saved_lists/presentation/saved_lists_library_screen.dart';
 
 part 'router.g.dart';
 
@@ -38,6 +42,11 @@ const _permissionGuards = <String, String>{
 const _permissionGuardsAny = <String, List<String>>{
   '/home': ['woleh.place.watch', 'woleh.place.broadcast'],
   '/map': ['woleh.place.watch', 'woleh.place.broadcast'],
+};
+
+/// Paths where the user must have watch **or** broadcast (prefix match).
+const _permissionPrefixGuardsAny = <String, List<String>>{
+  '/saved-lists': ['woleh.place.watch', 'woleh.place.broadcast'],
 };
 
 /// Redirect destination for authenticated users missing a required permission.
@@ -99,6 +108,43 @@ GoRouter router(Ref ref) {
         path: '/places/search',
         name: '/places/search',
         builder: (_, __) => const PlacesSearchScreen(),
+      ),
+      GoRoute(
+        path: '/saved-lists',
+        name: '/saved-lists',
+        builder: (_, __) => const SavedListsLibraryScreen(),
+      ),
+      GoRoute(
+        path: '/saved-lists/create',
+        name: '/saved-lists/create',
+        builder: (_, __) => const SavedListEditorScreen(),
+      ),
+      GoRoute(
+        path: '/saved-lists/edit/:id',
+        name: '/saved-lists/edit',
+        builder: (_, state) {
+          final id = int.tryParse(state.pathParameters['id'] ?? '');
+          if (id == null) {
+            return const SavedListsLibraryScreen();
+          }
+          return SavedListEditorScreen(listId: id);
+        },
+      ),
+      GoRoute(
+        path: '/saved-lists/scan',
+        name: '/saved-lists/scan',
+        builder: (_, __) => const SavedListScanScreen(),
+      ),
+      GoRoute(
+        path: '/saved-lists/import',
+        name: '/saved-lists/import',
+        builder: (_, state) {
+          final token = state.uri.queryParameters['token'] ?? '';
+          if (token.isEmpty) {
+            return const SavedListsLibraryScreen();
+          }
+          return SavedListImportScreen(token: token);
+        },
       ),
       GoRoute(path: '/map', redirect: (_, __) => '/home'),
       GoRoute(
@@ -252,6 +298,16 @@ class _RouterNotifier extends ChangeNotifier {
       final requiredAny = _permissionGuardsAny[location];
       if (requiredAny != null && !requiredAny.any(permissions.contains)) {
         return _kUpgradeRedirect;
+      }
+
+      for (final e in _permissionPrefixGuardsAny.entries) {
+        final prefix = e.key;
+        if (location == prefix || location.startsWith('$prefix/')) {
+          if (!e.value.any(permissions.contains)) {
+            return _kUpgradeRedirect;
+          }
+          break;
+        }
       }
     }
 

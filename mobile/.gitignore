@@ -19939,3 +19939,4 @@ app.*.map.json
 /android/node_modules/zod-to-json-schema/README.md
 /android/node_modules/.package-lock.json
 /android/node_modules/
+/android/.kotlin/sessions/

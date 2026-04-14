@@ -15,6 +15,7 @@ import 'core/telemetry_firebase_consent.dart';
 import 'core/ws_client.dart';
 import 'features/location/presentation/location_publish_notifier.dart';
 import 'features/location/presentation/peer_locations_notifier.dart';
+import 'features/saved_lists/presentation/saved_list_deep_link_scope.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -55,24 +56,26 @@ class WolehApp extends ConsumerWidget {
     ref.watch(peerLocationsNotifierProvider);
     // Phase 4: foreground GPS → throttled POST /me/location when sharing on.
     ref.watch(locationPublishNotifierProvider);
-    return MaterialApp.router(
-      title: 'Woleh',
-      scaffoldMessengerKey: rootScaffoldMessengerKey,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.primary,
-          primary: AppColors.primary,
-          secondary: AppColors.secondary,
-          surface: AppColors.background,
+    return SavedListDeepLinkScope(
+      child: MaterialApp.router(
+        title: 'Woleh',
+        scaffoldMessengerKey: rootScaffoldMessengerKey,
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: AppColors.primary,
+            primary: AppColors.primary,
+            secondary: AppColors.secondary,
+            surface: AppColors.background,
+          ),
+          scaffoldBackgroundColor: AppColors.background,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+          ),
         ),
-        scaffoldBackgroundColor: AppColors.background,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-        ),
+        routerConfig: router,
       ),
-      routerConfig: router,
     );
   }
 }
