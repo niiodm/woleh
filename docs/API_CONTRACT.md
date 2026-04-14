@@ -106,7 +106,7 @@ Returned inside `data` for **`GET /api/v1/me`** and optionally mirrored on subsc
 |-------|--------|
 | `tier` | `free` \| `paid` — coarse UI; **authorization uses `permissions`**, not `tier` alone |
 | `limits.placeBroadcastMax` | `0` means user must not send broadcast lists (permission absent) |
-| `limits.savedPlaceListMax` | Max persisted **saved place list** templates per user (see saved-lists API when implemented) |
+| `limits.savedPlaceListMax` | Max persisted **saved place list** templates per user (§6.11–§6.12) |
 | `subscription` | Extend when payment integration exists; v1 may use `none` / stub |
 
 ---
@@ -126,6 +126,12 @@ Returned inside `data` for **`GET /api/v1/me`** and optionally mirrored on subsc
 | PUT | `/api/v1/me/places/watch` | Yes | `woleh.place.watch` | Replace list; enforce `limits.placeWatchMax` |
 | GET | `/api/v1/me/places/broadcast` | Yes | `woleh.place.broadcast` | 403 if missing permission |
 | PUT | `/api/v1/me/places/broadcast` | Yes | `woleh.place.broadcast` | Replace ordered list; enforce max |
+| GET | `/api/v1/me/saved-place-lists` | Yes | `woleh.place.watch` **or** `woleh.place.broadcast` | List saved templates |
+| POST | `/api/v1/me/saved-place-lists` | Yes | watch **or** broadcast | Create template; enforce `savedPlaceListMax` |
+| GET | `/api/v1/me/saved-place-lists/{id}` | Yes | watch **or** broadcast | Full template |
+| PUT | `/api/v1/me/saved-place-lists/{id}` | Yes | watch **or** broadcast | Replace title + names |
+| DELETE | `/api/v1/me/saved-place-lists/{id}` | Yes | watch **or** broadcast | Remove template |
+| GET | `/api/v1/public/saved-place-lists/{token}` | No | — | Read-only share by opaque `shareToken` |
 | GET | `/api/v1/subscription/status` | Yes | `woleh.account.profile` | Detailed billing mirror (optional v1) |
 | POST | `/api/v1/subscription/checkout` | Yes | `woleh.plans.read` | Returns provider **checkout URL** for WebView; see §6.10, [ADR 0005](../adr/0005-payment-checkout-webview.md) |
 
@@ -438,6 +444,32 @@ Order is **significant** (drive-through sequence).
 ```
 
 Validation: max **`limits.placeBroadcastMax`** entries after dedupe; same per-name length rules. Dedupe policy: reject duplicates or collapse—**recommend 400** if duplicate normalized names appear if product wants strict lists; otherwise dedupe on save per PRD.
+
+---
+
+### 6.11 Saved place list templates (`/api/v1/me/saved-place-lists`)
+
+**Permissions:** at least one of `woleh.place.watch`, `woleh.place.broadcast`.
+
+Saved lists are **templates** only (they do not drive matching or live location). Name validation and **dedupe-by-normalization** (first occurrence kept) match **watch** list rules (§6.8). Max names per template: **`limits.placeBroadcastMax`** if the user has `woleh.place.broadcast`, else **`limits.placeWatchMax`**. Max templates per user: **`limits.savedPlaceListMax`**.
+
+**`GET /api/v1/me/saved-place-lists`** — `data`: array of `{ "id", "title", "placeCount", "shareToken", "updatedAt" }` (`updatedAt` ISO-8601).
+
+**`POST /api/v1/me/saved-place-lists`** — body `{ "title": "optional", "names": ["…"] }`. Success `data`: `{ "id", "title", "names", "shareToken", "createdAt", "updatedAt" }`.
+
+**`GET|PUT /api/v1/me/saved-place-lists/{id}`** — PUT body same shape as POST. **404** if not found or not owned.
+
+**`DELETE /api/v1/me/saved-place-lists/{id}`** — **200**; `data` null.
+
+**Errors:** `400` `VALIDATION_ERROR` (invalid names); `403` `PERMISSION_DENIED` or `OVER_LIMIT` (template count or name count).
+
+### 6.12 `GET /api/v1/public/saved-place-lists/{token}`
+
+**Permissions:** none.
+
+**Success `data`:** `{ "title": "…", "names": ["…"] }` (display names only).
+
+**404** `NOT_FOUND` if token unknown.
 
 ---
 

@@ -17,6 +17,7 @@ import odm.clarity.woleh.common.error.PermissionDeniedException;
 import odm.clarity.woleh.common.error.PlaceLimitExceededException;
 import odm.clarity.woleh.common.error.PlaceNameValidationException;
 import odm.clarity.woleh.common.error.RateLimitedException;
+import odm.clarity.woleh.common.error.SavedPlaceListNotFoundException;
 import odm.clarity.woleh.common.error.UserNotFoundException;
 
 import org.springframework.http.HttpHeaders;
@@ -92,6 +93,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
 	@ExceptionHandler(UserNotFoundException.class)
 	ResponseEntity<ApiEnvelope<Void>> handleUserNotFound(UserNotFoundException ex) {
+		counter4xx.increment();
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.body(ApiEnvelope.error(ex.getMessage(), "NOT_FOUND"));
+	}
+
+	@ExceptionHandler(SavedPlaceListNotFoundException.class)
+	ResponseEntity<ApiEnvelope<Void>> handleSavedPlaceListNotFound(SavedPlaceListNotFoundException ex) {
 		counter4xx.increment();
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(ApiEnvelope.error(ex.getMessage(), "NOT_FOUND"));

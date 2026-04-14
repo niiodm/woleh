@@ -58,6 +58,7 @@ public class SecurityConfig {
 							"/api/v1/auth/logout")
 					.permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/subscription/plans").permitAll()
+						.requestMatchers(HttpMethod.GET, "/api/v1/public/saved-place-lists/**").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/v1/webhooks/**").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/v1/dev/**").permitAll()
 						.requestMatchers("/ws/**").permitAll()

@@ -16,4 +16,6 @@ public interface UserSavedPlaceListRepository extends JpaRepository<UserSavedPla
 	long countByUser_Id(Long userId);
 
 	Optional<UserSavedPlaceList> findByIdAndUser_Id(Long id, Long userId);
+
+	boolean existsByShareToken(String shareToken);
 }
