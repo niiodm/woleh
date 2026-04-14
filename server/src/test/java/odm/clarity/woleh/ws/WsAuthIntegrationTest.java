@@ -48,11 +48,11 @@ class WsAuthIntegrationTest {
 
 	private static final Entitlements FREE_TIER = new Entitlements(
 			List.of("woleh.account.profile", "woleh.plans.read", "woleh.place.watch"),
-			"free", 5, 0, "none", null, false);
+			"free", 5, 0, 10, "none", null, false);
 
 	private static final Entitlements NO_PLACE_PERMS = new Entitlements(
 			List.of("woleh.account.profile", "woleh.plans.read"),
-			"free", 0, 0, "none", null, false);
+			"free", 0, 0, 10, "none", null, false);
 
 	@LocalServerPort
 	private int port;

@@ -34,12 +34,12 @@ class PlansIntegrationTest {
 				"woleh_free", "Free",
 				List.of("woleh.account.profile", "woleh.plans.read",
 						"woleh.place.watch", "woleh.place.broadcast"),
-				0, "GHS", 999999999, 999999999, true));
+				0, "GHS", 999999999, 999999999, 20, true));
 		planRepository.save(new Plan(
 				"woleh_paid_monthly", "Woleh Pro",
 				List.of("woleh.account.profile", "woleh.plans.read",
 						"woleh.place.watch", "woleh.place.broadcast"),
-				100, "GHS", 999999999, 999999999, true));
+				100, "GHS", 999999999, 999999999, 20, true));
 	}
 
 	// ── accessibility ─────────────────────────────────────────────────────────
@@ -94,7 +94,7 @@ class PlansIntegrationTest {
 	void plans_inactivePlanExcluded() throws Exception {
 		planRepository.save(new Plan(
 				"woleh_legacy", "Legacy",
-				List.of("woleh.place.watch"), 499, "GHS", 10, 0, false));
+				List.of("woleh.place.watch"), 499, "GHS", 10, 0, 20, false));
 
 		mockMvc.perform(get(PLANS_URL))
 				.andExpect(jsonPath("$.data.length()").value(2));

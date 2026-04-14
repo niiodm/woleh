@@ -20,14 +20,14 @@ public final class PlanCatalogTestHelper {
 					SubscriptionPlanIds.FREE, "Free",
 					List.of("woleh.account.profile", "woleh.plans.read",
 							"woleh.place.watch", "woleh.place.broadcast"),
-					0, "GHS", 999999999, 999999999, true));
+					0, "GHS", 999999999, 999999999, 20, true));
 		}
 		if (planRepository.findByPlanId(SubscriptionPlanIds.PAID_MONTHLY).isEmpty()) {
 			planRepository.save(new Plan(
 					SubscriptionPlanIds.PAID_MONTHLY, "Woleh Pro",
 					List.of("woleh.account.profile", "woleh.plans.read",
 							"woleh.place.watch", "woleh.place.broadcast"),
-					100, "GHS", 999999999, 999999999, true));
+					100, "GHS", 999999999, 999999999, 20, true));
 		}
 	}
 }

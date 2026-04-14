@@ -37,7 +37,7 @@ class LocationPublishServiceTest {
 	private LocationPublishService service;
 
 	private static final Entitlements WATCH_ENT = new Entitlements(
-			List.of("woleh.place.watch"), "free", 5, 0, "none", null, false);
+			List.of("woleh.place.watch"), "free", 5, 0, 10, "none", null, false);
 
 	@BeforeEach
 	void setUp() {
@@ -102,7 +102,7 @@ class LocationPublishServiceTest {
 		User u = sharingUser();
 		when(userRepository.findById(1L)).thenReturn(Optional.of(u));
 		when(entitlementService.computeEntitlements(1L)).thenReturn(
-				new Entitlements(List.of("woleh.account.profile"), "free", 5, 0, "none", null, false));
+				new Entitlements(List.of("woleh.account.profile"), "free", 5, 0, 10, "none", null, false));
 
 		assertThatThrownBy(() -> service.publish(1L, sampleRequest()))
 				.isInstanceOf(PermissionDeniedException.class);

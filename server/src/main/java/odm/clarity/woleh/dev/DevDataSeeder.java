@@ -47,12 +47,12 @@ public class DevDataSeeder implements ApplicationRunner {
 						"woleh_free", "Free",
 						List.of("woleh.account.profile", "woleh.plans.read",
 								"woleh.place.watch", "woleh.place.broadcast"),
-						0, "GHS", 999_999_999, 999_999_999, true),
+						0, "GHS", 999_999_999, 999_999_999, 20, true),
 				new Plan(
 						"woleh_paid_monthly", "Woleh Pro",
 						List.of("woleh.account.profile", "woleh.plans.read",
 								"woleh.place.watch", "woleh.place.broadcast"),
-						100, "GHS", 999_999_999, 999_999_999, true)));
+						100, "GHS", 999_999_999, 999_999_999, 20, true)));
 
 		log.info("[DEV] Seeded 2 plans: woleh_free, woleh_paid_monthly");
 	}

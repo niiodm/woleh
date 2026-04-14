@@ -68,7 +68,7 @@ class DevCheckoutStubTest {
 				"woleh_paid_monthly", "Woleh Pro",
 				List.of("woleh.account.profile", "woleh.plans.read",
 						"woleh.place.watch", "woleh.place.broadcast"),
-				100, "GHS", 999999999, 999999999, true));
+				100, "GHS", 999999999, 999999999, 20, true));
 		bearerToken = "Bearer " + jwtService.createAccessToken(user.getId(), Instant.now());
 	}
 

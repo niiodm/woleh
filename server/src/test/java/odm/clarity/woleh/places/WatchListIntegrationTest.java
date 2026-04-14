@@ -307,8 +307,9 @@ class WatchListIntegrationTest {
 	}
 
 	private void stubEntitlements(List<String> perms, int watchMax, int broadcastMax) {
+		int savedMax = perms.contains("woleh.place.broadcast") ? 20 : 10;
 		Entitlements ent = new Entitlements(perms, perms.contains("woleh.place.broadcast") ? "paid" : "free",
-				watchMax, broadcastMax, "none", null, false);
+				watchMax, broadcastMax, savedMax, "none", null, false);
 		when(entitlementService.computeEntitlements(user.getId())).thenReturn(ent);
 	}
 }

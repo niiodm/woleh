@@ -86,7 +86,7 @@ public class MeController {
 						user.isProductAnalyticsConsent()),
 				e.permissions(),
 				e.tier(),
-				new MeResponse.Limits(e.placeWatchMax(), e.placeBroadcastMax()),
+				new MeResponse.Limits(e.placeWatchMax(), e.placeBroadcastMax(), e.savedPlaceListMax()),
 				new MeResponse.Subscription(e.subscriptionStatus(), e.currentPeriodEnd(), e.inGracePeriod()));
 	}
 }

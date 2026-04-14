@@ -38,6 +38,8 @@ public class EntitlementService {
 			"woleh.place.watch");
 	static final int FREE_WATCH_MAX = 5;
 	static final int FREE_BROADCAST_MAX = 0;
+	/** Max saved place list templates when the user has no active subscription (PRD free tier). */
+	static final int FREE_SAVED_PLACE_LIST_MAX = 10;
 
 	private final SubscriptionRepository subscriptionRepository;
 
@@ -75,6 +77,7 @@ public class EntitlementService {
 				tier,
 				plan.getPlaceWatchMax(),
 				plan.getPlaceBroadcastMax(),
+				plan.getSavedPlaceListMax(),
 				"active",
 				sub.getCurrentPeriodEnd().toString(),
 				inGrace);
@@ -82,6 +85,7 @@ public class EntitlementService {
 
 	private static Entitlements freeTier() {
 		return new Entitlements(FREE_PERMISSIONS, "free", FREE_WATCH_MAX, FREE_BROADCAST_MAX,
+				FREE_SAVED_PLACE_LIST_MAX,
 				"none", null, false);
 	}
 }

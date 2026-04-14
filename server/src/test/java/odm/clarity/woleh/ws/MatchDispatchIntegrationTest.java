@@ -65,12 +65,12 @@ class MatchDispatchIntegrationTest {
 
 	private static final Entitlements WATCH_ONLY = new Entitlements(
 			List.of("woleh.account.profile", "woleh.plans.read", "woleh.place.watch"),
-			"free", 5, 0, "none", null, false);
+			"free", 5, 0, 10, "none", null, false);
 
 	private static final Entitlements BROADCAST_AND_WATCH = new Entitlements(
 			List.of("woleh.account.profile", "woleh.plans.read",
 					"woleh.place.watch", "woleh.place.broadcast"),
-			"paid", 50, 50, "active", Instant.now().plus(30, ChronoUnit.DAYS).toString(), false);
+			"paid", 50, 50, 20, "active", Instant.now().plus(30, ChronoUnit.DAYS).toString(), false);
 
 	@LocalServerPort
 	private int port;

@@ -319,13 +319,13 @@ class BroadcastListIntegrationTest {
 	// ── helpers ───────────────────────────────────────────────────────────
 
 	private void stubPaidEntitlements(int broadcastMax) {
-		Entitlements ent = new Entitlements(PAID_PERMS, "paid", 50, broadcastMax,
+		Entitlements ent = new Entitlements(PAID_PERMS, "paid", 50, broadcastMax, 20,
 				"active", Instant.now().plusSeconds(86400).toString(), false);
 		when(entitlementService.computeEntitlements(user.getId())).thenReturn(ent);
 	}
 
 	private void stubFreeEntitlements() {
-		Entitlements ent = new Entitlements(FREE_PERMS, "free", 5, 0, "none", null, false);
+		Entitlements ent = new Entitlements(FREE_PERMS, "free", 5, 0, 10, "none", null, false);
 		when(entitlementService.computeEntitlements(user.getId())).thenReturn(ent);
 	}
 }

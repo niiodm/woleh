@@ -40,6 +40,9 @@ public class Plan {
 	@Column(name = "place_broadcast_max", nullable = false)
 	private int placeBroadcastMax;
 
+	@Column(name = "saved_place_list_max", nullable = false)
+	private int savedPlaceListMax;
+
 	@Column(name = "active", nullable = false)
 	private boolean active;
 
@@ -48,7 +51,9 @@ public class Plan {
 
 	public Plan(String planId, String displayName, List<String> permissionsGranted,
 			int priceAmountMinor, String priceCurrency,
-			int placeWatchMax, int placeBroadcastMax, boolean active) {
+			int placeWatchMax, int placeBroadcastMax,
+			int savedPlaceListMax,
+			boolean active) {
 		this.planId = planId;
 		this.displayName = displayName;
 		this.permissionsGranted = permissionsGranted;
@@ -56,6 +61,7 @@ public class Plan {
 		this.priceCurrency = priceCurrency;
 		this.placeWatchMax = placeWatchMax;
 		this.placeBroadcastMax = placeBroadcastMax;
+		this.savedPlaceListMax = savedPlaceListMax;
 		this.active = active;
 	}
 
@@ -89,6 +95,10 @@ public class Plan {
 
 	public int getPlaceBroadcastMax() {
 		return placeBroadcastMax;
+	}
+
+	public int getSavedPlaceListMax() {
+		return savedPlaceListMax;
 	}
 
 	public boolean isActive() {

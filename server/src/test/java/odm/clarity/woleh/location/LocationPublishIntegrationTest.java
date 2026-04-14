@@ -125,6 +125,6 @@ class LocationPublishIntegrationTest {
 
 	private static Entitlements paidEntitlements() {
 		return new Entitlements(
-				PAID_PERMS, "paid", 50, 50, "active", null, false);
+				PAID_PERMS, "paid", 50, 50, 20, "active", null, false);
 	}
 }

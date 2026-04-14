@@ -67,10 +67,10 @@ Strings are **stable identifiers**; copy for users comes from the app (transit w
 
 Enforced on the server when validating place lists:
 
-| Tier | `placeWatchMax` | `placeBroadcastMax` | Notes |
-|------|-------------------|------------------------|--------|
-| **free** | 5 | 0 | No `woleh.place.broadcast` permission |
-| **paid** (active or in grace with paid entitlements) | 50 | 50 | Both permissions granted per PRD |
+| Tier | `placeWatchMax` | `placeBroadcastMax` | `savedPlaceListMax` | Notes |
+|------|-------------------|------------------------|----------------------|--------|
+| **free** | 5 | 0 | 10 | No `woleh.place.broadcast` permission |
+| **paid** (active or in grace with paid entitlements) | 50 | 50 | From plan row | Both place permissions per PRD; saved-list cap stored on `plans.saved_place_list_max` |
 
 Expose limits in **`GET /me`** (or equivalent) so the client can show UI without hard-coding numbers.
 
@@ -91,7 +91,8 @@ Returned inside `data` for **`GET /api/v1/me`** and optionally mirrored on subsc
   "tier": "free",
   "limits": {
     "placeWatchMax": 5,
-    "placeBroadcastMax": 0
+    "placeBroadcastMax": 0,
+    "savedPlaceListMax": 10
   },
   "subscription": {
     "status": "none",
@@ -105,6 +106,7 @@ Returned inside `data` for **`GET /api/v1/me`** and optionally mirrored on subsc
 |-------|--------|
 | `tier` | `free` \| `paid` — coarse UI; **authorization uses `permissions`**, not `tier` alone |
 | `limits.placeBroadcastMax` | `0` means user must not send broadcast lists (permission absent) |
+| `limits.savedPlaceListMax` | Max persisted **saved place list** templates per user (see saved-lists API when implemented) |
 | `subscription` | Extend when payment integration exists; v1 may use `none` / stub |
 
 ---
@@ -211,7 +213,8 @@ Signup completion (name, etc.) may be a separate **`PATCH /me/profile`** after f
   "tier": "free",
   "limits": {
     "placeWatchMax": 5,
-    "placeBroadcastMax": 0
+    "placeBroadcastMax": 0,
+    "savedPlaceListMax": 10
   },
   "subscription": {
     "status": "none",
@@ -222,6 +225,8 @@ Signup completion (name, etc.) may be a separate **`PATCH /me/profile`** after f
 ```
 
 Clients **must** use `permissions` and `limits` for gating and validation; `tier` is advisory.
+
+**`GET /api/v1/subscription/status`** mirrors the same `permissions`, `tier`, `limits` (including `savedPlaceListMax`), and `subscription` fields as above.
 
 ---
 

@@ -76,7 +76,7 @@ class WebhookIntegrationTest {
 				"woleh_paid_monthly", "Woleh Pro",
 				List.of("woleh.account.profile", "woleh.plans.read",
 						"woleh.place.watch", "woleh.place.broadcast"),
-				100, "GHS", 999999999, 999999999, true));
+				100, "GHS", 999999999, 999999999, 20, true));
 
 		// Create a pending payment session directly (bypasses checkout flow)
 		pendingSession = paymentSessionRepository.save(new PaymentSession(
@@ -141,7 +141,7 @@ class WebhookIntegrationTest {
 				SubscriptionPlanIds.FREE, "Free",
 				List.of("woleh.account.profile", "woleh.plans.read",
 						"woleh.place.watch", "woleh.place.broadcast"),
-				0, "GHS", 999999999, 999999999, true));
+				0, "GHS", 999999999, 999999999, 20, true));
 		Instant freeHorizon = Instant.now().plus(36500, ChronoUnit.DAYS);
 		Subscription freeSub = subscriptionRepository.save(new Subscription(
 				user, freePlan, SubscriptionStatus.ACTIVE,

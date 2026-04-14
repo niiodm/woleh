@@ -59,7 +59,8 @@ public class SubscriptionController {
 		SubscriptionStatusResponse response = new SubscriptionStatusResponse(
 				e.permissions(),
 				e.tier(),
-				new SubscriptionStatusResponse.Limits(e.placeWatchMax(), e.placeBroadcastMax()),
+				new SubscriptionStatusResponse.Limits(
+						e.placeWatchMax(), e.placeBroadcastMax(), e.savedPlaceListMax()),
 				new SubscriptionStatusResponse.Subscription(
 						e.subscriptionStatus(), e.currentPeriodEnd(), e.inGracePeriod()));
 		return ResponseEntity.ok(ApiEnvelope.success("OK", response));

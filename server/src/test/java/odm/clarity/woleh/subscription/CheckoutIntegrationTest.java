@@ -56,12 +56,12 @@ class CheckoutIntegrationTest {
 				"woleh_free", "Free",
 				List.of("woleh.account.profile", "woleh.plans.read",
 						"woleh.place.watch", "woleh.place.broadcast"),
-				0, "GHS", 999999999, 999999999, true));
+				0, "GHS", 999999999, 999999999, 20, true));
 		paidPlan = planRepository.save(new Plan(
 				"woleh_paid_monthly", "Woleh Pro",
 				List.of("woleh.account.profile", "woleh.plans.read",
 						"woleh.place.watch", "woleh.place.broadcast"),
-				100, "GHS", 999999999, 999999999, true));
+				100, "GHS", 999999999, 999999999, 20, true));
 	}
 
 	// ── auth guard ────────────────────────────────────────────────────────────

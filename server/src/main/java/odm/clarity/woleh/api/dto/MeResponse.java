@@ -23,7 +23,7 @@ public record MeResponse(
 			boolean productAnalyticsConsent) {
 	}
 
-	public record Limits(int placeWatchMax, int placeBroadcastMax) {
+	public record Limits(int placeWatchMax, int placeBroadcastMax, int savedPlaceListMax) {
 	}
 
 	public record Subscription(

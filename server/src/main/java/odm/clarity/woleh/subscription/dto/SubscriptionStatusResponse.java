@@ -15,7 +15,7 @@ public record SubscriptionStatusResponse(
 		Limits limits,
 		Subscription subscription) {
 
-	public record Limits(int placeWatchMax, int placeBroadcastMax) {
+	public record Limits(int placeWatchMax, int placeBroadcastMax, int savedPlaceListMax) {
 	}
 
 	public record Subscription(

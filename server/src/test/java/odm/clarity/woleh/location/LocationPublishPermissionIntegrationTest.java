@@ -54,6 +54,7 @@ class LocationPublishPermissionIntegrationTest {
 						"free",
 						0,
 						0,
+						10,
 						"none",
 						null,
 						false));

@@ -12,6 +12,7 @@ public record Entitlements(
 		String tier,
 		int placeWatchMax,
 		int placeBroadcastMax,
+		int savedPlaceListMax,
 		String subscriptionStatus,
 		String currentPeriodEnd,
 		boolean inGracePeriod) {

@@ -83,7 +83,7 @@ class SubscriptionStatusIntegrationTest {
 				SubscriptionPlanIds.FREE, "Free",
 				List.of("woleh.account.profile", "woleh.plans.read",
 						"woleh.place.watch", "woleh.place.broadcast"),
-				0, "GHS", 999999999, 999999999, true));
+				0, "GHS", 999999999, 999999999, 20, true));
 		Instant periodEnd = Instant.now().plus(36500, ChronoUnit.DAYS);
 		subscriptionRepository.save(new Subscription(
 				user, plan, SubscriptionStatus.ACTIVE,
@@ -104,7 +104,7 @@ class SubscriptionStatusIntegrationTest {
 				"woleh_paid_monthly", "Woleh Pro",
 				List.of("woleh.account.profile", "woleh.plans.read",
 						"woleh.place.watch", "woleh.place.broadcast"),
-				100, "GHS", 999999999, 999999999, true));
+				100, "GHS", 999999999, 999999999, 20, true));
 		Instant periodEnd = Instant.now().plus(30, ChronoUnit.DAYS);
 		subscriptionRepository.save(new Subscription(
 				user, plan, SubscriptionStatus.ACTIVE,
@@ -127,7 +127,7 @@ class SubscriptionStatusIntegrationTest {
 				"woleh_paid_monthly", "Woleh Pro",
 				List.of("woleh.account.profile", "woleh.plans.read",
 						"woleh.place.watch", "woleh.place.broadcast"),
-				100, "GHS", 999999999, 999999999, true));
+				100, "GHS", 999999999, 999999999, 20, true));
 		Instant periodEnd = Instant.now().minus(2, ChronoUnit.DAYS);
 		subscriptionRepository.save(new Subscription(
 				user, plan, SubscriptionStatus.ACTIVE,

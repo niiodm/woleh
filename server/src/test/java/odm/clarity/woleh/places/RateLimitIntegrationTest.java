@@ -152,7 +152,7 @@ class RateLimitIntegrationTest {
 
 	private void stubPaidEntitlements(Long userId) {
 		Entitlements ent = new Entitlements(
-				PAID_PERMS, "paid", 50, 50, "active", null, false);
+				PAID_PERMS, "paid", 50, 50, 20, "active", null, false);
 		when(entitlementService.computeEntitlements(userId)).thenReturn(ent);
 	}
 }

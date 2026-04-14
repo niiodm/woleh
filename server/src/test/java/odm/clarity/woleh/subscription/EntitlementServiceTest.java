@@ -47,6 +47,7 @@ class EntitlementServiceTest {
 		assertThat(result.permissions()).containsExactlyElementsOf(EntitlementService.FREE_PERMISSIONS);
 		assertThat(result.placeWatchMax()).isEqualTo(EntitlementService.FREE_WATCH_MAX);
 		assertThat(result.placeBroadcastMax()).isEqualTo(EntitlementService.FREE_BROADCAST_MAX);
+		assertThat(result.savedPlaceListMax()).isEqualTo(EntitlementService.FREE_SAVED_PLACE_LIST_MAX);
 		assertThat(result.subscriptionStatus()).isEqualTo("none");
 		assertThat(result.currentPeriodEnd()).isNull();
 		assertThat(result.inGracePeriod()).isFalse();
@@ -58,7 +59,7 @@ class EntitlementServiceTest {
 		Instant graceEnd = periodEnd.plus(7, ChronoUnit.DAYS);
 		Plan plan = new Plan(
 				SubscriptionPlanIds.FREE, "Free",
-				PAID_PERMISSIONS, 0, "GHS", 999999999, 999999999, true);
+				PAID_PERMISSIONS, 0, "GHS", 999999999, 999999999, 100, true);
 		User user = new User("+233241000001");
 		Subscription sub = new Subscription(user, plan, SubscriptionStatus.ACTIVE,
 				Instant.now(), periodEnd, graceEnd);
@@ -72,6 +73,7 @@ class EntitlementServiceTest {
 		assertThat(result.permissions()).containsExactlyElementsOf(PAID_PERMISSIONS);
 		assertThat(result.placeWatchMax()).isEqualTo(999999999);
 		assertThat(result.placeBroadcastMax()).isEqualTo(999999999);
+		assertThat(result.savedPlaceListMax()).isEqualTo(100);
 		assertThat(result.subscriptionStatus()).isEqualTo("active");
 		assertThat(result.inGracePeriod()).isFalse();
 	}
@@ -91,6 +93,7 @@ class EntitlementServiceTest {
 		assertThat(result.permissions()).containsExactlyElementsOf(PAID_PERMISSIONS);
 		assertThat(result.placeWatchMax()).isEqualTo(50);
 		assertThat(result.placeBroadcastMax()).isEqualTo(50);
+		assertThat(result.savedPlaceListMax()).isEqualTo(20);
 		assertThat(result.subscriptionStatus()).isEqualTo("active");
 		assertThat(result.currentPeriodEnd()).isEqualTo(periodEnd.toString());
 		assertThat(result.inGracePeriod()).isFalse();
@@ -138,7 +141,7 @@ class EntitlementServiceTest {
 	private static Subscription buildSubscription(Instant periodEnd, Instant graceEnd) {
 		Plan plan = new Plan(
 				"woleh_paid_monthly", "Woleh Pro",
-				PAID_PERMISSIONS, 100, "GHS", 50, 50, true);
+				PAID_PERMISSIONS, 100, "GHS", 50, 50, 20, true);
 		User user = new User("+233241000001");
 		return new Subscription(user, plan, SubscriptionStatus.ACTIVE,
 				periodEnd.minus(30, ChronoUnit.DAYS), periodEnd, graceEnd);
