@@ -12,6 +12,7 @@ import '../../me/data/me_dto.dart';
 import '../../me/presentation/me_notifier.dart';
 import '../data/saved_place_list_repository.dart';
 import 'saved_list_session.dart';
+import 'saved_list_user_message.dart';
 import 'saved_place_list_summaries_provider.dart';
 import 'watch_broadcast_limits.dart';
 
@@ -68,11 +69,11 @@ class _SavedListEditorScreenState extends ConsumerState<SavedListEditorScreen> {
         _loading = false;
         _bannerError = _dioMessage(e);
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _bannerError = 'Could not load this list.';
+        _bannerError = savedListUserMessage(e);
       });
     }
   }
@@ -183,7 +184,7 @@ class _SavedListEditorScreenState extends ConsumerState<SavedListEditorScreen> {
       unawaited(
         ref.read(wolehAnalyticsProvider).logEvent('saved_list_saved', {
           'place_count': _names.length,
-          'is_create': widget.listId == null,
+          'is_create': widget.listId == null ? 1 : 0,
         }),
       );
       if (mounted) {
@@ -198,11 +199,11 @@ class _SavedListEditorScreenState extends ConsumerState<SavedListEditorScreen> {
         _busy = false;
         _bannerError = _dioMessage(e);
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _bannerError = 'Could not save. Please try again.';
+        _bannerError = savedListUserMessage(e);
       });
     }
   }
@@ -221,10 +222,10 @@ class _SavedListEditorScreenState extends ConsumerState<SavedListEditorScreen> {
     if (mounted) setState(() => _busy = false);
     if (ok) {
       unawaited(
-        ref.read(wolehAnalyticsProvider).logButtonTapped(
-              'saved_list_start_watch',
-              screenName: '/saved-lists/edit',
-            ),
+        ref.read(wolehAnalyticsProvider).logEvent(
+          'session_started_from_saved_list',
+          const {'mode': 'watch', 'source': 'editor'},
+        ),
       );
     }
   }
@@ -243,10 +244,10 @@ class _SavedListEditorScreenState extends ConsumerState<SavedListEditorScreen> {
     if (mounted) setState(() => _busy = false);
     if (ok) {
       unawaited(
-        ref.read(wolehAnalyticsProvider).logButtonTapped(
-              'saved_list_start_broadcast',
-              screenName: '/saved-lists/edit',
-            ),
+        ref.read(wolehAnalyticsProvider).logEvent(
+          'session_started_from_saved_list',
+          const {'mode': 'broadcast', 'source': 'editor'},
+        ),
       );
     }
   }
@@ -256,6 +257,10 @@ class _SavedListEditorScreenState extends ConsumerState<SavedListEditorScreen> {
     final scheme = Theme.of(context).colorScheme;
     final snapshot = ref.watch(meNotifierProvider).valueOrNull;
     final maxNames = snapshot == null ? 32 : _maxNamesForMe(snapshot);
+    final canWatch =
+        snapshot?.me.permissions.contains('woleh.place.watch') ?? false;
+    final canBroadcast =
+        snapshot?.me.permissions.contains('woleh.place.broadcast') ?? false;
 
     if (_loading) {
       return Scaffold(
@@ -300,6 +305,10 @@ class _SavedListEditorScreenState extends ConsumerState<SavedListEditorScreen> {
         actions: [
           TextButton(
             onPressed: _busy ? null : _save,
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white,
+              disabledForegroundColor: Colors.white54,
+            ),
             child: const Text('Save'),
           ),
         ],
@@ -405,16 +414,20 @@ class _SavedListEditorScreenState extends ConsumerState<SavedListEditorScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  FilledButton(
-                    onPressed: (_names.isEmpty || _busy) ? null : _startWatch,
-                    child: const Text('Show me buses'),
-                  ),
-                  const SizedBox(height: 8),
-                  FilledButton(
-                    onPressed:
-                        (_names.isEmpty || _busy) ? null : _startBroadcast,
-                    child: const Text('Show me passengers'),
-                  ),
+                  if (canWatch) ...[
+                    FilledButton(
+                      onPressed:
+                          (_names.isEmpty || _busy) ? null : _startWatch,
+                      child: const Text('Show me buses'),
+                    ),
+                    if (canBroadcast) const SizedBox(height: 8),
+                  ],
+                  if (canBroadcast)
+                    FilledButton(
+                      onPressed:
+                          (_names.isEmpty || _busy) ? null : _startBroadcast,
+                      child: const Text('Show me passengers'),
+                    ),
                 ],
               ),
             ),

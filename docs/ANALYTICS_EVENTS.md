@@ -13,6 +13,10 @@ Firebase Analytics (GA4) events logged by the Flutter app. Parameter values are 
 | `setup_name_completed` | `action` — `save` \| `skip` \| `continue_empty` | End of display-name onboarding. |
 | `place_watch_saved` | `place_count` — number of names | Watch list saved from place search. |
 | `place_broadcast_saved` | `place_count` | Broadcast list saved from place search. |
+| `saved_list_saved` | `place_count`, `is_create` — `1` new list, `0` update | Saved list template persisted from the editor. |
+| `saved_list_import_saved` | `place_count` | Shared list copied into “my lists” from import. |
+| `saved_list_imported_scan` | `source` — `qr` | QR scan yielded a valid saved-list token (before import screen). |
+| `session_started_from_saved_list` | `mode` — `watch` \| `broadcast`, `source` — `editor` \| `import` | Watch or broadcast session started from a saved list (not from place search). |
 | `subscription_checkout_started` | `plan_id` — string | User taps Subscribe on a paid plan. |
 | `button_tapped` | `button_id`, `screen_name` | Primary CTAs (see below). |
 
@@ -26,8 +30,11 @@ Firebase Analytics (GA4) events logged by the Flutter app. Parameter values are 
 | `save_and_continue` | `/auth/setup-name` |
 | `skip_setup_name` | `/auth/setup-name` |
 | `open_places_search` | `/home` |
+| `open_saved_lists` | `/home` |
 | `stop_broadcast` / `stop_watch` | `/home` |
 | `open_profile` | `/home` |
+| `saved_lists_scan` | `/saved-lists` |
+| `saved_lists_create` | `/saved-lists` |
 | `add_place_to_list` | `/places/search` |
 | `save_watch_list` | `/places/search` |
 | `save_broadcast_list` | `/places/search` |

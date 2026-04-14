@@ -26,16 +26,18 @@ class _SavedListDeepLinkScopeState extends ConsumerState<SavedListDeepLinkScope>
   @override
   void initState() {
     super.initState();
-    final appLinks = AppLinks();
-    unawaited(_handleInitial(appLinks));
-    _sub = appLinks.uriLinkStream.listen(_onUri);
+    unawaited(_bindAppLinks());
   }
 
-  Future<void> _handleInitial(AppLinks appLinks) async {
+  /// Handle cold-start [getInitialLink] first, then subscribe — avoids the same
+  /// URI being processed twice on some devices (double [push] / odd stacks).
+  Future<void> _bindAppLinks() async {
+    final appLinks = AppLinks();
     try {
       final initial = await appLinks.getInitialLink();
       if (initial != null) _routeShare(initial);
     } catch (_) {}
+    _sub = appLinks.uriLinkStream.listen(_onUri);
   }
 
   void _onUri(Uri uri) => _routeShare(uri);
@@ -50,7 +52,7 @@ class _SavedListDeepLinkScopeState extends ConsumerState<SavedListDeepLinkScope>
     final auth = ref.read(authStateProvider);
     final router = ref.read(routerProvider);
     if (auth.valueOrNull != null) {
-      router.go(
+      router.push(
         '/saved-lists/import?token=${Uri.encodeQueryComponent(token)}',
       );
     } else {
@@ -76,7 +78,7 @@ class _SavedListDeepLinkScopeState extends ConsumerState<SavedListDeepLinkScope>
       ref.read(pendingSavedListImportTokenProvider.notifier).state = null;
       final router = ref.read(routerProvider);
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        router.go(
+        router.push(
           '/saved-lists/import?token=${Uri.encodeQueryComponent(pending)}',
         );
       });

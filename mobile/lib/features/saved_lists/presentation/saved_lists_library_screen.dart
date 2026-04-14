@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/analytics_provider.dart';
 import '../data/saved_place_list_repository.dart';
 import 'saved_list_qr_screen.dart';
+import 'saved_list_user_message.dart';
 import 'saved_place_list_summaries_provider.dart';
 
 /// Lists persisted saved place templates; entry to create, edit, share, scan.
@@ -44,7 +45,10 @@ class SavedListsLibraryScreen extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('$e', textAlign: TextAlign.center),
+                Text(
+                  savedListUserMessage(e),
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 16),
                 FilledButton(
                   onPressed: () =>
@@ -137,7 +141,9 @@ class SavedListsLibraryScreen extends ConsumerWidget {
                           } catch (e) {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('$e')),
+                                SnackBar(
+                                  content: Text(savedListUserMessage(e)),
+                                ),
                               );
                             }
                           }

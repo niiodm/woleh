@@ -215,15 +215,48 @@ class _RouterNotifier extends ChangeNotifier {
   String? redirect(BuildContext context, GoRouterState state) {
     final authAsync = _ref.read(authStateProvider);
     final location = state.matchedLocation;
+    final topRoutePath =
+        state.topRoute is GoRoute ? (state.topRoute as GoRoute).path : null;
+    final importPushedOnBase = topRoutePath == '/saved-lists/import';
 
     // While the token is still loading, only [/splash] is shown (avoids flashing
     // /auth/phone before we know if the user is signed in).
     if (authAsync.isLoading) {
-      if (location != '/splash') return '/splash';
+      if (location == '/splash') return null;
+      // [push] import: base uri can be /home while top is import — do not force splash.
+      if (importPushedOnBase) return null;
+      // Cold start from `woleh://saved-lists/...`: [push] import before auth resolves;
+      // do not redirect to splash or the import route is dropped and splash → /home.
+      if (location.startsWith('/saved-lists/import')) {
+        return null;
+      }
+      // Android reports `woleh://saved-lists/{token}` as a non-matched path until
+      // [SavedListDeepLinkScope] pushes `/saved-lists/import` — avoid force_splash.
+      if (state.uri.scheme == 'woleh' && state.uri.host == 'saved-lists') {
+        return null;
+      }
+      if (location != '/splash') {
+        return '/splash';
+      }
       return null;
     }
 
     final isAuthenticated = authAsync.valueOrNull != null;
+
+    // Must run **before** [/splash] → /home: when import was [push]ed, a refresh can
+    // temporarily show matchedLocation /splash while topRoute is still import;
+    // splash_exit would drop the imperative route (log: importPushedOnBase + splash_exit).
+    if (importPushedOnBase && isAuthenticated) {
+      final meAsync = _ref.read(meNotifierProvider);
+      if (meAsync.isLoading) return null;
+      final permissions =
+          meAsync.valueOrNull?.me.permissions ?? const <String>[];
+      if (!permissions.contains('woleh.place.watch') &&
+          !permissions.contains('woleh.place.broadcast')) {
+        return _kUpgradeRedirect;
+      }
+      return null;
+    }
 
     // Auth resolved — leave splash once [/me] is ready so we can land on map or profile.
     if (location == '/splash') {

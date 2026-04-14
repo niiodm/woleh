@@ -11,6 +11,7 @@ import '../../me/presentation/me_notifier.dart';
 import '../data/saved_place_list_dto.dart';
 import '../data/saved_place_list_repository.dart';
 import 'saved_list_session.dart';
+import 'saved_list_user_message.dart';
 import 'saved_place_list_summaries_provider.dart';
 import 'watch_broadcast_limits.dart';
 
@@ -68,6 +69,16 @@ class _SavedListImportScreenState extends ConsumerState<SavedListImportScreen> {
   String _title(SavedPlaceListPublicDto dto) =>
       dto.title?.trim().isNotEmpty == true ? dto.title!.trim() : 'Shared list';
 
+  /// Prefer [pop] so routes under import (e.g. `/home` → saved lists) stay in the stack.
+  void _closeImport() {
+    if (!context.mounted) return;
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/home');
+    }
+  }
+
   Future<void> _saveCopy(SavedPlaceListPublicDto dto) async {
     setState(() => _busy = true);
     final repo = ref.read(savedPlaceListRepositoryProvider);
@@ -87,18 +98,18 @@ class _SavedListImportScreenState extends ConsumerState<SavedListImportScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Saved to your lists')),
       );
-      context.pop();
+      _closeImport();
     } on DioException catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_dioMessage(e))),
       );
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not save. Please try again.')),
+        SnackBar(content: Text(savedListUserMessage(e))),
       );
     }
   }
@@ -117,10 +128,10 @@ class _SavedListImportScreenState extends ConsumerState<SavedListImportScreen> {
     if (mounted) setState(() => _busy = false);
     if (ok) {
       unawaited(
-        ref.read(wolehAnalyticsProvider).logButtonTapped(
-              'saved_list_import_watch',
-              screenName: '/saved-lists/import',
-            ),
+        ref.read(wolehAnalyticsProvider).logEvent(
+          'session_started_from_saved_list',
+          const {'mode': 'watch', 'source': 'import'},
+        ),
       );
     }
   }
@@ -139,10 +150,10 @@ class _SavedListImportScreenState extends ConsumerState<SavedListImportScreen> {
     if (mounted) setState(() => _busy = false);
     if (ok) {
       unawaited(
-        ref.read(wolehAnalyticsProvider).logButtonTapped(
-              'saved_list_import_broadcast',
-              screenName: '/saved-lists/import',
-            ),
+        ref.read(wolehAnalyticsProvider).logEvent(
+          'session_started_from_saved_list',
+          const {'mode': 'broadcast', 'source': 'import'},
+        ),
       );
     }
   }
@@ -152,12 +163,16 @@ class _SavedListImportScreenState extends ConsumerState<SavedListImportScreen> {
     final snapshot = ref.watch(meNotifierProvider).valueOrNull;
     final maxNames =
         snapshot == null ? null : savedListMaxPlaceNames(snapshot.me);
+    final canWatch =
+        snapshot?.me.permissions.contains('woleh.place.watch') ?? false;
+    final canBroadcast =
+        snapshot?.me.permissions.contains('woleh.place.broadcast') ?? false;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Import list'),
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: _busy ? null : () => context.pop(),
+          onPressed: _busy ? null : _closeImport,
         ),
       ),
       body: _data.when(
@@ -169,7 +184,7 @@ class _SavedListImportScreenState extends ConsumerState<SavedListImportScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        e is String ? e : '$e',
+                        e is String ? e : savedListUserMessage(e),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
@@ -241,20 +256,24 @@ class _SavedListImportScreenState extends ConsumerState<SavedListImportScreen> {
                                   : () => _saveCopy(dto),
                               child: const Text('Save to my lists'),
                             ),
-                            const SizedBox(height: 8),
-                            FilledButton(
-                              onPressed: _busy || dto.names.isEmpty
-                                  ? null
-                                  : () => _watch(dto),
-                              child: const Text('Show me buses'),
-                            ),
-                            const SizedBox(height: 8),
-                            FilledButton(
-                              onPressed: _busy || dto.names.isEmpty
-                                  ? null
-                                  : () => _broadcast(dto),
-                              child: const Text('Show me passengers'),
-                            ),
+                            if (canWatch) ...[
+                              const SizedBox(height: 8),
+                              FilledButton(
+                                onPressed: _busy || dto.names.isEmpty
+                                    ? null
+                                    : () => _watch(dto),
+                                child: const Text('Show me buses'),
+                              ),
+                            ],
+                            if (canBroadcast) ...[
+                              const SizedBox(height: 8),
+                              FilledButton(
+                                onPressed: _busy || dto.names.isEmpty
+                                    ? null
+                                    : () => _broadcast(dto),
+                                child: const Text('Show me passengers'),
+                              ),
+                            ],
                           ],
                         ),
                       ),

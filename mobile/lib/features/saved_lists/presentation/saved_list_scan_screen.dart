@@ -35,13 +35,13 @@ class _SavedListScanScreenState extends ConsumerState<SavedListScanScreen> {
       if (token == null || token.isEmpty) continue;
       _handled = true;
       unawaited(
-        ref.read(wolehAnalyticsProvider).logButtonTapped(
-              'saved_list_scan_success',
-              screenName: '/saved-lists/scan',
-            ),
+        ref.read(wolehAnalyticsProvider).logEvent('saved_list_imported_scan', {
+          'source': 'qr',
+        }),
       );
       if (!mounted) return;
-      context.go(
+      // Replace scan so closing import returns to the library (stack under it intact).
+      context.pushReplacement(
         '/saved-lists/import?token=${Uri.encodeQueryComponent(token)}',
       );
       return;
