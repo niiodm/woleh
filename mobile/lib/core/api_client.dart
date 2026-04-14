@@ -10,21 +10,9 @@ import 'auth_token_storage.dart';
 import 'firebase_monitoring.dart';
 import 'firebase_performance_dio.dart';
 import 'sentry_config.dart';
+import 'api_config.dart';
 
 part 'api_client.g.dart';
-
-// Base URL injected at build time via --dart-define=API_BASE_URL=...
-//
-// Defaults to the Android emulator's loopback alias for the host machine.
-// Physical devices on the same Wi-Fi network need the host's actual LAN IP:
-//
-//   flutter run --dart-define=API_BASE_URL=http://<your-lan-ip>:8080
-//
-// Find your LAN IP on macOS:  ipconfig getifaddr en0
-const _kApiBaseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'http://10.0.2.2:8080',
-);
 
 @Riverpod(keepAlive: true)
 ApiClient apiClient(Ref ref) {
@@ -35,7 +23,7 @@ ApiClient apiClient(Ref ref) {
   // do not recurse through TokenRefreshInterceptor.
   final refreshDio = Dio(
     BaseOptions(
-      baseUrl: '$_kApiBaseUrl/api/v1',
+      baseUrl: '$apiHostBaseUrl/api/v1',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},
@@ -44,7 +32,7 @@ ApiClient apiClient(Ref ref) {
 
   final dio = Dio(
     BaseOptions(
-      baseUrl: '$_kApiBaseUrl/api/v1',
+      baseUrl: '$apiHostBaseUrl/api/v1',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},

@@ -45,19 +45,28 @@ class MeLimits {
   const MeLimits({
     required this.placeWatchMax,
     required this.placeBroadcastMax,
+    this.savedPlaceListMax = _kDefaultSavedPlaceListMax,
   });
 
   final int placeWatchMax;
   final int placeBroadcastMax;
 
+  /// Max persisted saved place list templates (server `GET /me` → `limits.savedPlaceListMax`).
+  final int savedPlaceListMax;
+
+  static const _kDefaultSavedPlaceListMax = 10;
+
   factory MeLimits.fromJson(Map<String, dynamic> json) => MeLimits(
         placeWatchMax: json['placeWatchMax'] as int,
         placeBroadcastMax: json['placeBroadcastMax'] as int,
+        savedPlaceListMax:
+            json['savedPlaceListMax'] as int? ?? _kDefaultSavedPlaceListMax,
       );
 
   Map<String, dynamic> toJson() => {
         'placeWatchMax': placeWatchMax,
         'placeBroadcastMax': placeBroadcastMax,
+        'savedPlaceListMax': savedPlaceListMax,
       };
 }
 

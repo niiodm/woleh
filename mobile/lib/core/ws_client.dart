@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import 'api_config.dart';
 import 'auth_state.dart';
 import 'firebase_monitoring.dart';
 import 'ws_message.dart';
@@ -19,13 +20,6 @@ enum WsConnectionState {
   reconnecting,
   disconnected,
 }
-
-// WS base URL is derived from the API base URL by substituting the scheme.
-// Matches the --dart-define=API_BASE_URL=... convention used by api_client.dart.
-const _kApiBaseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'http://10.0.2.2:8080',
-);
 
 const _kBaseReconnectDelay = Duration(seconds: 2);
 const _kMaxReconnectDelay = Duration(seconds: 60);
@@ -132,7 +126,7 @@ class WsClient extends _$WsClient {
       }
     }
 
-    final wsBase = _kApiBaseUrl
+    final wsBase = apiHostBaseUrl
         .replaceFirst('https://', 'wss://')
         .replaceFirst('http://', 'ws://');
     final uri = Uri.parse('$wsBase/ws/v1/transit?access_token=$token');

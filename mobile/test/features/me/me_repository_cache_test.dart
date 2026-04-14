@@ -79,6 +79,7 @@ void main() {
       final snap = await repo.getMe();
       expect(snap.fromCache, isTrue);
       expect(snap.me.profile.displayName, 'Ama');
+      expect(snap.me.limits.savedPlaceListMax, 10);
     });
 
     test('connection error + no cache throws OfflineError', () async {
@@ -111,6 +112,7 @@ void main() {
       );
       expect(roundTrip.tier, 'free');
       expect(snap.me.profile.displayName, roundTrip.profile.displayName);
+      expect(roundTrip.limits.savedPlaceListMax, 10);
     });
   });
 }

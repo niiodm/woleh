@@ -7,13 +7,17 @@ part of 'peer_locations_notifier.dart';
 // **************************************************************************
 
 String _$peerLocationsNotifierHash() =>
-    r'0f973a7358927128aae4fce383fc42e8cb6c53fd';
+    r'e3793280814e4eb15cd25dde9438655fff3f659b';
 
 /// Last-known [PeerLocation] per peer user id from WebSocket `peer_location`.
 ///
 /// - Updates on [PeerLocationMessage]; removes a key on [PeerLocationRevokedMessage].
-/// - Incoming peer fixes are shown whenever received; **local** [MeProfile.locationSharingEnabled]
-///   only controls publishing (`POST /me/location`), not whether you can see matched peers.
+/// - Peer pins are shown only while [hasActivePlaceSession] is true for the local watch/broadcast
+///   state (same gate as foreground `POST /me/location` publishing), so reconnecting without an
+///   active list session
+///   does not resurrect stale markers.
+/// - **Local** [MeProfile.locationSharingEnabled] still controls publishing only; you can receive
+///   peer fixes while sharing is off if you have an active place session.
 /// - Clears all pins when the signed-in user **turns off** sharing (true → false) or signs out
 ///   ([MAP_LIVE_LOCATION_PLAN.md](../../../../../docs/MAP_LIVE_LOCATION_PLAN.md) §4.2).
 ///

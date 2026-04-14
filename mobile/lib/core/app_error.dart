@@ -47,3 +47,8 @@ final class PlaceValidationError extends AppError {
 final class PlaceLimitError extends AppError {
   const PlaceLimitError([super.message = 'Place list limit exceeded']);
 }
+
+/// Shared saved list not found (HTTP 404) or invalid share token.
+final class SavedListNotFoundError extends AppError {
+  const SavedListNotFoundError([super.message = 'Saved list not found']);
+}

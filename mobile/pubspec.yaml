@@ -55,6 +55,9 @@ dependencies:
   sentry_flutter: ^9.16.1
   sentry_dio: ^9.16.1
   package_info_plus: ^9.0.1
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^7.0.0
+  app_links: ^6.4.0
 
 dev_dependencies:
   flutter_test:
