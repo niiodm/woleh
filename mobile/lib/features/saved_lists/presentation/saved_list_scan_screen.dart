@@ -41,8 +41,13 @@ class _SavedListScanScreenState extends ConsumerState<SavedListScanScreen> {
             ),
       );
       if (!mounted) return;
-      context.go(
+      final importRoute = context.push<String?>(
         '/saved-lists/import?token=${Uri.encodeQueryComponent(token)}',
+      );
+      unawaited(
+        importRoute.then((_) {
+          if (mounted) setState(() => _handled = false);
+        }),
       );
       return;
     }
