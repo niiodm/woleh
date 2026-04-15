@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/auth_state.dart';
 import '../core/location_onboarding.dart';
@@ -177,6 +178,33 @@ GoRouter router(Ref ref) {
   );
 }
 
+/// Post-auth landing route (map home, profile, or location intro).
+///
+/// Returns null while [meAsync] is still loading so splash can wait.
+String? authenticatedLandingFromMeAndPrefs({
+  required AsyncValue<MeLoadSnapshot?> meAsync,
+  required SharedPreferences prefs,
+}) {
+  if (meAsync.isLoading) return null;
+  final permissions =
+      meAsync.valueOrNull?.me.permissions ?? const <String>[];
+  final canUseMap = permissions.contains('woleh.place.watch') ||
+      permissions.contains('woleh.place.broadcast');
+  if (!canUseMap) return '/profile';
+  final introDone =
+      prefs.getBool(kLocationOnboardingCompletedKey) ?? false;
+  if (!introDone) return '/auth/location-intro';
+  return '/home';
+}
+
+/// Same as [authenticatedLandingFromMeAndPrefs] using current [ref] reads.
+String? resolveAuthenticatedLandingLocation(Ref ref) {
+  return authenticatedLandingFromMeAndPrefs(
+    meAsync: ref.read(meNotifierProvider),
+    prefs: ref.read(sharedPreferencesProvider),
+  );
+}
+
 /// Bridges Riverpod state changes into GoRouter's [Listenable] refresh
 /// so the router re-evaluates its redirect whenever the token or the
 /// user's entitlements change (e.g. after a successful checkout).
@@ -193,24 +221,8 @@ class _RouterNotifier extends ChangeNotifier {
 
    final Ref _ref;
 
-  /// Map home when the user has watch or broadcast; otherwise profile (free tier).
-  /// Map-eligible users who have not completed [LocationOnboardingScreen] go there first.
-  /// Null while [meNotifierProvider] is still loading so splash can wait.
-  String? _authenticatedLandingLocation() {
-    final meAsync = _ref.read(meNotifierProvider);
-    if (meAsync.isLoading) return null;
-    final permissions =
-        meAsync.valueOrNull?.me.permissions ?? const <String>[];
-    final canUseMap = permissions.contains('woleh.place.watch') ||
-        permissions.contains('woleh.place.broadcast');
-    if (!canUseMap) return '/profile';
-    final introDone = _ref.read(sharedPreferencesProvider).getBool(
-          kLocationOnboardingCompletedKey,
-        ) ??
-        false;
-    if (!introDone) return '/auth/location-intro';
-    return '/home';
-  }
+  String? _authenticatedLandingLocation() =>
+      resolveAuthenticatedLandingLocation(_ref);
 
   String? redirect(BuildContext context, GoRouterState state) {
     final authAsync = _ref.read(authStateProvider);

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:dio/dio.dart';
+import 'package:odm_clarity_woleh_mobile/app/router.dart';
 import 'package:odm_clarity_woleh_mobile/core/auth_state.dart';
 import 'package:odm_clarity_woleh_mobile/core/shared_preferences_provider.dart';
 import 'package:odm_clarity_woleh_mobile/core/location_onboarding.dart';
@@ -13,6 +14,8 @@ import 'package:odm_clarity_woleh_mobile/core/telemetry_consent.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/data/me_dto.dart';
 import 'package:odm_clarity_woleh_mobile/features/me/presentation/me_notifier.dart';
 import 'package:odm_clarity_woleh_mobile/features/places/data/place_list_repository.dart';
+import 'package:odm_clarity_woleh_mobile/features/saved_lists/presentation/pending_saved_list_import_provider.dart';
+import 'package:odm_clarity_woleh_mobile/features/saved_lists/presentation/saved_list_deep_link_scope.dart';
 import 'package:odm_clarity_woleh_mobile/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -282,6 +285,83 @@ void main() {
         expect(find.text('Woleh'), findsOneWidget);
         expect(find.text('Sign in'), findsNothing);
       });
+    });
+
+    group('saved list deep link', () {
+      testWidgets(
+        'while auth is loading, stores token and stays on splash (no /auth/phone)',
+        (tester) async {
+          WidgetRef? capturedRef;
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                sharedPreferencesProvider.overrideWithValue(routerTestPrefs),
+                authStateProvider.overrideWith(_AuthLoading.new),
+                placeListRepositoryProvider
+                    .overrideWithValue(const _StubPlaceListRepo()),
+              ],
+              child: Consumer(
+                builder: (context, ref, _) {
+                  capturedRef ??= ref;
+                  return const WolehApp();
+                },
+              ),
+            ),
+          );
+          await tester.pump();
+          expect(capturedRef, isNotNull);
+
+          routeSavedListShareFromUri(
+            capturedRef!,
+            Uri.parse('woleh://saved-lists/cold-start-token'),
+          );
+          await tester.pump();
+
+          final router = capturedRef!.read(routerProvider);
+          expect(router.state.matchedLocation, '/splash');
+          expect(
+            capturedRef!.read(pendingSavedListImportTokenProvider),
+            'cold-start-token',
+          );
+        },
+      );
+
+      testWidgets(
+        'when authenticated, pushes import on top of landing so back pops to home',
+        (tester) async {
+          WidgetRef? capturedRef;
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                sharedPreferencesProvider.overrideWithValue(routerTestPrefs),
+                authStateProvider.overrideWith(_Authenticated.new),
+                meNotifierProvider.overrideWith(_StubMeNotifier.new),
+                placeListRepositoryProvider
+                    .overrideWithValue(const _StubPlaceListRepo()),
+              ],
+              child: Consumer(
+                builder: (context, ref, _) {
+                  capturedRef ??= ref;
+                  return const WolehApp();
+                },
+              ),
+            ),
+          );
+          await pumpWolehWithMap(tester);
+          expect(capturedRef, isNotNull);
+
+          routeSavedListShareFromUri(
+            capturedRef!,
+            Uri.parse('woleh://saved-lists/share-token-xyz'),
+          );
+          await tester.pumpAndSettle();
+
+          final router = capturedRef!.read(routerProvider);
+          expect(router.state.matchedLocation, '/saved-lists/import');
+          expect(router.canPop(), isTrue);
+          expect(capturedRef!.read(pendingSavedListImportTokenProvider), isNull);
+        },
+      );
     });
 
     group('/auth/setup-name', () {
