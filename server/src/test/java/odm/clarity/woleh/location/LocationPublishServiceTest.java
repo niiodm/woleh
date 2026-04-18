@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -33,6 +34,7 @@ class LocationPublishServiceTest {
 	private UserRepository userRepository;
 	private EntitlementService entitlementService;
 	private MatchAdjacencyRegistry matchAdjacencyRegistry;
+	private LastKnownLocationStore lastKnownLocationStore;
 	private WsSessionRegistry wsSessionRegistry;
 	private LocationPublishService service;
 
@@ -44,9 +46,14 @@ class LocationPublishServiceTest {
 		userRepository = Mockito.mock(UserRepository.class);
 		entitlementService = Mockito.mock(EntitlementService.class);
 		matchAdjacencyRegistry = Mockito.mock(MatchAdjacencyRegistry.class);
+		lastKnownLocationStore = new LastKnownLocationStore();
 		wsSessionRegistry = Mockito.mock(WsSessionRegistry.class);
 		service = new LocationPublishService(
-				userRepository, entitlementService, matchAdjacencyRegistry, wsSessionRegistry);
+				userRepository,
+				entitlementService,
+				matchAdjacencyRegistry,
+				lastKnownLocationStore,
+				wsSessionRegistry);
 	}
 
 	@Test
@@ -60,6 +67,7 @@ class LocationPublishServiceTest {
 				.isInstanceOf(LocationSharingDisabledException.class);
 		verify(matchAdjacencyRegistry, never()).getCounterparties(any());
 		verify(wsSessionRegistry, never()).sendPeerLocationEvent(any(), any());
+		assertThat(lastKnownLocationStore.get(1L)).isEmpty();
 	}
 
 	@Test
@@ -72,6 +80,7 @@ class LocationPublishServiceTest {
 		service.publish(1L, sampleRequest());
 
 		verify(wsSessionRegistry, never()).sendPeerLocationEvent(any(), any());
+		assertThat(lastKnownLocationStore.get(1L)).isPresent();
 	}
 
 	@Test
@@ -98,6 +107,23 @@ class LocationPublishServiceTest {
 	}
 
 	@Test
+	void publish_ordersCounterpartiesByClosestKnownPositionFirst() {
+		User u = sharingUser();
+		when(userRepository.findById(1L)).thenReturn(Optional.of(u));
+		when(entitlementService.computeEntitlements(1L)).thenReturn(WATCH_ENT);
+		when(matchAdjacencyRegistry.getCounterparties(1L)).thenReturn(Set.of(10L, 11L));
+
+		lastKnownLocationStore.put(10L, 10.0, 10.0);
+		lastKnownLocationStore.put(11L, 5.601, -0.18);
+
+		service.publish(1L, new PublishLocationRequest(5.6, -0.18, null, null, null, null));
+
+		var order = inOrder(wsSessionRegistry);
+		order.verify(wsSessionRegistry).sendPeerLocationEvent(eq(11L), any(PeerLocationEvent.class));
+		order.verify(wsSessionRegistry).sendPeerLocationEvent(eq(10L), any(PeerLocationEvent.class));
+	}
+
+	@Test
 	void publish_withoutMatchingPermissions_throws() {
 		User u = sharingUser();
 		when(userRepository.findById(1L)).thenReturn(Optional.of(u));
@@ -107,6 +133,7 @@ class LocationPublishServiceTest {
 		assertThatThrownBy(() -> service.publish(1L, sampleRequest()))
 				.isInstanceOf(PermissionDeniedException.class);
 		verify(wsSessionRegistry, never()).sendPeerLocationEvent(any(), any());
+		assertThat(lastKnownLocationStore.get(1L)).isEmpty();
 	}
 
 	@Test

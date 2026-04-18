@@ -8,6 +8,9 @@ import odm.clarity.woleh.common.error.LocationSharingDisabledException;
 import odm.clarity.woleh.common.error.PermissionDeniedException;
 import odm.clarity.woleh.common.error.UserNotFoundException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 
 import odm.clarity.woleh.model.User;
@@ -26,6 +29,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 /**
  * Accepts authenticated location fixes and fans them out to matched peers over WebSocket
  * (MAP_LIVE_LOCATION_PLAN §3.2–3.3). Turning sharing off notifies peers (§3.4).
+ *
+ * <p>Successful publishes update {@link LastKnownLocationStore}; peer fan-out is ordered by
+ * increasing Haversine distance from this fix to each peer’s last-known position (unknown last,
+ * then by peer id).
  */
 @Service
 public class LocationPublishService {
@@ -38,16 +45,19 @@ public class LocationPublishService {
 	private final UserRepository userRepository;
 	private final EntitlementService entitlementService;
 	private final MatchAdjacencyRegistry matchAdjacencyRegistry;
+	private final LastKnownLocationStore lastKnownLocationStore;
 	private final WsSessionRegistry wsSessionRegistry;
 
 	public LocationPublishService(
 			UserRepository userRepository,
 			EntitlementService entitlementService,
 			MatchAdjacencyRegistry matchAdjacencyRegistry,
+			LastKnownLocationStore lastKnownLocationStore,
 			WsSessionRegistry wsSessionRegistry) {
 		this.userRepository = userRepository;
 		this.entitlementService = entitlementService;
 		this.matchAdjacencyRegistry = matchAdjacencyRegistry;
+		this.lastKnownLocationStore = lastKnownLocationStore;
 		this.wsSessionRegistry = wsSessionRegistry;
 	}
 
@@ -65,6 +75,8 @@ public class LocationPublishService {
 			throw new LocationSharingDisabledException();
 		}
 
+		lastKnownLocationStore.put(userId, request.latitude(), request.longitude());
+
 		Instant receivedAt = Instant.now();
 		PeerLocationEvent event = new PeerLocationEvent(
 				String.valueOf(userId),
@@ -76,14 +88,34 @@ public class LocationPublishService {
 				receivedAt);
 
 		Set<Long> peers = matchAdjacencyRegistry.getCounterparties(userId);
-		for (Long peerId : peers) {
+		List<Long> orderedPeers = sortPeerIdsByClosestFirst(
+				userId, request.latitude(), request.longitude(), peers);
+
+		for (Long peerId : orderedPeers) {
 			wsSessionRegistry.sendPeerLocationEvent(peerId, event);
 		}
 
 		if (log.isTraceEnabled()) {
 			log.trace("location publish userId={} lat={} lng={} peers={}",
-					userId, request.latitude(), request.longitude(), peers);
+					userId, request.latitude(), request.longitude(), orderedPeers);
 		}
+	}
+
+	/**
+	 * Peers with a last-known position sort by Haversine distance ascending; peers without sort
+	 * after, then by id for stability.
+	 */
+	private List<Long> sortPeerIdsByClosestFirst(
+			long publisherUserId, double originLat, double originLon, Set<Long> peers) {
+		List<Long> peerIds = new ArrayList<>(peers);
+		peerIds.remove(Long.valueOf(publisherUserId));
+		peerIds.sort(Comparator
+				.<Long>comparingDouble(peerId -> lastKnownLocationStore.get(peerId)
+						.map(p -> GeoDistance.haversineMeters(
+								originLat, originLon, p.latitude(), p.longitude()))
+						.orElse(Double.POSITIVE_INFINITY))
+				.thenComparingLong(id -> id));
+		return peerIds;
 	}
 
 	@Transactional
