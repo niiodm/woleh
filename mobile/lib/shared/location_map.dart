@@ -55,6 +55,13 @@ class LocationMap extends StatefulWidget {
 class _LocationMapState extends State<LocationMap> {
   late final MapController _mapController;
 
+  /// Set from [MapOptions.onMapReady] after [FlutterMap] links the controller.
+  /// Programmatic [MapController.move] before then throws [LateInitializationError]
+  /// (e.g. home stays under another route and location updates fire first).
+  bool _mapControllerReady = false;
+
+  late final VoidCallback _onMapReadyListener;
+
   /// When true, [self] updates move the camera. Cleared after a user gesture.
   bool _followUser = true;
 
@@ -62,9 +69,11 @@ class _LocationMapState extends State<LocationMap> {
   void initState() {
     super.initState();
     _mapController = MapController();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _moveToUserIfFollowing(),
-    );
+    _onMapReadyListener = () {
+      if (!mounted) return;
+      _mapControllerReady = true;
+      _moveToUserIfFollowing();
+    };
   }
 
   @override
@@ -86,13 +95,22 @@ class _LocationMapState extends State<LocationMap> {
 
   void _moveToUserIfFollowing() {
     if (!mounted || widget.self == null || !_followUser) return;
-    _mapController.move(widget.self!.toLatLng(), widget.userFollowZoom);
+    if (!_mapControllerReady) return;
+    try {
+      _mapController.move(widget.self!.toLatLng(), widget.userFollowZoom);
+    } catch (_) {
+      // Defensive: avoid crashing if [MapController] is not linked yet.
+    }
   }
 
   void _recenterOnUser() {
-    if (widget.self == null) return;
+    if (widget.self == null || !_mapControllerReady) return;
     setState(() => _followUser = true);
-    _mapController.move(widget.self!.toLatLng(), widget.userFollowZoom);
+    try {
+      _mapController.move(widget.self!.toLatLng(), widget.userFollowZoom);
+    } catch (_) {
+      // Defensive: see [_moveToUserIfFollowing].
+    }
   }
 
   void _onPositionChanged(MapCamera camera, bool hasGesture) {
@@ -139,6 +157,7 @@ class _LocationMapState extends State<LocationMap> {
           options: MapOptions(
             initialCenter: _initialCenter(),
             initialZoom: _initialZoom(),
+            onMapReady: _onMapReadyListener,
             onPositionChanged: _onPositionChanged,
             interactionOptions: const InteractionOptions(
               flags: InteractiveFlag.all,
