@@ -510,6 +510,8 @@ Error body uses envelope §2.2.
 { "type": "peer_location_revoked", "data": { } }
 ```
 
+**Delivery order (best-effort):** When several counterparties should receive **`match`** or **`peer_location`** from the same originating action, the server may emit those events in **approximate ascending distance** from the initiator’s **last-known** published coordinates to each counterparty’s last-known coordinates (counterparties without a stored position are ordered after). Ordering is **not** guaranteed across process restart or multiple application instances.
+
 ### 8.1 `type: match` (illustrative v1)
 
 Sent when a normalized place-name intersection exists between another user’s broadcast path and this user’s watch list (or vice versa), per product rules.
@@ -589,3 +591,4 @@ Sent to each **matched** peer when the other user turns **off** location sharing
 | 1.1 | 2026-04-06 | Auth: removed `purpose` from send/verify OTP; `verify-otp` returns `flow`: `login` \| `signup` |
 | 1.2 | 2026-04-06 | WebSocket auth: query `access_token` per ADR 0001; `POST …/subscription/checkout` for WebView payment per ADR 0005 |
 | 1.3 | 2026-04-10 | Phase 4: `POST /me/location`, `PUT /me/location-sharing`, profile `locationSharingEnabled`, WebSocket `peer_location` (§8.2), `peer_location_revoked` (§8.3) |
+| 1.4 | 2026-04-18 | WebSocket §8: best-effort delivery order for `match` and `peer_location` when multiple counterparties apply (last-known positions; not guaranteed across restart or multi-instance) |
