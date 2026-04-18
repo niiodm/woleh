@@ -1,5 +1,7 @@
 package odm.clarity.woleh.places;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +10,8 @@ import java.util.Set;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 
+import odm.clarity.woleh.location.GeoDistance;
+import odm.clarity.woleh.location.LastKnownLocationStore;
 import odm.clarity.woleh.model.PlaceListType;
 import odm.clarity.woleh.model.UserPlaceList;
 import odm.clarity.woleh.push.FcmService;
@@ -31,6 +35,11 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Both the party whose list changed <em>and</em> each matched counterparty are notified
  * so operators and riders can both see new matches in their connected sessions.
+ *
+ * <p>When several counterparties match, dispatch order follows increasing Haversine distance from
+ * the initiator’s last-known published position to each counterparty’s (unknown positions last,
+ * then by user id). Requires {@link LastKnownLocationStore}; absent initiator position falls back
+ * to sorting by counterparty id only.
  */
 @Service
 @Transactional(readOnly = true)
@@ -40,15 +49,18 @@ public class MatchingService {
 	private static final String KIND = "broadcast_to_watch";
 
 	private final UserPlaceListRepository placeListRepository;
+	private final LastKnownLocationStore lastKnownLocationStore;
 	private final WsSessionRegistry wsSessionRegistry;
 	private final FcmService fcmService;
 	private final Timer matchEvaluationTimer;
 
 	public MatchingService(UserPlaceListRepository placeListRepository,
+			LastKnownLocationStore lastKnownLocationStore,
 			WsSessionRegistry wsSessionRegistry,
 			FcmService fcmService,
 			MeterRegistry meterRegistry) {
 		this.placeListRepository = placeListRepository;
+		this.lastKnownLocationStore = lastKnownLocationStore;
 		this.wsSessionRegistry = wsSessionRegistry;
 		this.fcmService = fcmService;
 		this.matchEvaluationTimer = Timer.builder("woleh.match.evaluation")
@@ -68,19 +80,27 @@ public class MatchingService {
 
 		matchEvaluationTimer.record(() -> {
 			Set<String> broadcastSet = new HashSet<>(normalizedBroadcastNames);
+			List<CounterpartyMatch> matches = new ArrayList<>();
 
 			for (UserPlaceList watchList : placeListRepository.findAllByListType(PlaceListType.WATCH)) {
+				Long watcherUserId = watchList.getUserId();
+				if (watcherUserId.equals(broadcastUserId)) {
+					continue;
+				}
 				List<String> intersection = intersect(watchList.getNormalizedNames(), broadcastSet);
 				if (intersection.isEmpty()) {
 					continue;
 				}
+				matches.add(new CounterpartyMatch(watcherUserId, intersection));
+			}
 
-				Long watcherUserId = watchList.getUserId();
+			sortCounterpartiesByClosestFirst(broadcastUserId, matches);
+
+			for (CounterpartyMatch m : matches) {
 				log.debug("broadcast match: broadcaster={} watcher={} names={}",
-						broadcastUserId, watcherUserId, intersection);
-
-				sendMatchToUser(watcherUserId, intersection, broadcastUserId);
-				sendMatchToUser(broadcastUserId, intersection, watcherUserId);
+						broadcastUserId, m.counterpartyUserId(), m.intersection());
+				sendMatchToUser(m.counterpartyUserId(), m.intersection(), broadcastUserId);
+				sendMatchToUser(broadcastUserId, m.intersection(), m.counterpartyUserId());
 			}
 		});
 	}
@@ -97,24 +117,50 @@ public class MatchingService {
 
 		matchEvaluationTimer.record(() -> {
 			Set<String> watchSet = new HashSet<>(normalizedWatchNames);
+			List<CounterpartyMatch> matches = new ArrayList<>();
 
 			for (UserPlaceList broadcastList : placeListRepository.findAllByListType(PlaceListType.BROADCAST)) {
+				Long broadcasterUserId = broadcastList.getUserId();
+				if (broadcasterUserId.equals(watchUserId)) {
+					continue;
+				}
 				List<String> intersection = intersect(broadcastList.getNormalizedNames(), watchSet);
 				if (intersection.isEmpty()) {
 					continue;
 				}
+				matches.add(new CounterpartyMatch(broadcasterUserId, intersection));
+			}
 
-				Long broadcasterUserId = broadcastList.getUserId();
+			sortCounterpartiesByClosestFirst(watchUserId, matches);
+
+			for (CounterpartyMatch m : matches) {
 				log.debug("watch match: watcher={} broadcaster={} names={}",
-						watchUserId, broadcasterUserId, intersection);
-
-				sendMatchToUser(watchUserId, intersection, broadcasterUserId);
-				sendMatchToUser(broadcasterUserId, intersection, watchUserId);
+						watchUserId, m.counterpartyUserId(), m.intersection());
+				sendMatchToUser(watchUserId, m.intersection(), m.counterpartyUserId());
+				sendMatchToUser(m.counterpartyUserId(), m.intersection(), watchUserId);
 			}
 		});
 	}
 
 	// ── helpers ───────────────────────────────────────────────────────────
+
+	private record CounterpartyMatch(Long counterpartyUserId, List<String> intersection) {
+	}
+
+	private void sortCounterpartiesByClosestFirst(long initiatorUserId, List<CounterpartyMatch> matches) {
+		matches.sort(distanceComparatorForInitiator(initiatorUserId));
+	}
+
+	private Comparator<CounterpartyMatch> distanceComparatorForInitiator(long initiatorUserId) {
+		return lastKnownLocationStore.get(initiatorUserId)
+				.<Comparator<CounterpartyMatch>>map(origin -> Comparator
+						.<CounterpartyMatch>comparingDouble(m -> lastKnownLocationStore.get(m.counterpartyUserId())
+								.map(p -> GeoDistance.haversineMeters(
+										origin.latitude(), origin.longitude(), p.latitude(), p.longitude()))
+								.orElse(Double.POSITIVE_INFINITY))
+						.thenComparingLong(CounterpartyMatch::counterpartyUserId))
+				.orElseGet(() -> Comparator.comparingLong(CounterpartyMatch::counterpartyUserId));
+	}
 
 	private void sendMatchToUser(Long recipientUserId, List<String> intersection, Long counterpartyUserId) {
 		wsSessionRegistry.sendMatchEvent(recipientUserId, intersection, counterpartyUserId, KIND);

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -16,6 +17,7 @@ import java.util.List;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
+import odm.clarity.woleh.location.LastKnownLocationStore;
 import odm.clarity.woleh.model.PlaceListType;
 import odm.clarity.woleh.model.UserPlaceList;
 import odm.clarity.woleh.push.FcmService;
@@ -28,6 +30,7 @@ import org.junit.jupiter.api.Test;
 class MatchingServiceTest {
 
 	private UserPlaceListRepository placeListRepository;
+	private LastKnownLocationStore lastKnownLocationStore;
 	private WsSessionRegistry wsSessionRegistry;
 	private FcmService fcmService;
 	private MatchingService matchingService;
@@ -35,10 +38,16 @@ class MatchingServiceTest {
 	@BeforeEach
 	void setUp() {
 		placeListRepository = mock(UserPlaceListRepository.class);
+		lastKnownLocationStore = new LastKnownLocationStore();
 		wsSessionRegistry = mock(WsSessionRegistry.class);
 		fcmService = mock(FcmService.class);
 		when(wsSessionRegistry.hasOpenSession(anyLong())).thenReturn(true);
-		matchingService = new MatchingService(placeListRepository, wsSessionRegistry, fcmService, new SimpleMeterRegistry());
+		matchingService = new MatchingService(
+				placeListRepository,
+				lastKnownLocationStore,
+				wsSessionRegistry,
+				fcmService,
+				new SimpleMeterRegistry());
 	}
 
 	// ── dispatchBroadcastMatches ──────────────────────────────────────────
@@ -156,6 +165,30 @@ class MatchingServiceTest {
 		verify(wsSessionRegistry, times(4)).sendMatchEvent(any(), any(), any(), any());
 	}
 
+	@Test
+	void dispatchBroadcastMatches_ordersWatchersByClosestKnownPositionFirst() {
+		UserPlaceList watcherFar = mockWatchList(10L, List.of("circle"));
+		UserPlaceList watcherNear = mockWatchList(20L, List.of("circle"));
+		when(placeListRepository.findAllByListType(PlaceListType.WATCH))
+				.thenReturn(List.of(watcherFar, watcherNear));
+
+		lastKnownLocationStore.put(1L, 5.6, -0.18);
+		lastKnownLocationStore.put(10L, 10.0, 10.0);
+		lastKnownLocationStore.put(20L, 5.601, -0.18);
+
+		matchingService.dispatchBroadcastMatches(1L, List.of("circle"));
+
+		var order = inOrder(wsSessionRegistry);
+		order.verify(wsSessionRegistry).sendMatchEvent(
+				eq(20L), eq(List.of("circle")), eq(1L), eq("broadcast_to_watch"));
+		order.verify(wsSessionRegistry).sendMatchEvent(
+				eq(1L), eq(List.of("circle")), eq(20L), eq("broadcast_to_watch"));
+		order.verify(wsSessionRegistry).sendMatchEvent(
+				eq(10L), eq(List.of("circle")), eq(1L), eq("broadcast_to_watch"));
+		order.verify(wsSessionRegistry).sendMatchEvent(
+				eq(1L), eq(List.of("circle")), eq(10L), eq("broadcast_to_watch"));
+	}
+
 	// ── dispatchWatchMatches ──────────────────────────────────────────────
 
 	@Test
@@ -201,6 +234,30 @@ class MatchingServiceTest {
 		matchingService.dispatchWatchMatches(10L, List.of("circle", "accra central"));
 
 		verify(wsSessionRegistry, never()).sendMatchEvent(any(), any(), any(), any());
+	}
+
+	@Test
+	void dispatchWatchMatches_ordersBroadcastersByClosestKnownPositionFirst() {
+		UserPlaceList broadcastFar = mockBroadcastList(1L, List.of("circle"));
+		UserPlaceList broadcastNear = mockBroadcastList(2L, List.of("circle"));
+		when(placeListRepository.findAllByListType(PlaceListType.BROADCAST))
+				.thenReturn(List.of(broadcastFar, broadcastNear));
+
+		lastKnownLocationStore.put(10L, 5.6, -0.18);
+		lastKnownLocationStore.put(1L, 10.0, 10.0);
+		lastKnownLocationStore.put(2L, 5.601, -0.18);
+
+		matchingService.dispatchWatchMatches(10L, List.of("circle"));
+
+		var order = inOrder(wsSessionRegistry);
+		order.verify(wsSessionRegistry).sendMatchEvent(
+				eq(10L), eq(List.of("circle")), eq(2L), eq("broadcast_to_watch"));
+		order.verify(wsSessionRegistry).sendMatchEvent(
+				eq(2L), eq(List.of("circle")), eq(10L), eq("broadcast_to_watch"));
+		order.verify(wsSessionRegistry).sendMatchEvent(
+				eq(10L), eq(List.of("circle")), eq(1L), eq("broadcast_to_watch"));
+		order.verify(wsSessionRegistry).sendMatchEvent(
+				eq(1L), eq(List.of("circle")), eq(10L), eq("broadcast_to_watch"));
 	}
 
 	// ── helpers ───────────────────────────────────────────────────────────
